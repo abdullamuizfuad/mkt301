@@ -215,6 +215,7 @@ table.wide{min-width:560px}
 select{font:15px Inter;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink);max-width:100%;min-height:40px}
 .sortrow{display:grid;grid-template-columns:1fr;gap:8px;padding:10px 0;border-bottom:1px dashed var(--line)}
 .sortrow .row select{flex:1 1 140px}
+.sortrow>*{min-width:0}.sortrow select{max-width:100%;min-width:0}
 @media (min-width:700px){.sortrow{grid-template-columns:1fr 260px;align-items:center}.sortrow:has(.row){grid-template-columns:160px 1fr}}
 .ok-t{color:var(--green)}.no-t{color:var(--gold)}
 .subnav button[disabled]{cursor:not-allowed}
@@ -345,7 +346,7 @@ function missions(){rollDay();return U.day.m.map(id=>MPOOL.find(m=>m.id===id)).f
 
 let ME=null, U=null;
 function me(){const r=LS.get('session',null);return r&&/^S0\d{5}$/.test(r.sid||'')?r:null}
-function blank(){return {xp:0,log:{},days:[],badges:{},n:{verdicts:0,verdictsRight:0,weakSpotted:0,plans:0,perfect:0,timed:0,missions:0,strat:0,errc:0,eplans:0,essays:0},day:{d:'',c:{},m:[],t:0,done:0},nick:'',hide:false,sets:{},verd:{},plansSaved:{},cw:{},ess:{},bweek:0}}
+function blank(){return {xp:0,log:{},days:[],badges:{},n:{verdicts:0,verdictsRight:0,weakSpotted:0,plans:0,perfect:0,timed:0,missions:0,strat:0,errc:0,eplans:0,essays:0},day:{d:'',c:{},m:[],t:0,done:0},nick:'',hide:false,sets:{},focus:{},verd:{},plansSaved:{},cw:{},ess:{},bweek:0}}
 function load(){U=Object.assign(blank(),LS.get('u_'+ME.sid,{}));U.n=Object.assign(blank().n,U.n);if(!U.nick)U.nick=defaultNick(ME.name)}
 function save(){LS.set('u_'+ME.sid,U)}
 function defaultNick(n){const p=String(n||'').trim().split(/\s+/);return p.length>1?p[0]+' '+p[p.length-1][0]+'.':(p[0]||'Player')}

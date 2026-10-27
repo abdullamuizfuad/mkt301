@@ -1,0 +1,128 @@
+#!/usr/bin/env node
+/* MKT301 Arena end-to-end tests (Playwright + Chromium).
+   Run from the repo root:  node tools/tests/run.js
+   Starts its own `python3 -m http.server`, runs every group, prints PASS/FAIL and exits non-zero on failure.
+   Options: --only=<group>  --headed */
+const path=require('path'),{spawn}=require('child_process');
+let chromium;try{({chromium}=require('playwright'))}catch(e){console.error('Playwright is not installed. Run: npm i -D playwright && npx playwright install chromium');process.exit(2)}
+
+const ROOT=path.resolve(__dirname,'../..'),PORT=8700+Math.floor(Math.random()*200),URL0=`http://localhost:${PORT}/`;
+const ARGS=Object.fromEntries(process.argv.slice(2).map(a=>a.replace(/^--/,'').split('=')).map(([k,v])=>[k,v??true]));
+const STUDENT='S081441',OTHER='S085542',LECT='S000001';
+let browser,fails=0,passes=0;
+const ok=(cond,msg)=>{if(!cond)throw new Error(msg)};
+
+async function page(opts={}){
+  const ctx=await browser.newContext({viewport:{width:opts.w||390,height:opts.h||844},permissions:['clipboard-read','clipboard-write']});
+  const p=await ctx.newPage();p.errs=[];
+  p.on('pageerror',e=>p.errs.push('pageerror: '+e.message));
+  p.on('console',m=>{if(m.type()==='error'&&!/mailto|favicon|fonts\.g/.test(m.text()))p.errs.push('console: '+m.text())});
+  p.on('dialog',d=>d.accept());
+  if(opts.clock)await p.clock.install();
+  await p.goto(URL0);
+  if(opts.sid){await p.evaluate(([sid,theme,tour])=>{localStorage.setItem('mkt301_session',JSON.stringify({sid,name:'Test Student'}));
+      if(tour)localStorage.setItem('mkt301_u_'+sid,JSON.stringify({tour:1}));if(theme)localStorage.setItem('mkt301_theme',JSON.stringify(theme))},[opts.sid,opts.theme,opts.tour!==false]);
+    await p.reload();await p.waitForTimeout(300)}
+  p.go=async h=>{await p.goto(URL0+h);await p.waitForTimeout(250)};
+  p.U=()=>p.evaluate(()=>({xp:U.xp,n:U.n,day:U.day,badges:Object.keys(U.badges)}));
+  p.done=async()=>{const w=await p.evaluate(()=>[document.documentElement.scrollWidth,innerWidth]);ok(w[0]<=w[1],`horizontal scroll: ${w[0]} > ${w[1]}`);ok(!p.errs.length,p.errs.join('\n'));await ctx.close()};
+  return p}
+
+/* plan the focused question: pick every key idea (flawless) or the first k chips */
+async function plan(p,k){const q=p.locator('.qcard').first();
+  if(k)for(let j=0;j<k;j++)await q.locator('.chip').nth(j).click();
+  else{const id=(await q.getAttribute('id')).slice(2);const good=await p.evaluate(id=>{const all=CASES.flatMap(c=>c.questions).concat(BANK_B);return all.find(x=>x.id===id).chips.map((c,i)=>c.g?i:-1).filter(i=>i>=0)},id);
+    for(const j of good)await q.locator(`.chip[data-j="${j}"]`).click()}
+  await q.locator('[data-a="check"]').click();await p.waitForTimeout(40)}
+
+const T={
+async signin(){const p=await page();
+  ok(await p.$('#sid'),'sign-in form missing');
+  await p.fill('#nm','Test Student');await p.type('#sid','0814');ok((await p.textContent('#mla')).startsWith('s0814'),'email does not fill while typing');
+  ok(await p.$eval('#go',b=>b.disabled),'button should be disabled before verifying');
+  await p.type('#sid','41');await p.waitForTimeout(300);ok((await p.textContent('#mst')).includes('Verified'),'listed ID not verified');
+  await p.fill('#sid','');await p.type('#sid','099999');await p.waitForTimeout(300);ok((await p.textContent('#mst')).includes('Not found'),'unlisted ID accepted');
+  await p.fill('#sid','');await p.type('#sid','5');ok((await p.textContent('#mst')).includes('0'),'leading-digit rule missing');
+  await p.fill('#sid','');await p.type('#sid','081441');await p.waitForTimeout(300);await p.click('#go');await p.waitForTimeout(400);
+  ok(await p.evaluate(()=>ME&&ME.sid==='S081441'),'sign-in did not complete');await p.done()},
+
+async tour(){const p=await page({sid:STUDENT,tour:false});await p.waitForTimeout(900);ok(await p.$('.modal'),'tour not shown on first sign-in');
+  for(let i=0;i<4;i++){await p.click('#tn');await p.waitForTimeout(60)}ok(!await p.$('.modal'),'tour did not close');
+  await p.reload();await p.waitForTimeout(900);ok(!await p.$('.modal'),'tour shown again');await p.click('#help');ok(await p.$('.modal'),'help link does not open tour');await p.done()},
+
+async cases(){const p=await page({sid:STUDENT,clock:true});const ids=await p.evaluate(()=>CASES.map(c=>c.id));ok(ids.length===3,'expected 3 cases');
+  for(const id of ids){await p.go(`#/case/${id}/read`);await p.click('[data-r]');
+    await p.go(`#/case/${id}/exhibits`);ok(await p.$$eval('table',t=>t.length)>=5,id+': exhibits missing');
+    await p.go(`#/case/${id}/board`);for(const t of await p.$$eval('[data-tp]',e=>e.map(x=>x.dataset.tp))){await p.click(`[data-tp="${t}"]`);
+      while(await p.locator('[data-v]:not([disabled])').count()){await p.locator('[data-v]:not([disabled])').first().click();await p.waitForTimeout(20)}}
+    await p.go(`#/case/${id}/practice`);const n=await p.$$eval('.dot',d=>d.length-1);ok(n===5,id+': focus mode should show 5 questions');
+    for(let i=0;i<n;i++){await plan(p,2);await p.click('[data-a="rplan"]');await p.waitForTimeout(60)}
+    ok((await p.textContent('#qs')).includes('Set summary'),id+': summary not shown after last question')}
+  const u=await p.U();ok(u.n.verdicts===60,'expected 60 verdicts, got '+u.n.verdicts);await p.done()},
+
+async sectionB(){const p=await page({sid:STUDENT,clock:true});const ids=await p.evaluate(()=>BANK_B.map(q=>q.id));ok(ids.length>=50,'Section B bank too small');
+  const bad=await p.evaluate(()=>BANK_B.filter(q=>q.chips.filter(c=>c.g).length<3||!q.chips.some(c=>!c.g)||!q.checks.length||!q.week).map(q=>q.id));ok(!bad.length,'malformed questions: '+bad);
+  for(const [k,id] of ids.entries()){await p.evaluate(id=>{U.sets._b=[id];U.bweek=0;(U.focus=U.focus||{})._b=0;save();location.hash='#/short';shortPage()},id);await p.waitForTimeout(60);
+    ok(await p.$('#q-'+id),'question not shown: '+id);await plan(p);const r=['rplan','rpaper','rtyped'][k%3];await p.click(`[data-a="${r}"]`);
+    if(r==='rpaper'){await p.click('[data-a="tgo"]');await p.clock.fastForward(300000);await p.click('[data-a="done"]');await p.locator('[data-k]').first().check();await p.click('[data-a="fin"]')}
+    if(r==='rtyped'){await p.fill('.qcard textarea','A clear explanation of the concept with an applied example. '.repeat(8));await p.click('[data-a="tdone"]');
+      await p.locator('[data-kp]').first().check();await p.locator('.band input[value="5"]').check();await p.click('[data-a="tfin"]')}
+    await p.waitForTimeout(30)}
+  const u=await p.U();ok(u.n.timed>=18&&u.n.typed>=18,'routes not counted: timed '+u.n.timed+', typed '+u.n.typed);ok(u.badges.includes('wordsmith'),'Wordsmith badge missing');await p.done()},
+
+async sectionC(){const p=await page({sid:STUDENT,clock:true});const C=await p.evaluate(()=>({s:BANK_C.structured.map(x=>x.id),e:BANK_C.essays.map(x=>({id:x.id,chain:x.chain}))}));
+  ok(C.s.length>=4&&C.e.length>=4,'expected 4 + 4 Section C scenarios');
+  for(const id of C.s){await p.go('#/essay/ca/'+id);for(const part of ['a','b','c']){const el=p.locator('#cp-'+part);
+      for(const g of await el.locator('[data-c]').evaluateAll(b=>[...new Set(b.map(x=>x.dataset.c.split('|')[0]))]))await el.locator(`[data-c^="${g}|0|"]`).click();
+      for(const s of await el.locator('select[data-s]').all())await s.selectOption({index:1});
+      await el.locator('[data-a="check"]').click();await el.locator('[data-a="go"]').click();await el.locator('[data-a="tgo"]').click();await p.clock.fastForward(1200000);
+      await el.locator('[data-a="done"]').click();await el.locator('[data-k]').first().check();await el.locator('[data-a="fin"]').click()}
+    ok(await p.evaluate(id=>!!U.log['cadone:'+id],id),id+': scenario not completed')}
+  for(const e of C.e){await p.go('#/essay/coach/'+e.id);await p.click('#nx');
+    await p.selectOption('select[data-o="0"]','1');await p.click('[data-c^="entry|0|"]');await p.click('[data-a="entry"]');
+    for(const t of e.chain)await p.click(`[data-ch="${t.replace(/"/g,'\\"')}"]`);await p.click('[data-a="chain"]');
+    await p.click('[data-c^="rev|0|"]');await p.click('[data-a="rev"]');await p.click('[data-rk="0"]');await p.click('[data-c^="mit|0|"]');await p.click('[data-a="risk"]');
+    await p.click('[data-a="plandone"]');await p.click('[data-a="toscript"]');await p.click('#nx');await p.click('[data-a="tgo"]');await p.clock.fastForward(1200000);await p.click('[data-a="done"]');
+    await p.selectOption('select[data-mk="0"]','3');await p.click('#fin');ok(await p.evaluate(id=>U.ess[id].final&&!!U.log['emark:'+id+':'+today()],e.id),e.id+': essay not completed')}
+  await p.done()},
+
+async antiFarming(){const p=await page({sid:STUDENT,clock:true});await p.go('#/case/iceto/practice');
+  for(let r=0;r<6;r++){await plan(p);if(r<5)await p.click('[data-a="replan"]')}
+  let u=await p.U();ok(u.n.plans===1&&u.n.perfect===1,'re-planning inflated counters: '+JSON.stringify(u.n));const x1=u.xp;
+  await p.click('[data-a="restart"]');await p.waitForTimeout(80);u=await p.U();ok(u.xp===x1-25&&u.n.plans===0,'restart did not refund plan XP/counters');
+  await plan(p);await p.click('[data-a="rpaper"]');await p.click('[data-a="tgo"]');await p.clock.runFor(5000);await p.click('[data-a="done"]');u=await p.U();ok(u.n.timed===0,'instant timer earned timed credit');
+  await p.click('[data-a="restart"]');await plan(p);await p.click('[data-a="rtyped"]');await p.fill('.qcard textarea','too short');await p.click('[data-a="tdone"]');
+  await p.locator('.band input[value="2"]').check();await p.click('[data-a="tfin"]');u=await p.U();ok(!u.n.typed,'short typed answer earned credit');
+  await p.click('[data-a="restart"]');await plan(p);await p.click('[data-a="rtyped"]');await p.fill('.qcard textarea','word '.repeat(60));await p.click('[data-a="tdone"]');
+  await p.locator('[data-kp]').first().check();await p.locator('.band input[value="4"]').check();const x2=(await p.U()).xp;await p.click('[data-a="tfin"]');u=await p.U();
+  ok(u.xp===x2+22&&u.n.typed===1,'typed XP should be +22 for one key point, got +'+(u.xp-x2));
+  await p.click('[data-a="restart"]');u=await p.U();ok(!u.n.typed&&u.xp===x2-25,'restart did not refund typed XP');await p.done()},
+
+async backup(){const p=await page({sid:STUDENT});await p.evaluate(()=>{U.xp=777;save()});const code=await p.evaluate(()=>backupCode());ok(/^MKT301[ZB]-/.test(code),'bad backup code');
+  await p.evaluate(()=>{localStorage.removeItem('mkt301_u_S081441')});await p.reload();await p.waitForTimeout(200);
+  ok((await p.evaluate(c=>restore(c),code))==='',' restore failed');ok((await p.U()).xp===777,'XP not restored');
+  await p.evaluate(()=>localStorage.setItem('mkt301_session',JSON.stringify({sid:'S085542',name:'Other'})));await p.reload();await p.waitForTimeout(200);
+  ok((await p.evaluate(c=>restore(c),code)).includes('different student'),'another ID could restore');
+  ok((await p.evaluate(c=>restore(c.slice(0,-4)+'0000'),code)).includes('damaged'),'damaged code accepted');
+  await p.click('#svb');ok(await p.$('.modal #mem'),'Save popup missing');await p.done()},
+
+async missions(){const p=await page({sid:STUDENT});const v=await p.evaluate(()=>[0,1,2].map(t=>pickMissions(t).map(id=>MPOOL.find(m=>m.id===id).t)));
+  ok(v.every((a,t)=>a.length===3&&a.every(x=>x===t||x===t-1)),'mission tiers wrong: '+JSON.stringify(v));
+  const ms=await p.evaluate(()=>missions().map(m=>m.k));ok(new Set(ms).size===3,'missions track the same activity twice');await p.done()},
+
+async lecturer(){const p=await page({sid:LECT});await p.go('#/lecturer');ok(await p.$('#demo'),'demo panel missing');ok(await p.$$eval('#rvw [data-rv]',e=>e.length)>30,'content review list too short');
+  ok((await p.textContent('#rvw')).includes('Naver'),'Naver example not listed');await p.done();
+  const s=await page({sid:STUDENT});await s.go('#/lecturer');ok(!await s.$('#demo'),'students can open the lecturer page');await s.done()},
+
+async layout(){const pages=['#/','#/cases','#/case/iceto/read','#/case/cbtl/board','#/case/tuna/practice','#/case/tuna/exhibits','#/short','#/essay','#/essay/ca/manta','#/essay/coach/coco','#/badges','#/board'];
+  for(const w of [320,390,1280])for(const theme of ['dark','light']){const p=await page({sid:STUDENT,w,theme});for(const h of pages){await p.go(h);const sw=await p.evaluate(()=>document.documentElement.scrollWidth);ok(sw<=w,`${h} at ${w}px ${theme}: scrollWidth ${sw}`)}
+    ok(await p.evaluate(t=>document.documentElement.dataset.theme===t,theme),'theme not applied');await p.done()}},
+
+async offline(){const p=await page({sid:STUDENT});const active=await p.evaluate(async()=>!!(await navigator.serviceWorker.ready).active);ok(active,'service worker not active');await p.done()}
+};
+
+(async()=>{const server=spawn('python3',['-m','http.server',String(PORT)],{cwd:ROOT,stdio:'ignore'});await new Promise(r=>setTimeout(r,800));
+  browser=await chromium.launch({headless:!ARGS.headed});
+  for(const [name,fn] of Object.entries(T)){if(ARGS.only&&ARGS.only!==name)continue;const t0=Date.now();
+    try{await fn();passes++;console.log(`PASS ${name} (${((Date.now()-t0)/1000).toFixed(1)}s)`)}catch(e){fails++;console.log(`FAIL ${name}: ${e.message.split('\n').slice(0,4).join(' | ')}`)}}
+  await browser.close();server.kill();console.log(`\n${passes} passed, ${fails} failed`);process.exit(fails?1:0)})();

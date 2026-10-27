@@ -9,6 +9,8 @@ A gamified study and practice site for MKT301 International Marketing (MNU Busin
 - **Section C · Strategy & essay:** 4 competitive-advantage scenarios in three parts (Five Forces sort, Diamond sort, Strategic Intent and Blue Ocean canvas, each with its own timer), and an Essay Coach with 4 expansion scenarios (mark bands, market scoring, order and entry modes, supply-chain builder, revenue and risk tools, an essay script, a 40-minute timer and self-marking).
 - **Game:** XP, levels, badges, day streaks, three daily missions that change every day and get tougher with each level, and a weekly leaderboard.
 - **Save my progress:** progress is stored in each student's browser. The 💾 button in the top bar emails a backup to the lecturer, downloads a backup file or copies a backup code; restoring it brings everything back on any device.
+- **Focus mode:** practice sets show one question at a time (progress bar, Previous/Next, dots). After planning, students finish their way: **Plan only**, **Write on paper** (timed) or **Type my answer** (compare with the key points, self-mark 0–6). Each set ends with a summary and a **Practise my weak spots** option.
+- **Install as an app:** students can add the portal to their home screen; it works offline (`manifest.webmanifest`, `sw.js`). When the list of files changes, bump `CACHE` in `sw.js`.
 - **Restart:** every question, Section C part and Essay Coach scenario has a ↺ Restart button that clears it and removes the XP it earned.
 
 ## Files
@@ -41,3 +43,13 @@ python3 tools/build-roster.py ClassList_MKT301_*.xls
 It also accepts a CSV with student IDs in the first column. Then commit and push `roster.js`.
 
 **Never commit class lists or exam papers.** This repo is public.
+
+## Tests
+
+End-to-end tests cover sign-in, the tour, all three cases, every Section B question, every Section C scenario, restart and anti-farming rules, backup/restore, missions, the lecturer tools, layout at 320/390/1280px in both themes, and offline support.
+
+```bash
+npm i -D playwright && npx playwright install chromium   # once
+node tools/tests/run.js              # all groups (starts its own local server)
+node tools/tests/run.js --only=sectionB
+```
