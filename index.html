@@ -71,6 +71,48 @@ input[type=text]{width:100%;font:16px Inter;padding:12px 14px;border-radius:12px
 input[type=text]:focus{outline:2px solid var(--teal);outline-offset:1px}
 textarea{width:100%;min-height:160px;font:14px/1.5 ui-monospace,monospace;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b1026;color:var(--ink)}
 .err{color:var(--red);font-size:.9rem;margin-top:8px}
+/* ---- sign-in ---- */
+.gate2{min-height:calc(100vh - 60px);display:grid;grid-template-columns:1.1fr 1fr;grid-template-areas:'top card' 'more card';column-gap:28px;row-gap:4px;align-content:center;align-items:center;max-width:1080px;margin:0 auto;padding:28px 16px}
+.gate2 .intro{grid-area:top;align-self:end}.gate2 .more{grid-area:more;align-self:start}.gate2 .signcard{grid-area:card}
+@media (max-width:860px){.gate2{grid-template-columns:1fr;grid-template-areas:'top' 'card' 'more';row-gap:18px;padding-top:16px}}
+.intro h1{font-size:clamp(1.9rem,6vw,2.8rem);margin:.4em 0 .25em}
+.intro h1 span{background:linear-gradient(90deg,var(--teal),var(--blue),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.intro .lead{color:var(--ink2);font-size:1.02rem}
+.perks{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}
+.perks li{display:flex;gap:10px;align-items:flex-start;font-size:.95rem}
+.perks li b{font-family:Lexend}
+.motto{min-height:3.2em;font:600 1.02rem/1.45 Lexend;color:var(--gold);transition:opacity .5s}
+.scene{position:relative;height:240px;border-radius:22px;overflow:hidden;background:radial-gradient(circle at 50% 42%,#3d5bd9 0,#22307a 40%,#121937 75%);border:1px solid var(--line);perspective:600px}
+@media (max-width:860px){.scene{height:200px}}
+.scene::before{content:"";position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg at 50% 50%,#ffffff10 0 4deg,transparent 4deg 18deg);animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fly{position:absolute;left:50%;top:42%;width:46px;height:34px;margin:-17px 0 0 -23px;border-radius:8px;display:grid;place-items:center;font-size:18px;
+  background:linear-gradient(135deg,#ffffffe6,#c9d6ff);box-shadow:0 6px 18px #0006;opacity:0;animation:fly 3.6s linear infinite;animation-delay:var(--d)}
+.fly.w{width:70px;background:linear-gradient(90deg,var(--pink),var(--violet))}
+@keyframes fly{0%{transform:translate(0,0) scale(.15);opacity:0}15%{opacity:1}100%{transform:translate(var(--x),var(--y)) scale(1.7);opacity:0}}
+.hero-svg{position:absolute;left:50%;bottom:-6px;width:210px;transform:translateX(-50%);animation:bob 3s ease-in-out infinite}
+@media (max-width:860px){.hero-svg{width:175px}}
+@keyframes bob{50%{transform:translateX(-50%) translateY(-4px)}}
+.blink{animation:blink 4s infinite;transform-origin:center 63px}
+@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
+.glow{animation:glow 1.8s ease-in-out infinite alternate}
+@keyframes glow{from{opacity:.55}to{opacity:1}}
+.signcard{position:relative;overflow:hidden}
+.signcard::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--blue),var(--teal))}
+.idrow{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0b1026}
+.idrow:focus-within{outline:2px solid var(--teal);outline-offset:1px}
+.idrow .pre{flex:none;width:52px;display:grid;place-items:center;background:var(--teal);color:#0b1026;font:800 1.2rem Lexend}
+.idrow input{border:0!important;outline:0!important;background:transparent!important;letter-spacing:.45em;font:600 1.15rem Lexend!important;padding:12px 14px!important}
+.hint{font-size:.8rem;color:var(--muted);margin-top:6px}
+.mail{display:flex;gap:12px;align-items:center;margin-top:16px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:#ffffff06;transition:border-color .3s,background .3s}
+.mail.ok{border-color:var(--green);background:#4fd88a14}.mail.no{border-color:var(--red);background:#ff6b6b14}
+.mail small{display:block;font-size:.72rem;color:var(--muted)}.mail b{font:600 .98rem Lexend;word-break:break-all}
+.mail .st{font:700 .75rem Lexend;margin-left:6px}
+.mail>div{min-width:0}.mail b{overflow-wrap:anywhere}
+@media (max-width:420px){.mail b{font-size:.9rem}}
+.mail.ok .st{color:var(--green)}.mail.no .st{color:var(--red)}
+.signcard .btn{width:100%;margin-top:16px;min-height:50px;font-size:1.02rem}
+@media (prefers-reduced-motion:reduce){.fly{display:none}}
 
 /* dashboard */
 .hero{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
@@ -256,22 +298,56 @@ function hud(){if(!ME){$('#hud').innerHTML='';return}const L=level(U.xp);
   $('#hud').innerHTML=`<span class="pill fire" title="Day streak">🔥 ${streak(U)}</span><span class="pill gold" title="XP">✨ ${U.xp}</span><span class="pill lvl">${esc(L.name)}</span><span class="xpmini" title="${L.pct}% to next level"><i style="width:${L.pct}%"></i></span>`}
 
 /* ---------- sign in ---------- */
+const FLY=[['📈','-170px','-120px'],['🌏','160px','-110px'],['🏷️','-190px','40px'],['💱','185px','60px'],['🛳️','-120px','-150px'],['🎯','120px','-150px'],['📊','-200px','-40px'],['🏆','200px','-20px'],['','-150px','110px'],['','150px','120px']];
+const MOTTOS=['Every case you crack today is one less surprise tomorrow.','Think global. Plan smart. Write with confidence.','Small steps every day add up to big results.','Your next level is one practice set away.','Great marketers are made, not born. Start now.'];
+const SCENE=`<div class="scene" aria-hidden="true">${FLY.map((f,i)=>`<span class="fly ${f[0]?'':'w'}" style="--x:${f[1]};--y:${f[2]};--d:${(i*.36).toFixed(2)}s">${f[0]}</span>`).join('')}
+<svg class="hero-svg" viewBox="0 0 200 170"><ellipse cx="100" cy="62" rx="34" ry="36" fill="#1b1430"/>
+<path d="M46 170c4-40 22-58 54-58s50 18 54 58z" fill="#3456d1"/><path d="M88 112l12 26 12-26z" fill="#fff"/>
+<rect x="93" y="86" width="14" height="16" rx="5" fill="#f2b98d"/><circle cx="100" cy="64" r="25" fill="#f6c39b"/>
+<path d="M72 60c0-24 16-34 30-34s28 10 28 32c-6-10-16-14-24-14-10 0-24 4-34 16z" fill="#1b1430"/>
+<g class="blink"><circle cx="91" cy="66" r="2.6" fill="#1b1430"/><circle cx="111" cy="66" r="2.6" fill="#1b1430"/></g>
+<g fill="none" stroke="#6f5bd8" stroke-width="2.4"><circle cx="91" cy="66" r="8"/><circle cx="111" cy="66" r="8"/><path d="M99 66h4"/></g>
+<path d="M94 78q6 4 12 0" stroke="#b5654a" stroke-width="2" fill="none" stroke-linecap="round"/>
+<path d="M18 170l22-44h120l22 44z" fill="#2a2f55"/>
+<rect x="52" y="104" width="96" height="62" rx="8" fill="#e9ecf6"/><rect x="52" y="104" width="96" height="62" rx="8" fill="#3ee6c1" fill-opacity=".14" class="glow"/>
+<rect x="112" y="116" width="9" height="9" rx="2" fill="#ff5a6e" transform="rotate(-8 116 120)"/><rect x="126" y="115" width="9" height="9" rx="2" fill="#35c46a"/>
+<text x="100" y="146" text-anchor="middle" font-family="Lexend,sans-serif" font-weight="800" font-size="11" fill="#9aa3c8">MKT301</text>
+<ellipse cx="50" cy="140" rx="10" ry="15" fill="#f6c39b"/><ellipse cx="150" cy="140" rx="10" ry="15" fill="#f6c39b"/></svg></div>`;
 function gate(msg){
-  app.innerHTML=`<div class="gate"><div class="card">
-  <div style="text-align:center;font-size:2.6rem">🌏</div>
-  <h1 style="text-align:center">MKT301 Arena</h1>
-  <p class="muted" style="text-align:center">International Marketing practice. Earn XP, unlock badges and climb the class leaderboard.</p>
-  <form id="f"><label for="nm">Your name</label><input type="text" id="nm" autocomplete="name" required>
-  <label for="sid">Student ID</label><input type="text" id="sid" placeholder="S0xxxxx" autocapitalize="characters" autocomplete="off" required>
+  app.innerHTML=`<div class="gate2"><section class="intro">${SCENE}
+  <h1>Welcome to the <span>MKT301 Arena</span></h1>
+  <p class="lead">Your practice ground for International Marketing. Work through real-world cases, from Malé to Milan, and build the skills to analyse a market, choose how to enter it and argue your plan with confidence.</p>
+  </section><section class="more"><ul class="perks"><li>📖 <span><b>Cases you can explore</b>: read the full story, check the exhibits and judge the boardroom.</span></li>
+  <li>🧩 <span><b>Plan smarter answers</b>: build your structure with chips, then write on paper against the clock.</span></li>
+  <li>🏆 <span><b>Level up</b>: earn XP, unlock badges, keep your streak and climb the class leaderboard.</span></li></ul>
+  <p class="motto" id="motto">${MOTTOS[0]}</p></section>
+  <div class="card signcard"><h2 style="margin-top:6px">Sign in</h2>
+  <form id="f" novalidate><label for="nm">Full name</label><input type="text" id="nm" autocomplete="name" required>
+  <label for="sid">Student ID</label><div class="idrow"><span class="pre">S</span><input type="text" id="sid" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="0·····" aria-describedby="hn"></div>
+  <div class="hint" id="hn">Type the 6 numbers after the S. They start with 0.</div>
+  <div class="mail" id="ml"><span style="font-size:1.2rem">✉️</span><div><small><span id="mll">Your student email</span><span class="st" id="mst"></span></small><b id="mla">s0·····@student.mnu.edu.mv</b></div></div>
   <div class="err" id="er">${msg||''}</div>
-  <button class="btn" style="width:100%;margin-top:16px">Enter the arena</button></form>
+  <button class="btn" id="go" disabled>Verify and start</button></form>
   <p class="muted" style="font-size:.8rem;margin-top:14px">Your progress is saved on this device, under your student ID.</p></div></div>`;
-  $('#f').onsubmit=async e=>{e.preventDefault();const name=$('#nm').value.trim(),sid=$('#sid').value.trim().toUpperCase();
-    if(!/^S0\d{5}$/.test(sid)){$('#er').textContent='Student IDs look like S0 followed by 5 digits, e.g. S081441.';return}
-    if(typeof ROSTER!=='undefined'&&ROSTER.hashes&&ROSTER.hashes.length){
-      if(!(window.crypto&&crypto.subtle)){$('#er').textContent='This browser cannot check your ID. Try Chrome or Safari.';return}
-      const h=await sha(ROSTER.salt+'|'+sid);if(!ROSTER.hashes.includes(h)){$('#er').textContent='That ID is not on the MKT301 class list. Check it, or ask your lecturer.';return}}
-    LS.set('session',{sid,name});start()}}
+  let mi=0;const mt=setInterval(()=>{const m=$('#motto');if(!m)return clearInterval(mt);m.style.opacity=0;setTimeout(()=>{mi=(mi+1)%MOTTOS.length;m.textContent=MOTTOS[mi];m.style.opacity=1},500)},4500);
+  let ok=false,seq=0;const sidIn=$('#sid'),nmIn=$('#nm');
+  const ready=()=>{$('#go').disabled=!(ok&&nmIn.value.trim().length>1)};
+  const check=async()=>{const d=sidIn.value.replace(/\D/g,'').slice(0,6);if(sidIn.value!==d)sidIn.value=d;
+    const ml=$('#ml'),me=++seq;ok=false;ml.className='mail';$('#mst').textContent='';$('#er').textContent='';
+    if(d&&d[0]!=='0'){ml.className='mail no';$('#mst').textContent='Starts with 0';ready();return}
+    const sid='S'+d;$('#mla').textContent=(sid.toLowerCase()+'·'.repeat(6-d.length))+'@student.mnu.edu.mv';$('#mll').textContent='Your student email';
+    if(d.length<6){ready();return}
+    if(sid===LECTURER){$('#mla').textContent='Lecturer access';}
+    $('#mst').textContent='Checking…';
+    let listed=true;if(typeof ROSTER!=='undefined'&&ROSTER.hashes&&ROSTER.hashes.length){
+      if(!(window.crypto&&crypto.subtle)){$('#mst').textContent='';$('#er').textContent='This browser cannot check your ID. Try Chrome or Safari.';return}
+      listed=ROSTER.hashes.includes(await sha(ROSTER.salt+'|'+sid))}
+    if(me!==seq)return;ok=listed;ml.className='mail '+(listed?'ok':'no');$('#mst').textContent=listed?'✓ Verified':'✗ Not found';
+    if(!listed)$('#er').textContent='That ID is not on the MKT301 class list. Check the numbers, or ask your lecturer.';
+    else if(!nmIn.value.trim())nmIn.focus();ready()};
+  sidIn.oninput=check;nmIn.oninput=ready;
+  $('#f').onsubmit=e=>{e.preventDefault();if(!ok){check();return}const name=nmIn.value.trim();if(name.length<2){$('#er').textContent='Please type your full name.';nmIn.focus();return}
+    clearInterval(mt);LS.set('session',{sid:'S'+sidIn.value,name});start()}}
 function signOut(){LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
 
 /* ---------- layout ---------- */
