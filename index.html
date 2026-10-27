@@ -347,6 +347,11 @@ function award(key,xp,label){
 function count(k){rollDay();U.n[k]=(U.n[k]||0)+1;U.day.c[k]=(U.day.c[k]||0)+1;
   const ms=missions();if(!U.day.done&&ms.length&&ms.every(m=>(U.day.c[m.k]||0)>=m.n)){U.day.done=1;U.n.missions++;save();award(null,MBONUS[U.day.t],'Daily mission complete')}
   checkBadges();save()}
+/* count activity once per award key (e.g. once per question per day); restart takes it back */
+function countOnce(key,...ks){U.cnt=U.cnt||{};if(U.cnt[key])return;U.cnt[key]={d:today(),k:ks.filter(Boolean)};U.cnt[key].k.forEach(count)}
+function uncount(test){U.cnt=U.cnt||{};rollDay();Object.keys(U.cnt).filter(test).forEach(key=>{const c=U.cnt[key];
+  c.k.forEach(k=>{U.n[k]=Math.max(0,(U.n[k]||0)-1);if(c.d===today()&&U.day.c[k])U.day.c[k]--});delete U.cnt[key]})}
+const MINPCT=.4,minMins=t=>Math.ceil(t*MINPCT/60);
 function checkBadges(){BADGES.forEach(b=>{if(!U.badges[b.id]&&b.t(U)){U.badges[b.id]=today();toast(b.ico,'Badge unlocked: '+b.name,b.d)}})}
 function toast(em,t,s){const el=document.createElement('div');el.className='toast';el.innerHTML=`<span class="em">${em}</span><div><b class="lex">${esc(t)}</b><div class="muted" style="font-size:.85rem">${esc(s)}</div></div>`;const box=$('#toasts');box.append(el);while(box.children.length>3)box.firstChild.remove();setTimeout(()=>el.remove(),2800)}
 
@@ -420,7 +425,7 @@ const XP_DEFAULT={plan:15,perfect:10,timed:30,check:0,ca:15,catimed:30,cacheck:0
 function xpFor(test){U.gain=U.gain||{};return Object.keys(U.log).filter(test).reduce((t,k)=>t+(k in U.gain?U.gain[k]:(XP_DEFAULT[k.split(':')[0]]||0)),0)}
 function restartItem(test,what,clear){const x=Math.min(xpFor(test),U.xp);
   if(!confirm(`Restart ${what}?\n\nYour plan, timer and answers for it will be cleared${x?`, and the ${x} XP it earned will be removed`:''}. Badges you already have are kept.`))return false;
-  Object.keys(U.log).filter(test).forEach(k=>{delete U.log[k];delete U.gain[k]});U.xp-=x;clear();save();hud();
+  Object.keys(U.log).filter(test).forEach(k=>{delete U.log[k];delete U.gain[k]});uncount(test);U.xp-=x;clear();save();hud();
   toast('↺','Restarted',x?'−'+x+' XP · start fresh':'Start fresh');return true}
 const qKeys=id=>k=>k.startsWith('plan:'+id+':')||k==='perfect:'+id||k.startsWith('timed:'+id+':')||k.startsWith('check:'+id+':');
 const partKeys=(sid,p)=>k=>['ca:','catimed:','cacheck:'].some(x=>k.startsWith(x+sid+':'+p+':'))||k==='cadone:'+sid;
@@ -596,10 +601,10 @@ function qCard(q,i,o={}){
   el.querySelector('[data-a="restart"]').onclick=()=>restartItem(qKeys(q.id),'this question',()=>{delete U.plansSaved[q.id];LS.del('tm_'+q.id);clearInterval(TIMERS[q.id])})&&qCard(q,i,o);
   const A=a=>el.querySelector(`[data-a="${a}"]`);
   A('check')&&(A('check').onclick=()=>{st.checked=true;const good=q.chips.filter(x=>x.g).length,hit=st.sel.filter(j=>q.chips[j].g).length,bad=st.sel.some(j=>!q.chips[j].g);
-    count('plans');if(o.week)count('bplans');award('plan:'+q.id+':'+today(),15,'Answer plan built');if(!bad&&hit===good){count('perfect');award('perfect:'+q.id,10,'Flawless plan')}save();qCard(q,i,o)});
+    countOnce('plan:'+q.id+':'+today(),'plans',o.week&&'bplans');award('plan:'+q.id+':'+today(),15,'Answer plan built');if(!bad&&hit===good){countOnce('perfect:'+q.id,'perfect');award('perfect:'+q.id,10,'Flawless plan')}save();qCard(q,i,o)});
   A('replan')&&(A('replan').onclick=()=>{st.checked=false;st.sel=[];save();qCard(q,i,o)});
   A('go')&&(A('go').onclick=()=>{st.step=1;save();qCard(q,i,o)});
-  if(st.step===1)timer(q.id,secs,el,()=>{st.step=2;count('timed');if(o.week)count('btimed');award('timed:'+q.id+':'+today(),30,'Timed answer finished');save();qCard(q,i,o)});
+  if(st.step===1)timer(q.id,secs,el,ok=>{st.step=2;if(ok){countOnce('timed:'+q.id+':'+today(),'timed',o.week&&'btimed');award('timed:'+q.id+':'+today(),30,'Timed answer finished')}else noTimeXP(secs);save();qCard(q,i,o)});
   el.querySelectorAll('[data-k]').forEach(b=>b.onchange=()=>{const j=+b.dataset.k;st.ticks=b.checked?st.ticks.concat(j):st.ticks.filter(x=>x!==j);save()});
   A('fin')&&(A('fin').onclick=()=>{st.final=true;award('check:'+q.id+':'+today(),st.ticks.length*3,'Self-check');save();qCard(q,i,o)})}
 
@@ -612,7 +617,10 @@ function timer(id,total,el,done,tick){
   clearInterval(TIMERS[id]);TIMERS[id]=setInterval(()=>{if(!document.body.contains(disp))return clearInterval(TIMERS[id]);paint()},500);paint();
   go.onclick=()=>{if(T.end){T.left=left();T.end=null}else T.end=Date.now()+T.left*1000;LS.set(key,T);paint()};
   el.querySelector('[data-a="tstop"]').onclick=()=>{T.left=total;T.end=null;LS.set(key,T);paint()};
-  el.querySelector('[data-a="done"]').onclick=()=>{const used=total-left();if(used<120&&!confirm('Less than 2 minutes on the clock. Finish anyway?'))return;LS.del(key);clearInterval(TIMERS[id]);done()}}
+  el.querySelector('[data-a="done"]').onclick=()=>{const used=total-left(),ok=used>=total*MINPCT;
+    if(!ok&&!confirm(`Only ${Math.floor(used/60)} min ${used%60} s on the clock.\n\nTimed XP needs at least ${minMins(total)} minutes of writing. Finish without XP?`))return;
+    LS.del(key);clearInterval(TIMERS[id]);done(ok)}}
+const noTimeXP=t=>toast('⏱️','No XP this time','Write for at least '+minMins(t)+' minutes to earn timed XP');
 
 /* ---------- Section B: short answers ---------- */
 function shortPage(){
@@ -687,13 +695,13 @@ function partCard(s,p){
   el.innerHTML=h;bindTools(el,st,redraw);
   const A=a=>el.querySelector(`[data-a="${a}"]`);
   A('restart').onclick=()=>restartItem(partKeys(s.id,p),'part ('+p+')',()=>{delete U.cw[k];LS.del('tm_c_'+s.id+'_'+p);clearInterval(TIMERS['c_'+s.id+'_'+p])})&&redraw();
-  A('check')&&(A('check').onclick=()=>{st.checked=true;count('plans');count('catool');if(p==='c')count('errc');award('ca:'+k+':'+today(),15,'Tool completed');save();redraw()});
+  A('check')&&(A('check').onclick=()=>{st.checked=true;countOnce('ca:'+k+':'+today(),'plans','catool',p==='c'&&'errc');award('ca:'+k+':'+today(),15,'Tool completed');save();redraw()});
   A('redo')&&(A('redo').onclick=()=>{Object.assign(st,{checked:false,def:[],f:{},d:{},in:[],e:{},mv:[],cp:[]});save();redraw()});
   A('go')&&(A('go').onclick=()=>{st.step=1;save();redraw()});
-  if(st.step===1)timer('c_'+s.id+'_'+p,P.mins*60,el,()=>{st.step=2;count('timed');count('catimed');award('catimed:'+k+':'+today(),30,'Part written on paper');save();redraw()});
+  if(st.step===1)timer('c_'+s.id+'_'+p,P.mins*60,el,ok=>{st.step=2;if(ok){countOnce('catimed:'+k+':'+today(),'timed','catimed');award('catimed:'+k+':'+today(),30,'Part written on paper')}else noTimeXP(P.mins*60);save();redraw()});
   el.querySelectorAll('[data-k]').forEach(b=>b.onchange=()=>{const j=+b.dataset.k;st.ticks=b.checked?st.ticks.concat(j):st.ticks.filter(x=>x!==j);save()});
   A('fin')&&(A('fin').onclick=()=>{st.final=true;award('cacheck:'+k+':'+today(),st.ticks.length*3,'Self-check');
-    if(['a','b','c'].every(q=>(U.cw[s.id+':'+q]||{}).final)&&award('cadone:'+s.id,40,'Scenario complete'))count('strat');save();redraw()})}
+    if(['a','b','c'].every(q=>(U.cw[s.id+':'+q]||{}).final)&&award('cadone:'+s.id,40,'Scenario complete'))countOnce('cadone:'+s.id,'strat');save();redraw()})}
 
 /* ---------- Section C: Essay Coach ---------- */
 const COACH=['1 · Brief','2 · Plan','3 · Script','4 · Write','5 · Mark'];
@@ -748,12 +756,12 @@ function coachPlan(s,E){
   el.querySelectorAll('[data-m]').forEach(x=>x.onchange=()=>{E.mode[x.dataset.m]=x.value;save()});
   el.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>{const t=b.dataset.ch;E.chain=E.chain.includes(t)?E.chain.filter(x=>x!==t):E.chain.concat(t);save();redraw()});
   el.querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{E.risk=+b.dataset.rk;E.mitOrd=null;E.mit=[];save();redraw()});
-  const A=a=>el.querySelector(`[data-a="${a}"]`),chk=(f,lbl)=>()=>{E[f]=true;if(award('ess:'+f+':'+s.id+':'+today(),5,lbl))count('esstool');save();redraw()};
+  const A=a=>el.querySelector(`[data-a="${a}"]`),chk=(f,lbl)=>()=>{E[f]=true;if(award('ess:'+f+':'+s.id+':'+today(),5,lbl))countOnce('ess:'+f+':'+s.id+':'+today(),'esstool');save();redraw()};
   A('entry')&&(A('entry').onclick=chk('entryChk','Entry reasons checked'));A('rev')&&(A('rev').onclick=chk('revChk','Revenue checked'));
   A('risk')&&(A('risk').onclick=chk('riskChk','Risk plan checked'));A('chain')&&(A('chain').onclick=chk('chainChk','Supply chain checked'));
   A('chclear')&&(A('chclear').onclick=()=>{E.chain=[];save();redraw()});
-  A('plandone')&&(A('plandone').onclick=()=>{E.planDone=true;count('plans');count('ecplan');if(award('eplan:'+s.id,40,'Essay plan complete'))count('eplans');save();redraw()});
-  A('toscript')&&(A('toscript').onclick=()=>{if(!E.planDone){E.planDone=true;count('plans');count('ecplan');if(award('eplan:'+s.id,40,'Essay plan complete'))count('eplans')}next(s,E,2)})}
+  A('plandone')&&(A('plandone').onclick=()=>{E.planDone=true;countOnce('eplan:'+s.id,'plans','ecplan','eplans');award('eplan:'+s.id,40,'Essay plan complete');save();redraw()});
+  A('toscript')&&(A('toscript').onclick=()=>{if(!E.planDone){E.planDone=true;countOnce('eplan:'+s.id,'plans','ecplan','eplans');award('eplan:'+s.id,40,'Essay plan complete')}next(s,E,2)})}
 const SCRIPT=[['Introduction','State your overall recommendation in one or two sentences and preview your main decisions.',['This essay recommends that ___ expands into ___ by ___.','The plan rests on three decisions: ___, ___ and ___.']],
  ['Market choice, order and pace','Name the first market and justify it with data from the table. Compare it with the others. Explain the order and timing.',['I recommend entering ___ first because the data shows ___.','Compared with ___, it offers ___, although ___.','___ should follow in year ___ once ___.']],
  ['Entry mode','Give the entry mode for each market and justify it with control, cost and risk.',['In ___, the most suitable entry mode is ___ because ___.','This gives ___ control at ___ cost.','An alternative would be ___, but ___.']],
@@ -771,7 +779,7 @@ function coachWrite(s,E){
   $('#pane').innerHTML=`<div class="card qcard" id="ew"><h2>Write the essay on paper</h2><p class="muted">The first 8 minutes are for planning on paper, using your plan. Then write.</p>
   <div class="tag" id="ph" style="display:block;text-align:center;font-size:.9rem;padding:8px">Planning phase</div><div class="timer" id="t-e_${s.id}">40:00</div>
   <div class="row" style="justify-content:center"><button class="btn" data-a="tgo">Start</button><button class="btn ghost" data-a="tstop">Stop</button><button class="btn gold" data-a="done">I've finished writing</button></div></div>`;
-  timer('e_'+s.id,2400,$('#ew'),()=>{E.written=true;count('timed');if(award('essay:'+s.id+':'+today(),60,'Essay written on paper'))count('essays');next(s,E,4)},
+  timer('e_'+s.id,2400,$('#ew'),ok=>{E.written=true;if(ok){countOnce('essay:'+s.id+':'+today(),'timed','essays');award('essay:'+s.id+':'+today(),60,'Essay written on paper')}else noTimeXP(2400);next(s,E,4)},
     left=>{const used=2400-left,ph=$('#ph');if(ph)ph.textContent=used<480?`📝 Planning phase · ${Math.max(0,Math.ceil((480-used)/60))} min left to plan`:left>120?'✍️ Writing phase':'🔎 Check your essay'})}
 function coachMark(s,E){
   const tot=RUBRIC.reduce((a,r,i)=>a+(+(E.marks[i]||0)),0),band=BANDS.find(b=>tot>=b[0]&&tot<=b[1]);
@@ -790,7 +798,7 @@ function badgesPage(){shell('#/badges',`<h1>Badges</h1><p class="muted">${Object
  <h2 style="margin-top:26px">Levels</h2><div class="card"><div class="tablewrap"><table><tr><th>Level</th><th>Title</th><th>XP needed</th></tr>${LEVELS.map((l,i)=>`<tr style="${level(U.xp).i===i?'color:var(--teal);font-weight:700':''}"><td>${i+1}</td><td>${l[1]}</td><td>${l[0]}</td></tr>`).join('')}</table></div></div>
  <h2 style="margin-top:26px">How to earn XP</h2><div class="card"><div class="tablewrap"><table>
  <tr><td>Read a case section</td><td>+5</td></tr><tr><td>Read a whole case</td><td>+30</td></tr><tr><td>Judge a boardroom argument</td><td>+10 if you agree with our reading, +3 otherwise</td></tr>
- <tr><td>Build an answer plan</td><td>+15 (+10 bonus for a flawless plan)</td></tr><tr><td>Finish a timed answer on paper</td><td>+30</td></tr><tr><td>Self-check</td><td>+3 per check met</td></tr>
+ <tr><td>Build an answer plan</td><td>+15 (+10 bonus for a flawless plan)</td></tr><tr><td>Finish a timed answer on paper</td><td>+30 (write for at least 4 of the 10 minutes; any timed task needs 40% of its time on the clock)</td></tr><tr><td>Practise the same question again</td><td>XP and badge progress count once per question per day</td></tr><tr><td>Self-check</td><td>+3 per check met</td></tr>
  <tr><td>Section C: complete a part's tool</td><td>+15</td></tr><tr><td>Section C: write a part on paper</td><td>+30</td></tr><tr><td>Section C: finish a whole scenario</td><td>+40</td></tr>
  <tr><td>Essay Coach: check a planning tool</td><td>+5 each</td></tr><tr><td>Essay Coach: complete a plan</td><td>+40</td></tr><tr><td>Essay Coach: write the 40-minute essay</td><td>+60</td></tr><tr><td>Essay Coach: self-mark</td><td>+20</td></tr>
  <tr><td>Practise on a new day</td><td>+10</td></tr><tr><td>Complete the daily mission</td><td>+25 Starter · +35 Pro · +50 Elite (missions get tougher as you level up)</td></tr></table></div></div>`)}
