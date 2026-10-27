@@ -8,6 +8,11 @@
 <meta name="theme-color" content="#0b1026">
 <script>try{var t=localStorage.getItem("mkt301_theme");if(t)document.documentElement.dataset.theme=JSON.parse(t)}catch(e){}</script>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MKT301 Arena">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -429,8 +434,8 @@ function shell(active,body){
   const nav=NAV.concat(ME.sid===LECTURER?[['#/lecturer','Lecturer']]:[]).map(n=>`<a href="${n[0]}" class="${n[0]===active?'on':''}">${n[1]}</a>`).join('');
   app.innerHTML=`<div class="wrap"><nav class="tabs">${nav}</nav><main>${body}</main>
   <footer><div class="row"><span>Signed in as <b>${esc(ME.name)}</b> · ${esc(ME.sid)}</span><button class="btn ghost sm" id="so">Sign out</button></div>
-  <p style="margin-top:10px">Practice material only. Write your full answers on paper.</p></footer></div>`;
-  $('#so').onclick=signOut;scrollTo(0,0)}
+  <p style="margin-top:10px">Practice material only. Write your full answers on paper. · <a href="javascript:void 0" id="help">? How it works</a></p></footer></div>`;
+  $('#so').onclick=signOut;$('#help').onclick=()=>tour(0);scrollTo(0,0)}
 
 /* ---------- restart: remove a question's progress and the XP it earned ---------- */
 const XP_DEFAULT={typed:20,plan:15,perfect:10,timed:30,check:0,ca:15,catimed:30,cacheck:0,cadone:40,ess:5,eplan:40,script:10,essay:60,emark:20};
@@ -465,6 +470,20 @@ async function downloadBackup(){const a=document.createElement('a');a.href=URL.c
 async function emailBackup(){const c=await backupCode();markSaved();
   location.href='mailto:'+SCORE_EMAIL+'?subject='+encodeURIComponent('MKT301 progress backup: '+ME.name+' ('+ME.sid+')')+'&body='+encodeURIComponent(`Hello,\n\nHere is my MKT301 Arena progress backup (${U.xp} XP, ${level(U.xp).name}, ${today()}).\n\n${c}\n\nThank you,\n${ME.name}\n`);
   return c.length}
+/* first-time tour: 4 steps, re-openable from the footer */
+const TOUR=[['🧩','Plan with chips','Every question starts with a plan. Tap the ideas you would use, then check your plan. Some chips are decoys, and the feedback explains why.'],
+ ['🏁','Finish your way','After planning, choose: <b>📝 Plan only</b> to move on, <b>✍️ Write on paper</b> against the clock, or <b>⌨️ Type my answer</b> and compare it with the key points.'],
+ ['✨','XP, missions and badges','Earn XP for reading, planning and writing. Three daily missions change every day and get tougher as you level up. Unlock badges and climb the leaderboard.'],
+ ['💾','Keep your progress safe','Your progress lives on this device. Tap <b>💾 Save</b> in the top bar to email a copy to your lecturer or download it.']];
+function tour(n){closeModal();const t=TOUR[n],m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','How it works');
+  const done=()=>{U.tour=1;save();closeModal()};
+  m.innerHTML=`<div class="card" style="text-align:center"><button class="x" aria-label="Close">✕</button><div style="font-size:2.6rem;margin-top:6px">${t[0]}</div>
+  <p class="muted" style="font:700 .75rem Lexend;letter-spacing:.08em;margin:6px 0 2px">STEP ${n+1} OF ${TOUR.length}</p><h2 style="margin:0 0 8px">${t[1]}</h2><p style="color:var(--ink2)">${t[2]}</p>
+  <div class="dots" style="justify-content:center;margin:6px 0 14px">${TOUR.map((_,j)=>`<span class="dot ${j===n?'on':j<n?'done':''}" style="width:12px;height:12px"></span>`).join('')}</div>
+  <div class="row" style="justify-content:center">${n?'<button class="btn ghost" id="tb">← Back</button>':'<button class="btn ghost" id="ts">Skip</button>'}<button class="btn" id="tn">${n<TOUR.length-1?'Next →':'Let\'s go 🚀'}</button></div></div>`;
+  document.body.append(m);m.querySelector('.x').onclick=done;m.onclick=e=>{if(e.target===m)done()};$('#tn').focus();
+  $('#tn').onclick=()=>n<TOUR.length-1?tour(n+1):done();$('#tb')&&($('#tb').onclick=()=>tour(n-1));$('#ts')&&($('#ts').onclick=done)}
+
 /* popup opened from the 💾 button in the top bar */
 function closeModal(){document.querySelector('.modal')?.remove()}
 function openSave(){closeModal();const last=LS.get('bk_'+ME.sid,''),L=level(U.xp);
@@ -985,8 +1004,9 @@ function route(){if(!ME)return gate();const h=location.hash.replace(/^#\/?/,'').
   if(h[0]==='essay'&&h[1]==='coach')return coachView(h[2]);
   ({'':home,cases:caseList,badges:badgesPage,board:boardPage,lecturer:lecturer,
     short:shortPage,essay:essayPage}[h[0]]||home)()}
-function start(){ME=me();if(!ME)return gate();load();if(!U.badges.boarding){checkBadges();save()}hud();route()}
+function start(){ME=me();if(!ME)return gate();load();if(!U.badges.boarding){checkBadges();save()}hud();route();if(!U.tour)setTimeout(()=>{if(ME&&!U.tour&&!document.querySelector('.modal'))tour(0)},700)}
 addEventListener('hashchange',route);start();
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
 </body>
 </html>
