@@ -1,0 +1,8 @@
+# Never publish class lists or exam papers
+ClassList_*
+*.xls
+*.xlsx
+*.csv
+*.docx
+*.pdf
+.DS_Store
