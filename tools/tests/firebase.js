@@ -47,7 +47,8 @@ async secondDevice(){const p=await page({w:1280,h:800});await signIn(p,A,PIN);aw
   ok(await p.evaluate(()=>U.xp===15&&!!U.log['read:iceto:origins']),'progress not loaded on the second device');await p.done()},
 
 async anyChars(){const p=await page({allow:/400|Failed to load resource|identitytoolkit/});await p.evaluate(async()=>{await CLOUD.create('S085651','Pass-word9');await CLOUD.signOut()});
-  await signIn(p,'S085651','Pass-word9','Letters Pin');ok(await p.evaluate(()=>ME.sid==='S085651'),'sign-in rejected a non-digit password');await p.done()},
+  await toPin(p,'S085651','Letters Pin');await p.click('#abc');ok(await p.evaluate(()=>document.querySelector('#pin').inputMode==='text'),'letters toggle did not switch the keyboard');
+  await p.fill('#pin','Pass-word9');await p.click('#pgo');await synced(p);ok(await p.evaluate(()=>ME.sid==='S085651'),'sign-in rejected a non-digit password');await p.done()},
 
 async wrongPin(){const p=await page({allow:/400|Failed to load resource|identitytoolkit/});await toPin(p,A);await p.fill('#pin','999999');await p.click('#pgo');await p.waitForTimeout(1200);
   ok((await p.textContent('#per')).includes("doesn't match"),'wrong PIN message missing: '+await p.textContent('#per'));
