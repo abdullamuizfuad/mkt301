@@ -8,7 +8,8 @@ A gamified study and practice site for MKT301 International Marketing (MNU Busin
 - **Section B · Short answers:** 56 practice questions tagged by week (3 angles on each key short-answer skill, plus questions from the other weeks). Random sets of 6, filter by week, plan with chips → 10-minute timer → self-check.
 - **Section C · Strategy & essay:** 4 competitive-advantage scenarios in three parts (Five Forces sort, Diamond sort, Strategic Intent and Blue Ocean canvas, each with its own timer), and an Essay Coach with 4 expansion scenarios (mark bands, market scoring, order and entry modes, supply-chain builder, revenue and risk tools, an essay script, a 40-minute timer and self-marking).
 - **Game:** XP, levels, badges, day streaks, three daily missions that change every day and get tougher with each level, and a weekly leaderboard.
-- **Save my progress:** progress is stored in each student's browser. A backup file or code on the home page moves it to another device or restores it after clearing the browser.
+- **Save my progress:** progress is stored in each student's browser. The 💾 button in the top bar emails a backup to the lecturer, downloads a backup file or copies a backup code; restoring it brings everything back on any device.
+- **Restart:** every question, Section C part and Essay Coach scenario has a ↺ Restart button that clears it and removes the XP it earned.
 
 ## Files
 

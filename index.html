@@ -33,6 +33,15 @@
 .avatar{color:#0b1026!important}
 .themebtn{flex:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:1.1rem;display:grid;place-items:center;margin-left:8px}
 .themebtn:hover{border-color:var(--teal)}
+.rst{margin-left:auto;min-height:30px!important;padding:3px 10px!important;font-size:.78rem!important}
+.pill.save{cursor:pointer;color:var(--ink);font:600 .85rem Lexend}.pill.save:hover{border-color:var(--teal)}
+@media (max-width:640px){.pill .lbl{display:none}}
+@media (max-width:440px){.brand>span{display:none}.hud{gap:6px}.pill{padding:5px 9px}.themebtn{margin-left:6px}}
+.modal{position:fixed;inset:0;z-index:60;background:#0b1026b3;display:grid;place-items:center;padding:16px;animation:pop .2s ease-out}
+.modal>.card{max-width:470px;width:100%;max-height:calc(100vh - 32px);overflow:auto;position:relative}
+.modal .x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:1.1rem}
+.opt{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);margin-top:10px}
+.opt:hover{border-color:var(--teal)}.opt .em{font-size:1.5rem;line-height:1}.opt b{font-family:Lexend;display:block}.opt small{color:var(--muted);font-size:.84rem}
 #demo:fullscreen{overflow:auto;padding:32px max(16px,calc(50vw - 540px));background:var(--bg);font-size:1.1rem}
 body{transition:background-color .3s,color .3s}
 *{box-sizing:border-box}
@@ -266,6 +275,7 @@ const LECTURER='S000001', SCORE_EMAIL='abdulla.muiz@mnu.edu.mv';
 function theme(t){if(t)LS.set('theme',t);const cur=LS.get('theme','dark');document.documentElement.dataset.theme=cur;
   $('#tbtn').textContent=cur==='light'?'🌙':'☀️';$('#tbtn').setAttribute('aria-label',cur==='light'?'Switch to dark mode':'Switch to light mode');
   document.querySelector('meta[name=theme-color]').content=cur==='light'?'#f7f2e8':'#0b1026'}
+$('#hud').onclick=e=>{if(e.target.closest('#svb'))openSave()};
 $('#tbtn').onclick=()=>theme(LS.get('theme','dark')==='light'?'dark':'light');theme();
 
 /* ---------- game model ---------- */
@@ -327,7 +337,7 @@ function rollDay(){if(U.day.d!==today()||!U.day.c||!U.day.m){const t=tier(U.xp);
 /* award XP once per key (key=null: always) */
 function award(key,xp,label){
   if(key&&U.log[key])return false;
-  if(key)U.log[key]=1;
+  if(key){U.log[key]=1;U.gain=U.gain||{};U.gain[key]=xp}
   rollDay();
   if(!U.days.includes(today())){U.days.push(today());U.days=U.days.slice(-60);U.xp+=10;toast('📅','Daily check-in','+10 XP · streak '+streak(U))}
   const before=level(U.xp).i;U.xp+=xp;
@@ -341,7 +351,7 @@ function checkBadges(){BADGES.forEach(b=>{if(!U.badges[b.id]&&b.t(U)){U.badges[b
 function toast(em,t,s){const el=document.createElement('div');el.className='toast';el.innerHTML=`<span class="em">${em}</span><div><b class="lex">${esc(t)}</b><div class="muted" style="font-size:.85rem">${esc(s)}</div></div>`;const box=$('#toasts');box.append(el);while(box.children.length>3)box.firstChild.remove();setTimeout(()=>el.remove(),2800)}
 
 function hud(){if(!ME){$('#hud').innerHTML='';return}const L=level(U.xp);
-  $('#hud').innerHTML=`<span class="pill fire" title="Day streak">🔥 ${streak(U)}</span><span class="pill gold" title="XP">✨ ${U.xp}</span><span class="pill lvl">${esc(L.name)}</span><span class="xpmini" title="${L.pct}% to next level"><i style="width:${L.pct}%"></i></span>`}
+  $('#hud').innerHTML=`<button class="pill save" id="svb" title="Save my progress" aria-label="Save my progress">💾<span class="lbl">&nbsp;Save</span></button><span class="pill fire" title="Day streak">🔥 ${streak(U)}</span><span class="pill gold" title="XP">✨ ${U.xp}</span><span class="pill lvl">${esc(L.name)}</span><span class="xpmini" title="${L.pct}% to next level"><i style="width:${L.pct}%"></i></span>`}
 
 /* ---------- sign in ---------- */
 const FLY=[['📈','-170px','-120px'],['🌏','160px','-110px'],['🏷️','-190px','40px'],['💱','185px','60px'],['🛳️','-120px','-150px'],['🎯','120px','-150px'],['📊','-200px','-40px'],['🏆','200px','-20px'],['','-150px','110px'],['','150px','120px']];
@@ -405,22 +415,65 @@ function shell(active,body){
   <p style="margin-top:10px">Practice material only. Write your full answers on paper.</p></footer></div>`;
   $('#so').onclick=signOut;scrollTo(0,0)}
 
+/* ---------- restart: remove a question's progress and the XP it earned ---------- */
+const XP_DEFAULT={plan:15,perfect:10,timed:30,check:0,ca:15,catimed:30,cacheck:0,cadone:40,ess:5,eplan:40,script:10,essay:60,emark:20};
+function xpFor(test){U.gain=U.gain||{};return Object.keys(U.log).filter(test).reduce((t,k)=>t+(k in U.gain?U.gain[k]:(XP_DEFAULT[k.split(':')[0]]||0)),0)}
+function restartItem(test,what,clear){const x=Math.min(xpFor(test),U.xp);
+  if(!confirm(`Restart ${what}?\n\nYour plan, timer and answers for it will be cleared${x?`, and the ${x} XP it earned will be removed`:''}. Badges you already have are kept.`))return false;
+  Object.keys(U.log).filter(test).forEach(k=>{delete U.log[k];delete U.gain[k]});U.xp-=x;clear();save();hud();
+  toast('↺','Restarted',x?'−'+x+' XP · start fresh':'Start fresh');return true}
+const qKeys=id=>k=>k.startsWith('plan:'+id+':')||k==='perfect:'+id||k.startsWith('timed:'+id+':')||k.startsWith('check:'+id+':');
+const partKeys=(sid,p)=>k=>['ca:','catimed:','cacheck:'].some(x=>k.startsWith(x+sid+':'+p+':'))||k==='cadone:'+sid;
+const essKeys=sid=>k=>(k.startsWith('ess:')&&k.split(':')[2]===sid)||k==='eplan:'+sid||k==='script:'+sid||k.startsWith('essay:'+sid+':')||k.startsWith('emark:'+sid+':');
+
 /* ---------- backup and restore (no server: a signed code the student keeps) ---------- */
 const b64e=t=>btoa(unescape(encodeURIComponent(t))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const b64d=t=>decodeURIComponent(escape(atob(t.replace(/-/g,'+').replace(/_/g,'/'))));
-async function backupCode(){const j=b64e(JSON.stringify({v:1,s:ME.sid,at:today(),u:U}));return 'MKT301B-'+j+'-'+(await sha('mkt301-backup|'+j)).slice(0,10)}
-async function restore(text){const m=String(text).replace(/\s+/g,'').match(/MKT301B-([A-Za-z0-9_-]+)-([0-9a-f]{10})/);
+const bytesB64=u=>{let t='';for(let i=0;i<u.length;i+=8192)t+=String.fromCharCode.apply(null,u.subarray(i,i+8192));return btoa(t).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')};
+const b64Bytes=t=>Uint8Array.from(atob(t.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0));
+const pipe=async(data,S)=>new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(S)).arrayBuffer());
+/* MKT301Z = gzip-compressed (short enough to email); MKT301B = plain, for browsers without compression */
+async function backupCode(){const json=JSON.stringify({v:1,s:ME.sid,at:today(),u:U});let tag='MKT301B',j;
+  if(window.CompressionStream){try{j=bytesB64(await pipe(new TextEncoder().encode(json),new CompressionStream('gzip')));tag='MKT301Z'}catch(e){}}
+  if(!j)j=b64e(json);return tag+'-'+j+'-'+(await sha('mkt301-backup|'+j)).slice(0,10)}
+async function restore(text){const m=String(text).replace(/\s+/g,'').match(/(MKT301[BZ])-([A-Za-z0-9_-]+)-([0-9a-f]{10})/);
   if(!m)return 'That doesn\'t look like an MKT301 backup code.';
-  if((await sha('mkt301-backup|'+m[1])).slice(0,10)!==m[2])return 'This backup is damaged or incomplete. Copy the whole code, or use the backup file.';
-  let p;try{p=JSON.parse(b64d(m[1]))}catch(e){return 'This backup could not be read.'}
+  if((await sha('mkt301-backup|'+m[2])).slice(0,10)!==m[3])return 'This backup is damaged or incomplete. Copy the whole code, or use the backup file.';
+  let p;try{p=JSON.parse(m[1]==='MKT301Z'?new TextDecoder().decode(await pipe(b64Bytes(m[2]),new DecompressionStream('gzip'))):b64d(m[2]))}catch(e){return 'This backup could not be read on this browser. Try Chrome or Safari, or use the backup file.'}
   if(p.s!==ME.sid)return 'This backup belongs to a different student ID ('+esc(p.s)+'). Sign in with that ID to restore it.';
   if(!confirm(`Restore your backup from ${p.at}?\n\nBackup: ${p.u.xp} XP\nThis device now: ${U.xp} XP\n\nYour progress on this device will be replaced.`))return '';
-  U=Object.assign(blank(),p.u);U.n=Object.assign(blank().n,U.n);save();hud();home();toast('💾','Progress restored',U.xp+' XP · '+level(U.xp).name);return ''}
+  U=Object.assign(blank(),p.u);U.n=Object.assign(blank().n,U.n);save();closeModal();hud();home();toast('💾','Progress restored',U.xp+' XP · '+level(U.xp).name);return ''}
+const markSaved=()=>LS.set('bk_'+ME.sid,today());
+async function downloadBackup(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([await backupCode()],{type:'text/plain'}));a.download='mkt301-progress-'+ME.sid+'-'+today()+'.txt';a.click();markSaved();toast('💾','Backup saved','Keep the file somewhere safe')}
+async function emailBackup(){const c=await backupCode();markSaved();
+  location.href='mailto:'+SCORE_EMAIL+'?subject='+encodeURIComponent('MKT301 progress backup: '+ME.name+' ('+ME.sid+')')+'&body='+encodeURIComponent(`Hello,\n\nHere is my MKT301 Arena progress backup (${U.xp} XP, ${level(U.xp).name}, ${today()}).\n\n${c}\n\nThank you,\n${ME.name}\n`);
+  return c.length}
+/* popup opened from the 💾 button in the top bar */
+function closeModal(){document.querySelector('.modal')?.remove()}
+function openSave(){closeModal();const last=LS.get('bk_'+ME.sid,''),L=level(U.xp);
+  const m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','Save my progress');
+  m.innerHTML=`<div class="card"><button class="x" aria-label="Close">✕</button><h2 style="margin-right:40px">💾 Save my progress</h2>
+  <p class="muted" style="font-size:.9rem;margin:0">${U.xp} XP · ${esc(L.name)} · ${Object.keys(U.badges).length} badge${Object.keys(U.badges).length===1?'':'s'} · 🔥 ${streak(U)}<br>${last?'Last saved '+last:'Not saved yet'}</p>
+  <p style="font-size:.92rem;margin:12px 0 0">Your progress lives on this device only. Keep a copy so you never lose it.</p>
+  <button class="opt" id="mem"><span class="em">📧</span><span><b>Email a copy to my lecturer</b><small>Opens your email app with your backup ready to send to ${SCORE_EMAIL}. If you ever lose your progress, your lecturer can send it back.</small></span></button>
+  <button class="opt" id="mdl"><span class="em">⬇️</span><span><b>Download a copy to this device</b><small>Saves a small .txt file. Open it on another device to carry on.</small></span></button>
+  <button class="opt" id="mcp"><span class="em">📋</span><span><b>Copy backup code</b><small>Paste it into a note or a message to yourself.</small></span></button>
+  <p style="margin:14px 0 0"><a href="javascript:void 0" id="mrs">Restore a backup on this device →</a></p>
+  <div id="mrp" class="hide"><textarea id="mrt" style="min-height:80px;margin-top:8px" placeholder="MKT301Z-..."></textarea>
+  <div class="row" style="margin-top:8px"><input type="file" id="mrf" accept=".txt,text/plain" style="max-width:100%;color:var(--ink2)"><button class="btn gold sm" id="mrgo">Restore</button></div></div>
+  <div class="err" id="mer"></div></div>`;
+  document.body.append(m);const k=e=>{if(e.key==='Escape'){closeModal();removeEventListener('keydown',k)}};addEventListener('keydown',k);
+  m.onclick=e=>{if(e.target===m)closeModal()};m.querySelector('.x').onclick=closeModal;m.querySelector('#mem').focus();
+  $('#mem').onclick=async()=>{const n=await emailBackup();$('#mer').style.color='var(--muted)';$('#mer').textContent=n>1800?'Your email app should open with the backup inside. If the code arrives cut off, download a copy and attach the file instead.':'Your email app should open. Press send to finish.'};
+  $('#mdl').onclick=downloadBackup;
+  $('#mcp').onclick=async()=>{const c=await backupCode();try{await navigator.clipboard.writeText(c);markSaved();toast('📋','Backup code copied','Keep it somewhere safe')}catch(e){$('#mrp').classList.remove('hide');$('#mrt').value=c;$('#mer').textContent='Copy the code above and keep it somewhere safe.'}};
+  $('#mrs').onclick=()=>$('#mrp').classList.toggle('hide');
+  $('#mrf').onchange=async e=>{const f=e.target.files[0];if(f)$('#mrt').value=(await f.text()).trim()};
+  $('#mrgo').onclick=async()=>{$('#mer').style.color='';$('#mer').textContent=await restore($('#mrt').value)}}
 function backupCard(){
   const last=LS.get('bk_'+ME.sid,'');$('#bkl').textContent=last?'Last saved '+last:'Not saved yet';
-  const mark=()=>{LS.set('bk_'+ME.sid,today());$('#bkl').textContent='Last saved '+today()};
-  $('#bkd').onclick=async()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([await backupCode()],{type:'text/plain'}));a.download='mkt301-progress-'+ME.sid+'-'+today()+'.txt';a.click();mark();toast('💾','Backup saved','Keep the file somewhere safe')};
-  $('#bkc').onclick=async()=>{const c=await backupCode();try{await navigator.clipboard.writeText(c);mark();toast('📋','Backup code copied','Paste it somewhere safe, e.g. a note or email to yourself')}catch(e){$('#bkp').classList.remove('hide');$('#bkt').value=c;$('#bke').textContent='Copy the code above and keep it somewhere safe.';mark()}};
+  $('#bkd').onclick=async()=>{await downloadBackup();$('#bkl').textContent='Last saved '+today()};
+  $('#bkc').onclick=openSave;
   $('#bkr').onclick=()=>$('#bkp').classList.toggle('hide');
   $('#bkf').onchange=async e=>{const f=e.target.files[0];if(f)$('#bkt').value=(await f.text()).trim()};
   $('#bkgo').onclick=async()=>{$('#bke').textContent=await restore($('#bkt').value)}}
@@ -449,7 +502,7 @@ function home(){
   </div>
   <div class="card" style="margin-top:26px" id="bk"><div class="row" style="justify-content:space-between"><h2 style="margin:0">💾 Save my progress</h2><span class="tag" id="bkl"></span></div>
   <p class="muted" style="font-size:.9rem;margin:8px 0 12px">Your progress lives on this device only. Save a backup to move it to another phone or laptop, or to keep it safe before clearing your browser.</p>
-  <div class="row"><button class="btn" id="bkd">⬇ Download backup file</button><button class="btn ghost" id="bkc">Copy backup code</button><button class="btn ghost" id="bkr">Restore a backup</button></div>
+  <div class="row"><button class="btn" id="bkd">⬇ Download backup file</button><button class="btn ghost" id="bkc">📧 Email or copy…</button><button class="btn ghost" id="bkr">Restore a backup</button></div>
   <div id="bkp" class="hide" style="margin-top:14px"><label for="bkt">Paste your backup code, or choose your backup file</label><textarea id="bkt" style="min-height:90px" placeholder="MKT301B-..."></textarea>
   <div class="row" style="margin-top:10px"><input type="file" id="bkf" accept=".txt,text/plain" style="max-width:100%;color:var(--ink2)"><button class="btn gold" id="bkgo">Restore</button></div><div class="err" id="bke"></div></div></div>`);
   backupCard()}
@@ -521,7 +574,7 @@ function qCard(q,i,o={}){
   const el=$('#q-'+q.id),st=U.plansSaved[q.id]||(U.plansSaved[q.id]={step:0,sel:[],checked:false,ticks:[]});
   if(!st.order)st.order=shuffle(q.chips.map((_,j)=>j));
   const steps=['1 · Plan','2 · Write','3 · Check'];
-  let h=`<div class="qmeta"><span class="tag">Question ${i+1}</span><span class="tag">${esc(q.skill||q.topic)}</span>${o.week?`<span class="tag">Week ${o.week}</span>`:''}<span class="tag">${q.marks||6} marks</span></div>
+  let h=`<div class="qmeta"><span class="tag">Question ${i+1}</span><span class="tag">${esc(q.skill||q.topic)}</span>${o.week?`<span class="tag">Week ${o.week}</span>`:''}<span class="tag">${q.marks||6} marks</span><button class="btn ghost sm rst" data-a="restart" title="Restart this question">↺ Restart</button></div>
   <h3 style="font-weight:600">${esc(q.q)}</h3><div class="steps">${steps.map((s,j)=>`<span class="${j===st.step?'on':j<st.step?'done':''}">${j<st.step?'✓ ':''}${s}</span>`).join('')}</div>`;
   if(st.step===0){
     h+=`<p class="muted" style="font-size:.9rem">Tap the ideas you would use in your answer. Some are decoys.</p><div class="chips">${st.order.map(j=>{const ch=q.chips[j],s=st.sel.includes(j);
@@ -540,6 +593,7 @@ function qCard(q,i,o={}){
     ${st.final?`<div class="fb ok"><b>Done.</b> ${st.ticks.length}/${q.checks.length} checks met. ${st.ticks.length<q.checks.length?'Try the missing ones next time.':'Excellent work.'}</div>`:`<button class="btn" data-a="fin">Finish</button>`}`}
   el.innerHTML=h;
   el.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const j=+b.dataset.j;st.sel=st.sel.includes(j)?st.sel.filter(x=>x!==j):st.sel.concat(j);save();qCard(q,i,o)});
+  el.querySelector('[data-a="restart"]').onclick=()=>restartItem(qKeys(q.id),'this question',()=>{delete U.plansSaved[q.id];LS.del('tm_'+q.id);clearInterval(TIMERS[q.id])})&&qCard(q,i,o);
   const A=a=>el.querySelector(`[data-a="${a}"]`);
   A('check')&&(A('check').onclick=()=>{st.checked=true;const good=q.chips.filter(x=>x.g).length,hit=st.sel.filter(j=>q.chips[j].g).length,bad=st.sel.some(j=>!q.chips[j].g);
     count('plans');if(o.week)count('bplans');award('plan:'+q.id+':'+today(),15,'Answer plan built');if(!bad&&hit===good){count('perfect');award('perfect:'+q.id,10,'Flawless plan')}save();qCard(q,i,o)});
@@ -614,7 +668,7 @@ function partCard(s,p){
   const prompt={a:`Define "competitive advantage" and identify TWO of Porter's Five Forces that affect ${s.name} in its new markets.`,
     b:`Apply Porter's Diamond to analyse whether the Maldives gives ${s.name} a national competitive advantage. Discuss THREE determinants.`,
     c:`Evaluate how ${s.name} could use Strategic Intent and Blue Ocean Strategy to stand out from bigger rivals. Recommend ONE strategic move and justify why competitors would find it hard to copy.`}[p];
-  let h=`<div class="qmeta"><span class="tag">Part (${p})</span><span class="tag">${esc(P.t)}</span><span class="tag">${P.m} marks</span></div><h3 style="font-weight:600">${esc(prompt)}</h3>
+  let h=`<div class="qmeta"><span class="tag">Part (${p})</span><span class="tag">${esc(P.t)}</span><span class="tag">${P.m} marks</span><button class="btn ghost sm rst" data-a="restart" title="Restart this part">↺ Restart</button></div><h3 style="font-weight:600">${esc(prompt)}</h3>
   <div class="steps">${['1 · Tool','2 · Write','3 · Check'].map((x,j)=>`<span class="${j===st.step?'on':j<st.step?'done':''}">${j<st.step?'✓ ':''}${x}</span>`).join('')}</div>`;
   if(st.step===0){
     if(p==='a')h+=`<h4>Which is the best definition?</h4>${chipSet('def',T.defs,st.def||[],st.checked,1)}<h4>Sort each fact into a force</h4>${sortRows('f',T.facts,FORCES,st.f||{},st.checked,'f')}`;
@@ -632,6 +686,7 @@ function partCard(s,p){
     ${st.final?`<div class="fb ok"><b>Part (${p}) done.</b> ${st.ticks.length}/${cl.length} checks met.</div>`:`<button class="btn" data-a="fin">Finish part (${p})</button>`}`}
   el.innerHTML=h;bindTools(el,st,redraw);
   const A=a=>el.querySelector(`[data-a="${a}"]`);
+  A('restart').onclick=()=>restartItem(partKeys(s.id,p),'part ('+p+')',()=>{delete U.cw[k];LS.del('tm_c_'+s.id+'_'+p);clearInterval(TIMERS['c_'+s.id+'_'+p])})&&redraw();
   A('check')&&(A('check').onclick=()=>{st.checked=true;count('plans');count('catool');if(p==='c')count('errc');award('ca:'+k+':'+today(),15,'Tool completed');save();redraw()});
   A('redo')&&(A('redo').onclick=()=>{Object.assign(st,{checked:false,def:[],f:{},d:{},in:[],e:{},mv:[],cp:[]});save();redraw()});
   A('go')&&(A('go').onclick=()=>{st.step=1;save();redraw()});
@@ -645,9 +700,10 @@ const COACH=['1 · Brief','2 · Plan','3 · Script','4 · Write','5 · Mark'];
 function coachView(id){
   const s=BANK_C.essays.find(x=>x.id===id);if(!s)return essayPage();
   const E=U.ess[id]||(U.ess[id]={step:0,sc:{},w:{},ord:{},yr:{},mode:{},marks:{}});
-  shell('#/essay',`<p><a href="#/essay">← Section C</a></p><div class="casehead" style="--c:#ffc94d"><div class="row"><span style="font-size:2.4rem">${s.icon}</span><div><h1 style="margin:0">${esc(s.name)}</h1><p class="muted" style="margin:0">Essay Coach · 20 marks · 40 minutes</p></div></div></div>
+  shell('#/essay',`<p><a href="#/essay">← Section C</a></p><div class="casehead" style="--c:#ffc94d"><div class="row"><span style="font-size:2.4rem">${s.icon}</span><div><h1 style="margin:0">${esc(s.name)}</h1><p class="muted" style="margin:0">Essay Coach · 20 marks · 40 minutes</p></div><button class="btn ghost sm rst" id="erst" title="Restart this essay">↺ Restart</button></div></div>
   <div class="subnav">${COACH.map((t,j)=>`<button data-st="${j}" class="${j===E.step?'on':''}" ${j>1&&!E.planDone?'disabled style="opacity:.45"':''}>${t}</button>`).join('')}</div><div id="pane"></div>`);
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{if(b.disabled)return;E.step=+b.dataset.st;save();coachView(id)});
+  $('#erst').onclick=()=>restartItem(essKeys(id),'this essay (plan, script, timer and marks)',()=>{delete U.ess[id];LS.del('tm_e_'+id);clearInterval(TIMERS['e_'+id])})&&coachView(id);
   [coachBrief,coachPlan,coachScript,coachWrite,coachMark][E.step](s,E)}
 const next=(s,E,n)=>{E.step=n;save();coachView(s.id);scrollTo(0,0)};
 function bandsHTML(){return `<div class="tablewrap"><table><tr><th>Marks</th><th>Level</th><th>What it looks like</th></tr>${BANDS.map(b=>`<tr><td><b>${b[0]}–${b[1]}</b></td><td>${b[2]}</td><td>${b[3]}</td></tr>`).join('')}</table></div>`}
