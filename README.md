@@ -24,6 +24,8 @@ A gamified study and practice site for MKT301 International Marketing (MNU Busin
 | `bank-c.js` | Section C strategy scenarios and essay scenarios |
 | `cloud.js` | Firebase connection: PIN accounts, progress sync, live leaderboard, lecturer dashboard |
 | `vendor/firebase.js` | The Firebase SDK, bundled so the site needs no CDN (rebuild: `sh tools/firebase/build.sh`) |
+| `concepts.js` | Automatic concept check for typed answers |
+| `CLAUDE.md`, `tools/marking/` | How Claude marks typed answers, and the fetch/apply scripts |
 | `roster.js` | Scrambled class list |
 | `leaderboard.js` | Leaderboard for device-only mode (the live board is in Firebase) |
 
@@ -41,6 +43,13 @@ Project `mkt301-f8830` (Authentication: Email/Password; Firestore in `asia-south
 
   Paste `firestore.rules` into Firebase console → Firestore → Rules → **Publish**. Run `build-roster.py` too (below).
 - **A student is locked out:** Firebase console → Authentication → Users → find `<id>@student.mnu.edu.mv` → ⋮ → *Reset password* or *Delete account* (they can then create a new PIN; their progress in Firestore is kept).
+
+## Typed answers and marking
+
+- **Automatic check** (`concepts.js`): a typed or spoken answer is checked against the question's key ideas (stemmed keywords, synonyms and a few hand-tuned patterns) and four structure points: definition, example, evaluation and recommendation. It gives a band from 0 to 6 and the XP: 10, plus 3 per key idea and 2 per structure point, up to 32. XP needs 40+ words and at least one key idea. Unit tests: `node tools/tests/concepts.js`.
+- **Integrity:** pasting and dropping are blocked. Any single insertion over 15 words that isn't from the 🎤 button is removed. Answers entered faster than about 2 words a second earn no XP. Flags are stored with each answer and shown in the Flags column of the dashboard.
+- **🎤 Speak:** uses the browser's speech-to-text (Chrome, Safari) where available.
+- **Marking:** submitted answers wait in the **Marking** card on the Lecturer tab. The lecturer can mark them there, or ask Claude Code to mark the queue (`CLAUDE.md` describes how: `tools/marking/fetch.mjs` → `marks.json` → `tools/marking/apply.mjs`, signed in as S000001 with the `MKT301_LECTURER_PIN` secret). Marks live in `reviews/{SID}`. Students see the band, feedback and XP live, and marked XP stays if they restart the question.
 
 ## Update the leaderboard by hand (device-only fallback)
 

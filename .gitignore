@@ -9,3 +9,8 @@ ClassList_*
 
 # Firebase rules contain the class list
 firestore.rules
+
+# Claude marking working files (student answers)
+tools/marking/pending.json
+tools/marking/marks.json
+tools/marking/marked-log.json

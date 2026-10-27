@@ -6,7 +6,8 @@ let chromium;try{({chromium}=require('playwright'))}catch(e){console.error('Play
 const ROOT=process.env.MKT301_ROOT||path.resolve(__dirname,'../..'),PORT=8900+Math.floor(Math.random()*90),URL0=`http://localhost:${PORT}/?emu=1`;
 const ARGS=Object.fromEntries(process.argv.slice(2).map(a=>a.replace(/^--/,'').split('=')).map(([k,v])=>[k,v??true]));
 const EMU='http://127.0.0.1:9099/emulator/v1/projects/demo-mkt301',FS='http://127.0.0.1:8085/v1/projects/demo-mkt301/databases/(default)/documents';
-const A='S081441',B='S085542',L='S000001',PIN='482913',PINB='730516',PINL='905127';
+const A='S081441',B='S085542',L='S000001',C='S082110',PIN='482913',PINB='730516',PINL='905127',PINC='371946';
+const fs=require('fs'),os=require('os'),{spawnSync}=require('child_process');
 let browser,fails=0,passes=0;const ok=(c,m)=>{if(!c)throw new Error(m)};
 const shot=async(p,name,full)=>{if(ARGS.shots)await p.screenshot({path:path.join(ARGS.shots,name+'.png'),fullPage:!!full})};
 
@@ -112,7 +113,49 @@ async resetLink(){for(const theme of ['dark','light']){const p=await page({theme
     await p.fill('#nm','Test Student');await p.click('#go');await p.waitForSelector('#pin');await p.fill('#pin',np);await p.click('#pgo');await synced(p);
     await p.goto(URL0+'&mode=resetPassword&oobCode='+encodeURIComponent(code));await p.waitForTimeout(1200);ok((await p.textContent('#act')).includes('expired or has already been used'),'reused link not rejected');
     await p.goto(URL0+'&mode=verifyEmail&oobCode=nonsense');await p.waitForTimeout(1200);ok((await p.textContent('#act')).includes("didn't work"),'bad verify link not handled');
-    await p.click('#ab');ok(await p.$('#sid'),'no way back to sign-in');await p.done()}}
+    await p.click('#ab');ok(await p.$('#sid'),'no way back to sign-in');await p.done()}},
+
+/* typed answer → Claude marking scripts (fetch → marks.json → apply) → the student sees the mark live; lecturer override; rules */
+async marking(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mkt301-mark-'));
+  const run=(f,pin,args=[])=>spawnSync(process.execPath,[path.join(ROOT,'tools/marking',f)].concat(args),{encoding:'utf8',
+    env:Object.assign({},process.env,{MKT301_EMU:'1',MKT301_LECTURER_PIN:pin,MKT301_MARK_DIR:dir})});
+  await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=x',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'s000001@student.mnu.edu.mv',password:PINL})});
+  const c=await page();await createPin(c,C,PINC,'Shifa Test');await tourOff(c);await c.go('#/short');
+  const id=(await c.locator('.qcard').getAttribute('id')).slice(2);
+  const info=await c.evaluate(id=>{const q=BANK_B.find(x=>x.id===id);return {good:q.chips.map((x,i)=>x.g?i:-1).filter(i=>i>=0),text:'This means '+q.chips.filter(x=>x.g).map(x=>x.t).join('. ')+'. For example, a firm can test this first. However, there is a risk. Overall I recommend this approach.'}},id);
+  for(const j of info.good)await c.click(`.qcard .chip[data-j="${j}"]`);await c.click('[data-a="check"]');await c.click('[data-a="rtyped"]');
+  await c.locator('.qcard textarea').click();const w=info.text.split(' ');for(let i=0;i<w.length;i+=8)await c.keyboard.insertText(w.slice(i,i+8).join(' ')+' ');
+  await c.evaluate(id=>{U.plansSaved[id].act=1e6},id);await c.click('[data-a="tdone"]');await c.click('[data-a="tfin"]');await c.waitForTimeout(2600);await synced(c);
+  const ud=await fsDoc('users',C);ok(ud&&JSON.parse(ud.u.stringValue).ans,'typed answer not saved for marking');
+  let r=run('fetch.mjs','000000');ok(r.status!==0&&/sign-in failed/i.test(r.stderr),'wrong lecturer PIN accepted: '+r.stderr);
+  r=run('fetch.mjs',PINL);ok(r.status===0,'fetch failed: '+r.stderr+r.stdout);ok(!/905127/.test(r.stdout+r.stderr),'PIN printed');
+  const pend=JSON.parse(fs.readFileSync(path.join(dir,'pending.json'),'utf8')),it=pend.items.find(x=>x.sid===C);
+  ok(it&&it.q===id&&it.answer.includes('For example')&&it.keyIdeas.length===info.good.length&&it.rubric.length===7,'pending item incomplete: '+JSON.stringify(it).slice(0,200));
+  fs.writeFileSync(path.join(dir,'marks.json'),JSON.stringify([{key:it.key,sid:C,q:id,band:9,xp:22,fb:'x'}]));r=run('apply.mjs',PINL,['--dry']);ok(r.status!==0&&/band/.test(r.stderr),'invalid mark accepted');
+  const x0=await c.evaluate(()=>U.xp);
+  fs.writeFileSync(path.join(dir,'marks.json'),JSON.stringify([{key:it.key,sid:C,q:id,band:5,xp:22,fb:'You covered every key idea clearly. Add one specific example from a real firm. Next time, finish with a firm recommendation.'}]));
+  r=run('apply.mjs',PINL);ok(r.status===0,'apply failed: '+r.stderr+r.stdout);ok(JSON.parse(fs.readFileSync(path.join(dir,'pending.json'),'utf8')).items.every(x=>x.key!==it.key),'marked item still pending');
+  const t0=Date.now();while(Date.now()-t0<10000&&!(await c.evaluate(k=>!!(U.log&&U.log['review:'+k]),it.key)))await c.waitForTimeout(200);
+  let u=await c.evaluate(()=>({xp:U.xp,badges:Object.keys(U.badges),n:U.n}));ok(u.xp===x0+22,'mark XP not awarded: +'+(u.xp-x0));ok(u.badges.includes('marked'),'Marked by the Pro badge missing');
+  await c.go('#/short');await c.waitForTimeout(300);const card=await c.textContent('.qcard');ok(card.includes('Marked 5/6')&&card.includes('Next time'),'mark not shown on the question');await shot(c,'mk-student',true);
+  /* rules: students can read only their own marks and can never write them */
+  const tokC=await c.evaluate(()=>CLOUD.user.getIdToken());
+  let h=await fetch(FS+'/reviews/'+C,{headers:{Authorization:'Bearer '+tokC}});ok(h.status===200,'student cannot read own marks: '+h.status);
+  h=await fetch(FS+'/reviews/'+C+'?updateMask.fieldPaths=m.fake',{method:'PATCH',headers:{Authorization:'Bearer '+tokC,'Content-Type':'application/json'},body:JSON.stringify({fields:{m:{mapValue:{fields:{fake:{mapValue:{fields:{xp:{integerValue:'30'}}}}}}}}})});
+  ok(h.status===403,'student could write a mark: '+h.status);
+  const o=await page();await createPin(o,'S084517','264819','Classmate Test');const tokB=await o.evaluate(()=>CLOUD.user.getIdToken());h=await fetch(FS+'/reviews/'+C,{headers:{Authorization:'Bearer '+tokB}});ok(h.status===403,'classmate could read marks: '+h.status);await o.done();
+  /* lecturer: marked list, override */
+  const l=await page({w:1280,h:900});await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);await l.go('#/lecturer');await l.waitForTimeout(1200);
+  ok((await l.textContent('#mqb')).includes('Marked (1)'),'marked list missing: '+(await l.textContent('#mqb')).slice(0,120));await l.click('#mqb [data-t="d"]');await l.click('#mqb [data-open]');
+  await l.selectOption('#mqb [data-f="band"]','6');await l.fill('#mqb [data-f="xp"]','26');await l.fill('#mqb [data-f="fb"]','Excellent, clear and well applied. Keep this structure.');await shot(l,'mk-lecturer',true);
+  await l.click('#mqb [data-save]');await l.waitForTimeout(800);
+  const t1=Date.now();while(Date.now()-t1<10000&&(await c.evaluate(k=>U.rev[k].band,it.key))!==6)await c.waitForTimeout(200);
+  u=await c.evaluate(k=>({xp:U.xp,r:U.rev[k]}),it.key);ok(u.r.band===6&&u.r.by==='lecturer'&&u.xp===x0+26,'override not applied: '+JSON.stringify(u));
+  ok((await l.textContent('#cdb')).includes(C),'dashboard missing the student');await l.done();
+  /* restart keeps marked XP (it's for a submitted answer) */
+  await c.go('#/short');const x2=await c.evaluate(()=>U.xp);await c.click('[data-a="restart"]');await c.waitForTimeout(200);
+  u=await c.evaluate(k=>({xp:U.xp,has:!!U.log['review:'+k]}),it.key);ok(u.has&&u.xp>=x2-60&&u.xp<x2,'restart removed the mark XP: '+JSON.stringify(u));
+  await c.done();fs.rmSync(dir,{recursive:true,force:true})}
 };
 
 (async()=>{const server=spawn('python3',['-m','http.server',String(PORT)],{cwd:ROOT,stdio:'ignore'});await new Promise(r=>setTimeout(r,800));

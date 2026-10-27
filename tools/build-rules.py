@@ -50,6 +50,15 @@ __EMAILS__
         && d.x is int && d.x >= 0 && d.x <= 50000
         && d.l is int && d.b is int && d.s is int && d.t == request.time;
     }
+    // Marks for typed answers: each student reads only their own; only the lecturer writes
+    // (the lecturer dashboard, or Claude marking signed in as the lecturer). m = {answerKey: {q, band, xp, fb, at, by}}.
+    match /reviews/{sid} {
+      allow read: if isOwner(sid) || isLecturer();
+      allow create, update: if isLecturer() && request.resource.data.keys().hasOnly(['m'])
+        && request.resource.data.m is map && request.resource.data.m.size() <= 500;
+      allow delete: if isLecturer();
+    }
+
     match /board/{sid} {
       allow read: if onRoster();
       allow create: if isOwner(sid) && validRow() && request.resource.data.x <= 5000;
