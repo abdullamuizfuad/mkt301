@@ -33,6 +33,7 @@
 .avatar{color:#0b1026!important}
 .themebtn{flex:none;width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:1.1rem;display:grid;place-items:center;margin-left:8px}
 .themebtn:hover{border-color:var(--teal)}
+#demo:fullscreen{overflow:auto;padding:32px max(16px,calc(50vw - 540px));background:var(--bg);font-size:1.1rem}
 body{transition:background-color .3s,color .3s}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -710,11 +711,52 @@ async function boardPage(){
   $('#cp').onclick=async()=>{const code=await upd();$('#cd').textContent=code;$('#cd').classList.remove('hide');try{await navigator.clipboard.writeText(code);toast('📋','Copied','Paste it into a message to your lecturer')}catch(e){}}}
 
 /* ---------- lecturer tools ---------- */
+/* classroom demo: made-up students, XP worked out from the real scoring rules */
+const DEMO_ROWS=[ // [activity, XP each, Student 1 count, Student 2 count]
+ ['Practise on a new day',10,6,1],['Daily mission completed',25,5,1],['Case sections read',5,23,12],['Whole case read',30,2,1],
+ ['Boardroom verdicts that match our reading',10,22,11],['Other boardroom verdicts',3,8,9],['Answer plans built',15,12,6],['Flawless plans (bonus)',10,4,0],
+ ['Timed answers written on paper',30,8,2],['Self-check points met',3,24,4],['Essay Coach tools checked',5,6,0],['Essay Coach plan completed',40,1,0]];
+const DEMO_P=[{n:'Student 1',who:'Practises about 35 minutes a day, 6 days a week',em:'🐢',time:'≈ 3.5 hours',streak:6,
+   badges:['🎫','📖','🎙️','😈','🎯','🧱','💎','⏱️','🔥','✅','⭐']},
+ {n:'Student 2',who:'Crams in one 4-hour session the night before',em:'🐇',time:'≈ 4 hours',streak:1,badges:['🎫','📖','🎙️','🧱','✅','⭐']}];
+function demoXP(i){return DEMO_ROWS.reduce((t,r)=>t+r[1]*r[2+i],0)}
+function demo(){
+  let mode='board';
+  const draw=()=>{document.querySelectorAll('[data-dm]').forEach(b=>b.classList.toggle('on',b.dataset.dm===mode));const x1=demoXP(0),x2=demoXP(1);let h='';
+    if(mode==='board'){const rows=[['Student 1',x1,11],['Student 3',1010,10],['Student 4',860,9],['Student 5',655,8],['Student 6',540,7],['Student 2',x2,6],['Student 7',310,4],['Student 8',150,2]].sort((a,b)=>b[1]-a[1]);
+      h=`<div class="lb">${rows.map((r,i)=>`<div class="r ${r[0]==='Student 1'||r[0]==='Student 2'?'me':''}"><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><div><b>${r[0]}</b><div class="muted" style="font-size:.8rem">${LEVELS[level(r[1]).i][1]} · ${r[2]} badges</div></div><b class="lex" style="color:var(--gold)">${r[1]} XP</b></div>`).join('')}</div>
+      <p class="muted" style="font-size:.85rem;margin-top:10px">Students 1 and 2 are highlighted. Open <b>Student 1 vs Student 2</b> to see why they are so far apart.</p>`}
+    else if(mode==='vs'){
+      h=`<div class="grid g2">${DEMO_P.map((p,i)=>{const x=demoXP(i),L=level(x);return `<div class="card" style="text-align:center;box-shadow:none"><div style="font-size:2.4rem">${p.em}</div><h3 style="margin:4px 0">${p.n}</h3><p class="muted" style="font-size:.88rem">${p.who}</p>
+        <div class="ring" style="--p:${L.pct};margin:0 auto;width:110px;height:110px"><div><b style="font-size:1.5rem">${x}</b><small>XP</small></div></div>
+        <div class="stats" style="grid-template-columns:repeat(3,1fr)"><div class="stat"><b style="font-size:1rem">${esc(L.name)}</b><span>level</span></div><div class="stat"><b>🔥 ${p.streak}</b><span>streak</span></div><div class="stat"><b>${p.badges.length}</b><span>badges</span></div></div>
+        <p style="font-size:1.3rem;letter-spacing:2px;margin:12px 0 4px">${p.badges.join('')}</p><p class="muted" style="font-size:.8rem;margin:0">Time spent: ${p.time}</p></div>`}).join('')}</div>
+      <h3 style="margin-top:18px">Where the XP came from</h3><div class="tablewrap"><table class="wide"><tr><th>Activity</th><th>XP each</th><th>Student 1</th><th>Student 2</th></tr>
+      ${DEMO_ROWS.map(r=>`<tr><td>${r[0]}</td><td>+${r[1]}</td><td>${r[2]} × ${r[1]} = <b>${r[1]*r[2]}</b></td><td>${r[3]} × ${r[1]} = <b>${r[1]*r[3]}</b></td></tr>`).join('')}
+      <tr><th>Total</th><th></th><th style="color:var(--gold)">${x1} XP</th><th style="color:var(--gold)">${x2} XP</th></tr></table></div>
+      <div class="callout" style="margin-top:14px"><b>Less time, ${(x1/x2).toFixed(1)}× the XP.</b> Student 1 spent about the same time but practised a little every day: daily check-ins and missions add up, timed writing on paper earns the most, and repeat practice makes plans flawless.</div>`}
+    else h=`<div class="grid g2">${[
+      ['📅','Show up daily','+10 for each new day and +25 for the daily mission. Six short days beat one long night.'],
+      ['✍️','Write on paper, timed','+30 per timed answer: the biggest single reward, and the habit that matters most.'],
+      ['🎯','Judge the boardroom carefully','+10 when your verdict matches our reading, +3 otherwise. Read the reasons; they teach the theory.'],
+      ['💎','Plan without decoys','+15 per plan, +10 more when it has every key idea and no decoys.'],
+      ['📖','Read every case in full','+5 a section, +30 for the whole case. Any case could be the one that matters.'],
+      ['🏆','Take on the Essay Coach','Up to +60 for the 40-minute essay, plus XP for every planning tool.']
+     ].map(t=>`<div class="card" style="box-shadow:none"><div style="font-size:1.8rem">${t[0]}</div><h3 style="margin:6px 0 4px">${t[1]}</h3><p class="muted" style="margin:0;font-size:.92rem">${t[2]}</p></div>`).join('')}</div>`;
+    $('#dm').innerHTML=h};
+  document.querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{mode=b.dataset.dm;draw()});
+  $('#fs').onclick=()=>{const d=$('#demo');if(document.fullscreenElement)document.exitFullscreen();else if(d.requestFullscreen)d.requestFullscreen()};
+  draw()}
 function lecturer(){
   if(ME.sid!==LECTURER)return home();
-  shell('#/lecturer',`<h1>Lecturer · Update the leaderboard</h1>
+  shell('#/lecturer',`<h1>Lecturer</h1>
+  <div class="card" id="demo" style="margin-bottom:22px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Show the class</h2><button class="btn ghost sm" id="fs">⛶ Full screen</button></div>
+  <p class="muted" style="font-size:.9rem;margin:6px 0 12px">Example students only, made up to explain how scoring works. Real scores appear on the Leaderboard tab.</p>
+  <div class="subnav"><button data-dm="board" class="on">🏆 Example leaderboard</button><button data-dm="vs">⚔️ Student 1 vs Student 2</button><button data-dm="tips">💡 How to climb</button></div><div id="dm"></div></div>
+  <h2>Update the leaderboard</h2>
   <div class="card"><ol style="padding-left:1.2em;margin-top:0"><li>Paste all the score emails or codes below (everything at once is fine).</li><li>Check the preview, then <b>Download leaderboard.js</b>.</li><li>On GitHub, open the <b>mkt301</b> repo → <b>Add file → Upload files</b> → drop in <code>leaderboard.js</code> → <b>Commit changes</b>.</li></ol>
   <textarea id="tx" placeholder="Paste score emails or codes here"></textarea><div class="row" style="margin-top:12px"><button class="btn" id="go">Read codes</button></div><div id="out" style="margin-top:16px"></div></div>`);
+  demo();
   $('#go').onclick=async()=>{const found=$('#tx').value.match(/MKT301-[A-Za-z0-9_-]+-[0-9a-f]{8}/g)||[];const best={};let bad=0,off=0;
     for(const code of found){const m=code.match(/^MKT301-(.+)-([0-9a-f]{8})$/);if((await sha('mkt301-score|'+m[1])).slice(0,8)!==m[2]){bad++;continue}
       let p;try{p=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,'+').replace(/_/g,'/')))))}catch(e){bad++;continue}
