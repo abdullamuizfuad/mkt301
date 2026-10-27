@@ -45,6 +45,13 @@
 .route{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:center;text-align:left;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)}
 .route:hover{border-color:var(--teal)}.route span{grid-row:span 2;font-size:1.5rem}.route b{font-family:Lexend}.route small{color:var(--muted);font-size:.8rem;line-height:1.35}
 textarea.answer{min-height:220px;font:16px/1.6 Inter,sans-serif}
+.ck{list-style:none;padding:0;margin:6px 0 12px;display:grid;gap:6px}.ck li{display:flex;gap:8px;align-items:flex-start;font-size:.93rem}.ck li i{font-style:normal;flex:none;width:1.3em;text-align:center}
+.ck li.no{color:var(--muted)}.autob{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--sunk);margin:10px 0}
+.autob b.big{font:800 1.8rem Lexend;color:var(--teal)}.mic.on{background:var(--red);color:#fff;border-color:var(--red)}.interim{font-size:.88rem;color:var(--muted);font-style:italic;min-height:1.2em}
+.mark{border:1px solid var(--gold);border-radius:14px;padding:12px 14px;margin:12px 0;background:linear-gradient(180deg,#ffc94d18,transparent)}.mark b.big{font:800 1.3rem Lexend;color:var(--gold)}
+.flagnote{font-size:.85rem;color:var(--gold);margin-top:6px}
+.mqi{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;background:var(--sunk)}.answerprev{white-space:normal;font-size:.92rem;line-height:1.55;max-height:260px;overflow:auto;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);margin-top:8px}
+label.inl{display:inline-flex;gap:6px;align-items:center;margin:0}label.inl select,label.inl input{font:16px Inter;padding:6px 8px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink)}label.inl input{width:76px}
 .bands{display:grid;gap:6px;margin-bottom:12px}.band{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--sunk);font:400 .9rem Inter;color:var(--ink);margin:0;cursor:pointer}
 .band.on{border-color:var(--teal);background:var(--w0d)}.band input{accent-color:var(--teal)}.band b{font:800 1.05rem Lexend;min-width:16px}
 details.mine{margin:6px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--sunk)}details.mine summary{cursor:pointer;font:600 .9rem Lexend}details.mine p{margin:10px 0 0;font-size:.92rem;color:var(--ink2)}
@@ -285,6 +292,7 @@ footer .row{justify-content:space-between}
 <script src="case-tuna.js"></script>
 <script src="bank-b.js"></script>
 <script src="bank-c.js"></script>
+<script src="concepts.js"></script>
 <script src="vendor/firebase.js"></script>
 <script src="cloud.js"></script>
 <script>
@@ -324,7 +332,8 @@ const BADGES=[
  {id:'blueocean',ico:'🌊',name:'Blue Ocean Explorer',d:'Complete 3 Blue Ocean canvases',t:u=>u.n.errc>=3},
  {id:'planner',ico:'🗺️',name:'Grand Planner',d:'Complete 3 essay plans',t:u=>u.n.eplans>=3},
  {id:'essayist',ico:'🖋️',name:'Essayist',d:'Write a full 40-minute essay on paper',t:u=>u.n.essays>=1},
- {id:'wordsmith',ico:'⌨️',name:'Wordsmith',d:'Type and mark 5 answers',t:u=>(u.n.typed||0)>=5},
+ {id:'wordsmith',ico:'⌨️',name:'Wordsmith',d:'Type 5 answers that hit key ideas',t:u=>(u.n.typed||0)>=5},
+ {id:'marked',ico:'🧑‍🏫',name:'Marked by the Pro',d:'Get a typed answer marked by your lecturer',t:u=>(u.n.reviewed||0)>=1},
  {id:'regional',ico:'🌏',name:'Regional Director',d:'Reach Regional Director level',t:u=>u.xp>=1400}
 ];
 /* daily missions: 3 a day from a pool, harder as the student levels up (tier 0: levels 1-2, tier 1: 3-4, tier 2: 5-6) */
@@ -332,12 +341,12 @@ const MPOOL=[
  {id:'read2',t:0,k:'read',n:2,x:'Read 2 case sections'},{id:'verd3',t:0,k:'verdicts',n:3,x:'Judge 3 Boardroom arguments'},
  {id:'right2',t:0,k:'verdictsRight',n:2,x:'Make 2 Boardroom calls that match our reading'},{id:'plan1',t:0,k:'plans',n:1,x:'Build 1 answer plan'},
  {id:'bplan1',t:0,k:'bplans',n:1,x:'Plan 1 Section B short answer'},{id:'timed1',t:0,k:'timed',n:1,x:'Finish 1 timed answer on paper'},
- {id:'typed1',t:0,k:'typed',n:1,x:'Type 1 answer and mark it against the key points'},{id:'esstool1',t:0,k:'esstool',n:1,x:'Check 1 Essay Coach planning tool'},
+ {id:'typed1',t:0,k:'typed',n:1,x:'Type 1 answer and check it'},{id:'esstool1',t:0,k:'esstool',n:1,x:'Check 1 Essay Coach planning tool'},
  {id:'read4',t:1,k:'read',n:4,x:'Read 4 case sections'},{id:'verd6',t:1,k:'verdicts',n:6,x:'Judge 6 Boardroom arguments'},
  {id:'right4',t:1,k:'verdictsRight',n:4,x:'Make 4 Boardroom calls that match our reading'},{id:'plan3',t:1,k:'plans',n:3,x:'Build 3 answer plans'},
  {id:'perfect1',t:1,k:'perfect',n:1,x:'Build 1 flawless plan (every key idea, no decoys)'},{id:'timed2',t:1,k:'timed',n:2,x:'Finish 2 timed answers on paper'},
  {id:'btimed1',t:1,k:'btimed',n:1,x:'Write 1 Section B answer against the clock'},{id:'catool1',t:1,k:'catool',n:1,x:'Complete 1 Section C strategy tool'},
- {id:'typed2',t:1,k:'typed',n:2,x:'Type and mark 2 answers'},{id:'esstool3',t:1,k:'esstool',n:3,x:'Check 3 Essay Coach planning tools'},
+ {id:'typed2',t:1,k:'typed',n:2,x:'Type and check 2 answers'},{id:'esstool3',t:1,k:'esstool',n:3,x:'Check 3 Essay Coach planning tools'},
  {id:'right6',t:2,k:'verdictsRight',n:6,x:'Make 6 Boardroom calls that match our reading'},{id:'perfect2',t:2,k:'perfect',n:2,x:'Build 2 flawless plans'},
  {id:'timed3',t:2,k:'timed',n:3,x:'Finish 3 timed answers on paper'},{id:'btimed2',t:2,k:'btimed',n:2,x:'Write 2 Section B answers against the clock'},
  {id:'catimed1',t:2,k:'catimed',n:1,x:'Write 1 Section C part on paper, timed'},{id:'ecplan1',t:2,k:'ecplan',n:1,x:'Complete a full Essay Coach plan'},
@@ -511,7 +520,7 @@ async function emailBackup(){const c=await backupCode();markSaved();
   return c.length}
 /* first-time tour: 4 steps, re-openable from the footer */
 const TOUR=[['🧩','Plan with chips','Every question starts with a plan. Tap the ideas you would use, then check your plan. Some chips are decoys, and the feedback explains why.'],
- ['🏁','Finish your way','After planning, choose: <b>📝 Plan only</b> to move on, <b>✍️ Write on paper</b> against the clock, or <b>⌨️ Type my answer</b> and compare it with the key points.'],
+ ['🏁','Finish your way','After planning, choose: <b>📝 Plan only</b> to move on, <b>✍️ Write on paper</b> against the clock, or <b>⌨️ Type my answer</b> (or speak it with 🎤) for an automatic check of the key ideas. Your lecturer may mark typed answers too.'],
  ['✨','XP, missions and badges','Earn XP for reading, planning and writing. Three daily missions change every day and get tougher as you level up. Unlock badges and climb the leaderboard.'],
  ['💾','Keep your progress safe','Your progress lives on this device. Tap <b>💾 Save</b> in the top bar to email a copy to your lecturer or download it.']];
 function tour(n){closeModal();const t=n===3&&cloudOn()?['☁️','Your progress follows you','You signed in with your PIN, so your progress saves to your account automatically. Carry on from any phone or laptop. Tap <b>💾 Save</b> any time for an extra backup copy.']:TOUR[n],m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','How it works');
@@ -679,6 +688,7 @@ function setSummary(P,go){const host=$('#qs'),sts=P.qs.map(q=>[q,U.plansSaved[q.
   const setT=P.qs.map(q=>tk(q,P.o(q))),wt=weakTopics(),sug=wt.find(t=>setT.includes(t))||wt[0];
   host.innerHTML=`<div class="card"><div style="font-size:2.4rem">🏁</div><h2 style="margin:4px 0">Set summary</h2>
   <div class="stats"><div class="stat"><b>${xp}</b><span>XP from this set</span></div><div class="stat"><b>${R.paper}</b><span>✍️ on paper</span></div><div class="stat"><b>${R.typed}</b><span>⌨️ typed</span></div><div class="stat"><b>${R.plan}</b><span>📝 plan only</span></div></div>
+  ${(()=>{const T=sts.filter(([q,s])=>s.route==='typed'&&s.done);return T.length?`<h3 style="margin-top:16px">Typed answers</h3><ul class="sumlist">${T.map(([q,s])=>{const r=s.ak&&U.rev&&U.rev[s.ak],c=s.chk;return `<li>${esc(q.skill||q.topic)}: automatic ${c?c.band:'–'}/6${r?` · <b>marked ${r.band}/6</b>${r.fb?`<div class="muted" style="font-size:.85rem">${esc(r.fb)}</div>`:''}`:cloudOn()?' · <span class="muted">waiting to be marked</span>':''}</li>`}).join('')}</ul>`:''})()}
   ${open?`<p class="muted" style="margin-top:12px">${open} question${open===1?' is':'s are'} not finished yet. <a href="javascript:void 0" id="sfo">Go back to ${open===1?'it':'them'}</a>.</p>`:''}
   ${mk.length?`<h3 style="margin-top:16px">Key ideas you left out</h3><ul class="sumlist">${mk.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`:''}
   ${bk.length?`<h3 style="margin-top:12px">Decoys you picked</h3><ul class="sumlist">${bk.map(t=>`<li><b>${esc(t)}</b>${bad[t]?`: <span class="muted">${esc(bad[t])}</span>`:''}</li>`).join('')}</ul>`:''}
@@ -709,7 +719,7 @@ function qCard(q,i,o={}){
       ${planHTML}<h4 style="margin-bottom:8px">How do you want to finish?</h4><div class="routes">
       <button class="route" data-a="rplan"><span>📝</span><b>Plan only</b><small>Move on now. Keeps your plan XP.</small></button>
       <button class="route" data-a="rpaper"><span>✍️</span><b>Write on paper</b><small>Timed, about ${mins} min. Full XP.</small></button>
-      <button class="route" data-a="rtyped"><span>⌨️</span><b>Type my answer</b><small>No timer needed. Compare with key points.</small></button></div>
+      <button class="route" data-a="rtyped"><span>⌨️</span><b>Type my answer</b><small>Type or speak it. Automatic check of key ideas.</small></button></div>
       <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-a="replan">Re-plan</button></div>`}
     else h+=`<div class="row" style="margin-top:14px"><button class="btn" data-a="check" ${st.sel.length?'':'disabled'}>Check my plan</button><span class="muted" style="font-size:.85rem">${st.sel.length} selected</span></div>`}
   else if(st.route==='plan'){
@@ -722,18 +732,23 @@ function qCard(q,i,o={}){
     h+=`<p>Read your answer on paper and tick what is true:</p><div class="checks">${q.checks.map((t,j)=>`<label><input type="checkbox" data-k="${j}" ${st.ticks.includes(j)?'checked':''} ${st.done?'disabled':''}> ${esc(t)}</label>`).join('')}</div>
     ${st.done?`<div class="fb ok"><b>Done.</b> ${st.ticks.length}/${q.checks.length} checks met. ${st.ticks.length<q.checks.length?'Try the missing ones next time.':'Excellent work.'}</div>${nextBtn}`:`<button class="btn" data-a="fin">Finish</button>`}`}
   else if(st.route==='typed'&&st.step===1){const w=words(st.txt);
-    h+=`${planHTML}<label for="ta-${q.id}">Type your answer</label><textarea id="ta-${q.id}" class="answer" placeholder="Use your plan: define, explain, apply to the example, then evaluate.">${esc(st.txt||'')}</textarea>
-    <div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" style="font-size:.85rem" id="wc-${q.id}">${w} words · aim for 150–250</span><span class="muted" style="font-size:.85rem" id="sw-${q.id}"></span></div>
-    <div class="row" style="margin-top:10px"><button class="btn" data-a="tdone">I'm done typing →</button>${st.sw?'':'<button class="btn ghost sm" data-a="sw">⏱ Show a timer</button>'}<button class="btn ghost sm" data-a="back">Choose another way</button></div>`}
-  else if(st.route==='typed'){st.kp=st.kp||[];
-    h+=`<details class="mine"><summary>Your answer (${words(st.txt)} words)</summary><p>${esc(st.txt||'').replace(/\n/g,'<br>')}</p></details>
-    <h4>A strong answer covers…</h4><p class="muted" style="font-size:.88rem;margin-top:-4px">Tick each point your typed answer actually covers.</p>
-    <div class="checks">${good.map(j=>`<label><input type="checkbox" data-kp="${j}" ${st.kp.includes(j)?'checked':''} ${st.done?'disabled':''}> ${esc(q.chips[j].t)}</label>`).join('')}</div>
-    <h4>Mark yourself out of 6</h4><div class="bands">${BANDS6.map(b=>`<label class="band ${st.band===b[0]?'on':''}"><input type="radio" name="bd-${q.id}" value="${b[0]}" ${st.band===b[0]?'checked':''} ${st.done?'disabled':''}><b>${b[0]}</b><span>${esc(b[1])}</span></label>`).join('')}</div>
-    ${st.done?`<div class="fb ok"><b>Done.</b> ${st.kp.length}/${good.length} key points covered · self-mark ${st.band}/6.${st.noxp?' No XP this time: typed XP needs at least '+MINWORDS+' words.':''}</div>${nextBtn}`:`<button class="btn" data-a="tfin" ${st.band==null?'disabled':''}>Finish</button>`}`}
+    h+=`${planHTML}<label for="ta-${q.id}">Type your answer</label><textarea id="ta-${q.id}" class="answer" placeholder="Use your plan: define, explain, apply to the example, then evaluate. Pasting is turned off: type or speak your own answer.">${esc(st.txt||'')}</textarea>
+    <div class="interim" id="im-${q.id}"></div><div class="row" style="justify-content:space-between;margin-top:2px"><span class="muted" style="font-size:.85rem" id="wc-${q.id}">${w} words · aim for 150–250</span><span class="muted" style="font-size:.85rem" id="sw-${q.id}"></span></div>
+    <div class="flagnote" id="fn-${q.id}">${(st.fl&&(st.fl.paste||st.fl.big))?'⚠️ Pasted text was removed. Type or speak your own answer.':''}</div>
+    <div class="row" style="margin-top:10px"><button class="btn" data-a="tdone">Check my answer →</button>${SR?`<button class="btn ghost sm mic" data-a="mic" aria-pressed="false">🎤 Speak</button>`:''}${st.sw?'':'<button class="btn ghost sm" data-a="sw">⏱ Show a timer</button>'}<button class="btn ghost sm" data-a="back">Choose another way</button></div>`}
+  else if(st.route==='typed'){const C=st.chk||CONCEPT.checkAnswer(q,st.txt||'',namesFor(q,o)),SL={def:'Defines the key term',ex:'Gives an example or names the case/company',ev:'Evaluates (however, but, therefore…)',rec:'Makes a recommendation or judgement'};
+    const why=typedNoXP(st,C);
+    h+=`<details class="mine"><summary>Your answer (${C.words} words)</summary><p>${esc(st.txt||'').replace(/\n/g,'<br>')}</p></details>
+    <div class="autob"><b class="big">${C.band}/6</b><div><b>Automatic check</b><div class="muted" style="font-size:.85rem">${esc(BANDS6[C.band][1])} · ${C.found.length} of ${C.need} key ideas · ${Object.values(C.struct).filter(Boolean).length}/4 structure</div></div></div>
+    <h4>Key ideas in a strong answer</h4><ul class="ck">${good.map(j=>{const f=C.found.includes(j);return `<li class="${f?'':'no'}"><i>${f?'✅':'○'}</i><span>${esc(q.chips[j].t)}${f?'':' <span class="tag">not found</span>'}</span></li>`}).join('')}</ul>
+    <h4>Structure</h4><ul class="ck">${Object.keys(SL).map(k=>`<li class="${C.struct[k]?'':'no'}"><i>${C.struct[k]?'✅':'○'}</i><span>${SL[k]}</span></li>`).join('')}</ul>
+    <p class="muted" style="font-size:.82rem">The check looks for key words and phrases, so it can miss ideas written in very different words. ${cloudOn()?'Your lecturer may also mark this answer.':''}</p>
+    ${reviewHTML_(st.ak)}
+    <h4>How do you rate it? <span class="muted" style="font-weight:400;font-size:.85rem">(optional, for your own reflection)</span></h4><div class="bands">${BANDS6.map(b=>`<label class="band ${st.band===b[0]?'on':''}"><input type="radio" name="bd-${q.id}" value="${b[0]}" ${st.band===b[0]?'checked':''} ${st.done?'disabled':''}><b>${b[0]}</b><span>${esc(b[1])}</span></label>`).join('')}</div>
+    ${st.done?`<div class="fb ${why?'no':'ok'}"><b>Done.</b> ${why?'No XP this time: '+why:'+'+(st.xpGot||C.xp)+' XP from the automatic check.'}</div>${nextBtn}`:`<div class="fb ${why?'no':'ok'}">${why?'No XP this time: '+why:'This answer earns <b>+'+C.xp+' XP</b> when you finish.'}</div><div class="row" style="margin-top:10px"><button class="btn" data-a="tfin">Finish and submit</button><button class="btn ghost sm" data-a="tedit">← Keep editing</button></div>`}`}
   el.innerHTML=h;o.refresh&&o.refresh();
   el.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const j=+b.dataset.j;st.sel=st.sel.includes(j)?st.sel.filter(x=>x!==j):st.sel.concat(j);save();re()});
-  el.querySelector('[data-a="restart"]').onclick=()=>restartItem(qKeys(q.id),'this question',()=>{delete U.plansSaved[q.id];LS.del('tm_'+q.id);clearInterval(TIMERS[q.id]);clearInterval(TIMERS['sw'+q.id])})&&re();
+  el.querySelector('[data-a="restart"]').onclick=()=>restartItem(qKeys(q.id),'this question',()=>{stopMic();delete U.plansSaved[q.id];LS.del('tm_'+q.id);clearInterval(TIMERS[q.id]);clearInterval(TIMERS['sw'+q.id])})&&re();
   const A=a=>el.querySelector(`[data-a="${a}"]`),on=(a,f)=>el.querySelectorAll(`[data-a="${a}"]`).forEach(b=>b.onclick=f);
   A('check')&&(A('check').onclick=()=>{st.checked=true;const hit=st.sel.filter(j=>q.chips[j].g).length,bad=st.sel.filter(j=>!q.chips[j].g).length;
     countOnce('plan:'+q.id+':'+today(),'plans',o.week&&'bplans');award('plan:'+q.id+':'+today(),15,'Answer plan built');if(!bad&&hit===good.length){countOnce('perfect:'+q.id,'perfect');award('perfect:'+q.id,10,'Flawless plan')}
@@ -742,24 +757,72 @@ function qCard(q,i,o={}){
   on('rplan',()=>{st.route='plan';st.done=true;st.step=0;save();toast('📝','Finished with your plan','Plan XP kept');o.next?o.next():re()});
   on('rpaper',()=>{st.route='paper';st.done=false;st.step=1;save();re()});
   on('rtyped',()=>{st.route='typed';st.done=false;st.step=1;save();re()});
-  on('back',()=>{LS.del('tm_'+q.id);clearInterval(TIMERS[q.id]);clearInterval(TIMERS['sw'+q.id]);st.route=null;st.step=0;save();re()});
+  on('back',()=>{stopMic();LS.del('tm_'+q.id);clearInterval(TIMERS[q.id]);clearInterval(TIMERS['sw'+q.id]);st.route=null;st.step=0;save();re()});
   on('next',()=>o.next?o.next():0);
   if(st.route==='paper'&&st.step===1)timer(q.id,secs,el,ok=>{st.step=2;if(ok){countOnce('timed:'+q.id+':'+today(),'timed',o.week&&'btimed');award('timed:'+q.id+':'+today(),30,'Timed answer finished')}else noTimeXP(secs);save();re()});
   el.querySelectorAll('[data-k]').forEach(b=>b.onchange=()=>{const j=+b.dataset.k;st.ticks=b.checked?st.ticks.concat(j):st.ticks.filter(x=>x!==j);save()});
   A('fin')&&(A('fin').onclick=()=>{st.final=st.done=true;award('check:'+q.id+':'+today(),st.ticks.length*3,'Self-check');if(st.ticks.length<q.checks.length/2)weakMark(q,o,1);save();re()});
   /* typed route */
-  const ta=$('#ta-'+q.id);if(ta){let tmo;ta.oninput=()=>{st.txt=ta.value;$('#wc-'+q.id).textContent=words(ta.value)+' words · aim for 150–250';clearTimeout(tmo);tmo=setTimeout(save,400)};
-    const swp=()=>{const s=$('#sw-'+q.id);if(!s)return clearInterval(TIMERS['sw'+q.id]);if(st.sw){const t=Math.floor((Date.now()-st.sw)/1000);s.textContent='⏱ '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}};
-    if(st.sw){clearInterval(TIMERS['sw'+q.id]);TIMERS['sw'+q.id]=setInterval(swp,1000);swp()}}
+  const ta=$('#ta-'+q.id);if(ta)typingBox(q,st,ta,el);
   on('sw',()=>{st.sw=Date.now();save();re()});
-  on('tdone',()=>{st.txt=ta.value;const w=words(st.txt);if(!w){toast('⌨️','Nothing typed yet','Type your answer first');return}
-    st.noxp=w<MINWORDS;if(st.noxp&&!confirm(`Only ${w} words.\n\nTyped XP needs at least ${MINWORDS} words. Continue without XP?`))return;
-    clearInterval(TIMERS['sw'+q.id]);st.step=2;save();re()});
-  el.querySelectorAll('[data-kp]').forEach(b=>b.onchange=()=>{const j=+b.dataset.kp;st.kp=b.checked?st.kp.concat(j):st.kp.filter(x=>x!==j);save()});
+  on('tdone',()=>{stopMic();st.txt=ta.value;const w=words(st.txt);if(!w){toast('⌨️','Nothing typed yet','Type or speak your answer first');return}
+    st.noxp=w<MINWORDS;if(st.noxp&&!confirm(`Only ${w} words.\n\nTyped XP needs at least ${MINWORDS} words. Check it anyway, without XP?`))return;
+    st.fast=(st.act||0)/1000<w*TYPE_SPW;st.chk=CONCEPT.checkAnswer(q,st.txt,namesFor(q,o));clearInterval(TIMERS['sw'+q.id]);st.step=2;save();re()});
+  on('tedit',()=>{st.step=1;st.chk=null;save();re()});
   el.querySelectorAll(`[name="bd-${q.id}"]`).forEach(b=>b.onchange=()=>{st.band=+b.value;save();re()});
-  A('tfin')&&(A('tfin').onclick=()=>{st.done=true;const n=st.kp.length;
-    if(!st.noxp){countOnce('typed:'+q.id+':'+today(),'typed',o.week&&'btyped');award('typed:'+q.id+':'+today(),20+2*n,'Typed answer marked')}
-    weakMark(q,o,(st.band<=2?2:st.band<=4?1:0)+(n<good.length/2?1:0));save();re()})}
+  A('tfin')&&(A('tfin').onclick=()=>{const C=st.chk||CONCEPT.checkAnswer(q,st.txt||'',namesFor(q,o)),why=typedNoXP(st,C);st.done=true;st.xpGot=why?0:C.xp;
+    if(st.fast){U.integ=U.integ||{};U.integ.fast=(U.integ.fast||0)+1}
+    st.ak=submitAnswer(q,o,st,C);
+    if(!why){countOnce('typed:'+q.id+':'+today(),'typed',o.week&&'btyped');award('typed:'+q.id+':'+today(),C.xp,'Typed answer checked')}
+    weakMark(q,o,(C.band<=2?2:C.band<=4?1:0)+(C.found.length<C.need/2?1:0));save();re()})}
+
+/* ---------- typed answers: integrity, speech, submission ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition,TYPE_SPW=.5,BIG=15;
+let MIC=null;
+function stopMic(){if(MIC){const m=MIC;MIC=null;try{m.rec.stop()}catch(e){}m.done()}}
+function namesFor(q,o){const c=o&&o.cid?CASES.find(x=>x.id===o.cid):null,n=[];
+  if(c){n.push(c.title,...c.title.split(/\s+/).filter(w=>w.length>3));(c.boardroom||[]).forEach(a=>n.push(a.who))}
+  (String(q.q).match(/\b[A-Z][a-zA-Z]{2,}(?:\s[A-Z][a-zA-Z]+)*/g)||[]).slice(1).forEach(x=>n.push(x));return [...new Set(n)]}
+function typedNoXP(st,C){if(st.noxp||C.words<MINWORDS)return 'typed XP needs at least '+MINWORDS+' words.';if(!C.found.length)return 'no key ideas were found. Use your plan and try again.';
+  if(st.fast)return 'this was entered faster than typing allows. Type or speak your own answer to earn XP.';return ''}
+/* keep the answer box honest: no pasting or dropping, no big insertions (except our own speech button), count active typing time */
+function typingBox(q,st,ta,el){let prev=ta.value,last=0,tmo;st.fl=st.fl||{};const wc=$('#wc-'+q.id),fn=$('#fn-'+q.id);
+  const sync=()=>{st.txt=ta.value;prev=ta.value;wc.textContent=words(ta.value)+' words · aim for 150–250';clearTimeout(tmo);tmo=setTimeout(save,400)};
+  const tick=()=>{const t=Date.now();if(last)st.act=(st.act||0)+Math.min(t-last,15000);last=t};
+  const flag=(k,msg)=>{st.fl[k]=(st.fl[k]||0)+1;U.integ=U.integ||{};U.integ[k]=(U.integ[k]||0)+1;fn.textContent='⚠️ '+msg;toast('🚫','Pasting is turned off','Type or speak your own answer');save()};
+  ['paste','drop'].forEach(ev=>ta.addEventListener(ev,e=>{e.preventDefault();flag('paste','Pasted text was removed. Type or speak your own answer.')}));
+  ta.addEventListener('beforeinput',e=>{const t=e.inputType||'';
+    if(/^insertFrom(Paste|Drop|Yank|PasteAsQuotation)$/.test(t)){e.preventDefault();return flag('paste','Pasted text was removed. Type or speak your own answer.')}
+    if(e.data&&t!=='insertFromDictation'&&words(e.data)>BIG){e.preventDefault();return flag('big','A large block of text was removed. Type or speak your own answer.')}});
+  ta.addEventListener('input',e=>{const t=e.inputType||'';
+    if(t!=='insertFromDictation'&&words(ta.value)-words(prev)>BIG){ta.value=prev;return flag('big','A large block of text was removed. Type or speak your own answer.')}
+    tick();sync()});
+  ta.addEventListener('focus',()=>{last=Date.now()});
+  const swp=()=>{const s=$('#sw-'+q.id);if(!s)return clearInterval(TIMERS['sw'+q.id]);if(st.sw){const t=Math.floor((Date.now()-st.sw)/1000);s.textContent='⏱ '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}};
+  if(st.sw){clearInterval(TIMERS['sw'+q.id]);TIMERS['sw'+q.id]=setInterval(swp,1000);swp()}
+  const mb=el.querySelector('[data-a="mic"]');if(!mb)return;
+  mb.onclick=()=>{if(MIC)return stopMic();
+    if(!LS.get('micnote',0)){LS.set('micnote',1);toast('🎤','Speech to text','Your speech is converted by Google or Apple and is not stored by MKT301 Arena.')}
+    let rec;try{rec=new SR()}catch(e){return toast('🎤','Speech not available','Your browser does not support speech to text.')}
+    rec.lang='en-GB';rec.continuous=true;rec.interimResults=true;const im=$('#im-'+q.id),t0=Date.now();
+    MIC={rec,done:()=>{st.act=(st.act||0)+(Date.now()-t0);mb.classList.remove('on');mb.textContent='🎤 Speak';mb.setAttribute('aria-pressed','false');if(im)im.textContent='';save()}};
+    rec.onresult=e=>{let tmp='';for(let k=e.resultIndex;k<e.results.length;k++){const r=e.results[k],t=r[0].transcript.trim();
+        if(r.isFinal){if(t){ta.value=(ta.value&&!/\s$/.test(ta.value)?ta.value+' ':ta.value)+t;sync()}}else tmp+=t+' '}if(im)im.textContent=tmp?'🎤 '+tmp:''};
+    rec.onerror=e=>{if(e.error==='not-allowed')toast('🎤','Microphone blocked','Allow the microphone for this site in your browser settings.');stopMic()};
+    rec.onend=()=>{if(MIC&&MIC.rec===rec){MIC=null;st.act=(st.act||0)+(Date.now()-t0);mb.classList.remove('on');mb.textContent='🎤 Speak';if(im)im.textContent='';save()}};
+    try{rec.start();mb.classList.add('on');mb.textContent='⏹ Stop';mb.setAttribute('aria-pressed','true')}catch(e){MIC=null}}}
+/* store a submitted typed answer so the lecturer (and Claude marking) can review it */
+function submitAnswer(q,o,st,C){U.ans=U.ans||{};const key=q.id+'_'+Date.now().toString(36);
+  U.ans[key]={q:q.id,sec:o.week?'B':o.cid||'',t:String(st.txt||'').slice(0,3000),at:new Date().toISOString(),b:C.band,f:C.found,s:Object.keys(C.struct).filter(k=>C.struct[k]),w:C.words,x:st.xpGot||0,
+    fl:{paste:(st.fl&&st.fl.paste)||0,big:(st.fl&&st.fl.big)||0,fast:st.fast?1:0}};
+  /* keep the newest 80: drop the oldest already-marked answers first, then the oldest */
+  const old=()=>Object.keys(U.ans).sort((a,b)=>U.ans[a].at<U.ans[b].at?-1:1);
+  for(const k of old()){if(Object.keys(U.ans).length<=80)break;if(U.rev&&U.rev[k]&&k!==key)delete U.ans[k]}
+  for(const k of old()){if(Object.keys(U.ans).length<=80)break;if(k!==key)delete U.ans[k]}
+  return key}
+/* a mark from the lecturer or Claude, shown on the question */
+function reviewHTML_(key){const r=key&&U.rev&&U.rev[key];if(!r)return '';
+  return `<div class="mark"><div class="row" style="justify-content:space-between"><span><b class="big">✓ Marked ${r.band}/6</b></span><span class="tag">+${r.xp} XP</span></div>${r.fb?`<p style="margin:8px 0 0">${esc(r.fb)}</p>`:''}<p class="muted" style="font-size:.8rem;margin:6px 0 0">${r.by==='claude'?'Marked with AI assistance for your lecturer':'Marked by your lecturer'} · ${esc(String(r.at||'').slice(0,10))}</p></div>`}
 
 /* timer that survives leaving the page: stored as {left, end} */
 function timer(id,total,el,done,tick){
@@ -951,7 +1014,7 @@ function badgesPage(){shell('#/badges',`<h1>Badges</h1><p class="muted">${Object
  <h2 style="margin-top:26px">Levels</h2><div class="card"><div class="tablewrap"><table><tr><th>Level</th><th>Title</th><th>XP needed</th></tr>${LEVELS.map((l,i)=>`<tr style="${level(U.xp).i===i?'color:var(--teal);font-weight:700':''}"><td>${i+1}</td><td>${l[1]}</td><td>${l[0]}</td></tr>`).join('')}</table></div></div>
  <h2 style="margin-top:26px">How to earn XP</h2><div class="card"><div class="tablewrap"><table>
  <tr><td>Read a case section</td><td>+5</td></tr><tr><td>Read a whole case</td><td>+30</td></tr><tr><td>Judge a boardroom argument</td><td>+10 if you agree with our reading, +3 otherwise</td></tr>
- <tr><td>Build an answer plan</td><td>+15 (+10 bonus for a flawless plan). Choosing <b>Plan only</b> keeps this XP and moves on.</td></tr><tr><td>Type an answer and mark it</td><td>+20, plus +2 for each key point it covers (needs at least 40 words)</td></tr><tr><td>Finish a timed answer on paper</td><td>+30 (write for at least 4 of the 10 minutes; any timed task needs 40% of its time on the clock)</td></tr><tr><td>Practise the same question again</td><td>XP and badge progress count once per question per day</td></tr><tr><td>Self-check</td><td>+3 per check met</td></tr>
+ <tr><td>Build an answer plan</td><td>+15 (+10 bonus for a flawless plan). Choosing <b>Plan only</b> keeps this XP and moves on.</td></tr><tr><td>Type (or speak) an answer and check it</td><td>+10, plus +3 for each key idea and +2 for each structure point the automatic check finds, up to +32. Needs at least 40 words, at least one key idea, and your own typing or speech: pasting is turned off.</td></tr><tr><td>Answer marked by your lecturer</td><td>Up to +30, depending on the mark. It stays even if you restart the question.</td></tr><tr><td>Finish a timed answer on paper</td><td>+30 (write for at least 4 of the 10 minutes; any timed task needs 40% of its time on the clock)</td></tr><tr><td>Practise the same question again</td><td>XP and badge progress count once per question per day</td></tr><tr><td>Self-check</td><td>+3 per check met</td></tr>
  <tr><td>Section C: complete a part's tool</td><td>+15</td></tr><tr><td>Section C: write a part on paper</td><td>+30</td></tr><tr><td>Section C: finish a whole scenario</td><td>+40</td></tr>
  <tr><td>Essay Coach: check a planning tool</td><td>+5 each</td></tr><tr><td>Essay Coach: complete a plan</td><td>+40</td></tr><tr><td>Essay Coach: write the 40-minute essay</td><td>+60</td></tr><tr><td>Essay Coach: self-mark</td><td>+20</td></tr>
  <tr><td>Practise on a new day</td><td>+10</td></tr><tr><td>Complete the daily mission</td><td>+25 Starter · +35 Pro · +50 Elite (missions get tougher as you level up)</td></tr></table></div></div>`)}
@@ -1058,31 +1121,63 @@ function classDash(){
   $('#cdash').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Class dashboard</h2><span class="live"><i></i>LIVE</span></div><div id="cdb"><p class="muted">Loading students…</p></div>`;
   CLOUD.watchUsers(list=>{const el=$('#cdb');if(!el)return;const I=qIndex();
     const st=list.filter(x=>x.id!==LECTURER&&x.u).map(x=>{const u=x.u,n=u.n||{};return {id:x.id,name:x.name||'',xp:u.xp|0,lv:level(u.xp|0).name,str:streak(Object.assign({days:[]},u)),ts:x.ts,
-      plans:n.plans|0,timed:n.timed|0,typed:n.typed|0,badges:Object.keys(u.badges||{}).length,weak:weakOf(u),done:practised(u),u}}).sort((a,b)=>b.xp-a.xp);
+      plans:n.plans|0,timed:n.timed|0,typed:n.typed|0,flags:Object.values(u.integ||{}).reduce((t,v)=>t+(v|0),0),badges:Object.keys(u.badges||{}).length,weak:weakOf(u),done:practised(u),u}}).sort((a,b)=>b.xp-a.xp);
     const day=864e5,now=Date.now(),act=d=>st.filter(x=>x.ts&&now-x.ts<d).length,total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:st.length);
     const dec={};st.forEach(x=>Object.entries(x.u.plansSaved||{}).forEach(([id,p])=>{const e=I[id];if(!e||!p.checked)return;(p.sel||[]).forEach(j=>{const c=e.q.chips[j];if(c&&!c.g){const k=id+'|'+j;dec[k]=dec[k]||{t:c.t,why:c.why,where:e.label,n:0};dec[k].n++}})}));
     const topDec=Object.values(dec).sort((a,b)=>b.n-a.n).slice(0,8);
     const areas=[...new Set(Object.values(I).map(e=>e.area))].map(a=>({a,label:a[0]==='w'?tkLabel(a):CASES.find(c=>'c:'+c.id===a).title+' (case practice)',n:st.filter(x=>[...x.done].some(id=>I[id]&&I[id].area===a)).length})).sort((a,b)=>a.n-b.n).slice(0,6);
     el.innerHTML=`<div class="stats" style="margin:12px 0"><div class="stat"><b>${st.length}/${total}</b><span>signed up</span></div><div class="stat"><b>${act(day)}</b><span>active today</span></div><div class="stat"><b>${act(7*day)}</b><span>active this week</span></div><div class="stat"><b>${st.length?Math.round(st.reduce((t,x)=>t+x.xp,0)/st.length):0}</b><span>average XP</span></div></div>
-    <div class="tablewrap"><table class="wide"><tr><th>#</th><th>Name</th><th>ID</th><th>XP</th><th>Level</th><th>🔥</th><th>Last active</th><th>Plans</th><th>Timed</th><th>Typed</th><th>Badges</th><th>Weak topics</th></tr>
-    ${st.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.id)}</td><td><b>${x.xp}</b></td><td>${esc(x.lv)}</td><td>${x.str}</td><td>${ago(x.ts)}</td><td>${x.plans}</td><td>${x.timed}</td><td>${x.typed}</td><td>${x.badges}</td><td style="font-size:.82rem">${esc(x.weak.join('; ')||'–')}</td></tr>`).join('')||'<tr><td colspan="12" class="muted">No students have signed in with a PIN yet.</td></tr>'}</table></div>
+    <div class="tablewrap"><table class="wide"><tr><th>#</th><th>Name</th><th>ID</th><th>XP</th><th>Level</th><th>🔥</th><th>Last active</th><th>Plans</th><th>Timed</th><th>Typed</th><th title="Pastes blocked, big insertions removed, too-fast answers">Flags</th><th>Badges</th><th>Weak topics</th></tr>
+    ${st.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.id)}</td><td><b>${x.xp}</b></td><td>${esc(x.lv)}</td><td>${x.str}</td><td>${ago(x.ts)}</td><td>${x.plans}</td><td>${x.timed}</td><td>${x.typed}</td><td>${x.flags?'<b style="color:var(--gold)">'+x.flags+'</b>':'0'}</td><td>${x.badges}</td><td style="font-size:.82rem">${esc(x.weak.join('; ')||'–')}</td></tr>`).join('')||'<tr><td colspan="13" class="muted">No students have signed in with a PIN yet.</td></tr>'}</table></div>
     <div class="grid g2" style="margin-top:16px"><div><h3>Decoys the class picks most</h3>${topDec.length?`<ol class="sumlist">${topDec.map(d=>`<li><b>${esc(d.t)}</b> <span class="tag">${d.n} student${d.n===1?'':'s'}</span><div class="muted" style="font-size:.82rem">${esc(d.where)}${d.why?' · '+esc(d.why):''}</div></li>`).join('')}</ol>`:'<p class="muted">No decoys picked yet.</p>'}</div>
     <div><h3>Practised by the fewest students</h3><ol class="sumlist">${areas.map(a=>`<li>${esc(a.label)} <span class="tag">${a.n}/${st.length||0}</span></li>`).join('')}</ol></div></div>
     <button class="btn ghost sm" id="csv" style="margin-top:12px">⬇ Download CSV</button>`;
-    $('#csv').onclick=()=>{const q=v=>'"'+String(v).replace(/"/g,'""')+'"',rows=[['Name','ID','XP','Level','Streak','Last active','Plans','Timed','Typed','Badges','Weak topics']].concat(st.map(x=>[x.name,x.id,x.xp,x.lv,x.str,x.ts?x.ts.toISOString():'',x.plans,x.timed,x.typed,x.badges,x.weak.join('; ')]));
+    $('#csv').onclick=()=>{const q=v=>'"'+String(v).replace(/"/g,'""')+'"',rows=[['Name','ID','XP','Level','Streak','Last active','Plans','Timed','Typed','Integrity flags','Badges','Weak topics']].concat(st.map(x=>[x.name,x.id,x.xp,x.lv,x.str,x.ts?x.ts.toISOString():'',x.plans,x.timed,x.typed,x.flags,x.badges,x.weak.join('; ')]));
       const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='mkt301-class-'+today()+'.csv';a.click()}},
   e=>{const el=$('#cdb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
+/* marking: typed answers waiting for a mark, and marks already given (by Claude marking or by the lecturer) */
+function markQueue(){let US=null,RV=null,tab='q',open=null;const drafts={},I=qIndex();
+  $('#mq').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Marking</h2><span class="live"><i></i>LIVE</span></div>
+  <p class="muted" style="font-size:.88rem;margin:6px 0 10px">Typed answers students have submitted. Mark them here, or ask Claude to mark the queue (see CLAUDE.md in the repo). Students see the mark, feedback and XP straight away.</p><div id="mqb"><p class="muted">Loading answers…</p></div>`;
+  const flags=a=>{const f=a.fl||{};return [f.paste?'paste blocked ×'+f.paste:'',f.big?'big insert ×'+f.big:'',f.fast?'too fast':''].filter(Boolean).join(' · ')};
+  const draw=force=>{const el=$('#mqb');if(!el||!US||!RV)return;const ae=document.activeElement;if(!force&&ae&&el.contains(ae)&&/TEXTAREA|INPUT|SELECT/.test(ae.tagName))return;
+    const all=[];US.forEach(x=>{if(x.id===LECTURER||!x.u||!x.u.ans)return;Object.entries(x.u.ans).forEach(([k,a])=>{if(a&&a.q)all.push({sid:x.id,name:x.name||'',k,a,r:(RV[x.id]||{})[k]})})});
+    all.sort((p,q)=>String(p.a.at)<String(q.a.at)?1:-1);const pend=all.filter(x=>!x.r),done=all.filter(x=>x.r),list=(tab==='q'?pend:done).slice(0,40);
+    const item=x=>{const e=I[x.a.q],qt=e?e.q.q:x.a.q,d=drafts[x.k]||{band:x.r?x.r.band:x.a.b|0,xp:x.r?x.r.xp:Math.min(30,(x.a.b|0)*4),fb:x.r?x.r.fb:''},fl=flags(x.a);
+      return `<div class="mqi" data-k="${esc(x.k)}"><div class="row" style="justify-content:space-between"><b>${esc(x.name||x.sid)}</b><span class="muted" style="font-size:.8rem">${esc(x.sid)} · ${esc(String(x.a.at||'').slice(0,16).replace('T',' '))}</span></div>
+      <div class="muted" style="font-size:.85rem">${esc(e?e.label:x.a.q)}: ${esc(qt.slice(0,150))}${qt.length>150?'…':''}</div>
+      <div style="font-size:.85rem;margin:4px 0">Automatic ${x.a.b|0}/6 · ${x.a.w|0} words${fl?` · <span style="color:var(--gold)">⚠️ ${esc(fl)}</span>`:''}${x.r?` · <b>marked ${x.r.band}/6, +${x.r.xp} XP</b> <span class="muted">(${x.r.by==='lecturer'?'you':'Claude'})</span>`:''}</div>
+      ${open===x.k?`<div class="answerprev">${esc(x.a.t||'').replace(/\n/g,'<br>')}</div>
+      <div class="row" style="margin-top:8px"><label class="inl">Band <select data-f="band">${[0,1,2,3,4,5,6].map(b=>`<option value="${b}" ${b===d.band?'selected':''}>${b}</option>`).join('')}</select></label><label class="inl">XP <input type="number" min="0" max="30" data-f="xp" value="${d.xp}"></label></div>
+      <textarea data-f="fb" maxlength="600" style="min-height:80px;margin-top:8px" placeholder="Feedback: one strength, the most important missing point, one tip">${esc(d.fb||'')}</textarea>
+      <div class="row" style="margin-top:8px"><button class="btn sm" data-save>Save mark</button><button class="btn ghost sm" data-close>Close</button></div><div class="err" data-er></div>`
+      :`<button class="btn ghost sm" data-open style="margin-top:4px">${x.r?'Edit mark':'Read and mark'}</button>`}</div>`};
+    el.innerHTML=`<div class="subnav"><button data-t="q" class="${tab==='q'?'on':''}">⏳ To mark (${pend.length})</button><button data-t="d" class="${tab==='d'?'on':''}">✅ Marked (${done.length})</button></div>
+    ${list.map(item).join('')||`<p class="muted">${tab==='q'?'Nothing waiting. New typed answers appear here.':'No marks yet.'}</p>`}${(tab==='q'?pend:done).length>40?'<p class="muted" style="font-size:.85rem">Showing the newest 40.</p>':''}`;
+    el.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;open=null;draw(1)});
+    el.querySelectorAll('.mqi').forEach(box=>{const k=box.dataset.k,x=all.find(y=>y.k===k);
+      box.querySelector('[data-open]')&&(box.querySelector('[data-open]').onclick=()=>{open=k;draw(1)});
+      box.querySelector('[data-close]')&&(box.querySelector('[data-close]').onclick=()=>{open=null;delete drafts[k];draw(1)});
+      box.querySelectorAll('[data-f]').forEach(f=>f.oninput=f.onchange=()=>{const d=drafts[k]||(drafts[k]={band:x.r?x.r.band:x.a.b|0,xp:x.r?x.r.xp:Math.min(30,(x.a.b|0)*4),fb:x.r?x.r.fb:''});
+        d[f.dataset.f]=f.dataset.f==='fb'?f.value:+f.value;if(f.dataset.f==='band'&&!x.r&&!d.xpSet){d.xp=Math.min(30,d.band*4);box.querySelector('[data-f="xp"]').value=d.xp}if(f.dataset.f==='xp')d.xpSet=1});
+      box.querySelector('[data-save]')&&(box.querySelector('[data-save]').onclick=async()=>{const g=n=>box.querySelector(`[data-f="${n}"]`);
+        const v={q:x.a.q,band:Math.max(0,Math.min(6,+g('band').value|0)),xp:Math.max(0,Math.min(30,+g('xp').value|0)),fb:g('fb').value.trim().slice(0,600),at:new Date().toISOString(),by:'lecturer'};
+        const b=box.querySelector('[data-save]');b.disabled=true;b.textContent='Saving…';
+        try{await CLOUD.saveReview(x.sid,k,v);delete drafts[k];open=null;toast('✅','Mark saved',(x.name||x.sid)+': '+v.band+'/6, +'+v.xp+' XP');draw(1)}
+        catch(e){b.disabled=false;b.textContent='Save mark';box.querySelector('[data-er]').textContent=CLOUD.say(e)}})})};
+  const err=e=>{const el=$('#mqb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`};
+  CLOUD.watchUsers(l=>{US=l;draw()},err);CLOUD.watchReviews(r=>{RV=r;draw()},err)}
 function lecturer(){
   if(ME.sid!==LECTURER)return home();
   shell('#/lecturer',`<h1>Lecturer</h1>
-  ${cloudOn()?'<div class="card" id="cdash" style="margin-bottom:22px"></div>':'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
+  ${cloudOn()?'<div class="card" id="cdash" style="margin-bottom:22px"></div><div class="card" id="mq" style="margin-bottom:22px"></div>':'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
   <div class="card" id="demo" style="margin-bottom:22px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Show the class</h2><button class="btn ghost sm" id="fs">⛶ Full screen</button></div>
   <p class="muted" style="font-size:.9rem;margin:6px 0 12px">Example students only, made up to explain how scoring works. Real scores appear on the Leaderboard tab.</p>
   <div class="subnav"><button data-dm="board" class="on">🏆 Example leaderboard</button><button data-dm="vs">⚔️ Student 1 vs Student 2</button><button data-dm="tips">💡 How to climb</button></div><div id="dm"></div></div>
   <h2>Content review</h2><div class="card" id="rvw" style="margin-bottom:22px"></div>
   <details class="card"${cloudOn()?'':' open'}><summary class="lex" style="cursor:pointer;font-weight:700">Offline fallback: update the leaderboard from score codes</summary><p class="muted" style="font-size:.88rem">Only needed if the live leaderboard is unavailable.</p><ol style="padding-left:1.2em;margin-top:0"><li>Paste all the score emails or codes below (everything at once is fine).</li><li>Check the preview, then <b>Download leaderboard.js</b>.</li><li>On GitHub, open the <b>mkt301</b> repo → <b>Add file → Upload files</b> → drop in <code>leaderboard.js</code> → <b>Commit changes</b>.</li></ol>
   <textarea id="tx" placeholder="Paste score emails or codes here"></textarea><div class="row" style="margin-top:12px"><button class="btn" id="go">Read codes</button></div><div id="out" style="margin-top:16px"></div></details>`);
-  if(cloudOn())classDash();
+  if(cloudOn()){classDash();markQueue()}
   demo();$('#rvw').innerHTML=reviewHTML();$('#rvw').querySelectorAll('[data-rv]').forEach(b=>b.onchange=()=>{const r=LS.get('review',{});r[b.dataset.rv]=b.checked;LS.set('review',r)});
   $('#go').onclick=async()=>{const found=$('#tx').value.match(/MKT301-[A-Za-z0-9_-]+-[0-9a-f]{8}/g)||[];const best={};let bad=0,off=0;
     for(const code of found){const m=code.match(/^MKT301-(.+)-([0-9a-f]{8})$/);if((await sha('mkt301-score|'+m[1])).slice(0,8)!==m[2]){bad++;continue}
@@ -1117,7 +1212,18 @@ async function cloudSync(){const sid=ME.sid;
     toast('📴','Offline for now','Your progress is saved on this device and will sync when you reconnect.');return}
   if(!ME||ME.sid!==sid)return;const R=r&&r.u;
   if(R&&(R._t||0)>LOAD_T){U=Object.assign(blank(),R);U.n=Object.assign(blank().n,U.n);LS.set('u_'+sid,U);hud();route();toast('☁️','Progress loaded',U.xp+' XP from your account')}
-  CLOUD.ready(sid,()=>ME&&ME.sid===sid?{sid,name:ME.name,U,row:rowOf(sid)}:null);CLOUD.flush()}
+  CLOUD.ready(sid,()=>ME&&ME.sid===sid?{sid,name:ME.name,U,row:rowOf(sid)}:null);CLOUD.flush();
+  if(sid!==LECTURER)CLOUD.watchMine(sid,m=>{if(ME&&ME.sid===sid)applyMarks(m)})}
+/* a new or changed mark: award its XP once (and adjust if the lecturer changes it later). Restart doesn't remove it. */
+function applyMarks(m){U.rev=U.rev||{};U.gain=U.gain||{};let n=0,ch=0;
+  for(const [key,v] of Object.entries(m||{})){if(!v||typeof v!=='object')continue;
+    const r={q:String(v.q||''),band:Math.max(0,Math.min(6,v.band|0)),xp:Math.max(0,Math.min(30,v.xp|0)),fb:String(v.fb||'').slice(0,600),at:String(v.at||''),by:v.by==='lecturer'?'lecturer':'claude'},k='review:'+key;
+    const old=U.rev[key];U.rev[key]=r;
+    if(!U.log[k]){countOnce(k,'reviewed');award(k,r.xp,'Marked by your lecturer');n++}
+    else if((U.gain[k]|0)!==r.xp){U.xp=Math.max(0,U.xp+r.xp-(U.gain[k]|0));U.gain[k]=r.xp;ch++}
+    else if(old&&(old.band!==r.band||old.fb!==r.fb))ch++}
+  if(n||ch){save();hud();if(n)toast('🧑‍🏫',n===1?'An answer was marked':n+' answers were marked','Open the question to read the feedback');else toast('🧑‍🏫','A mark was updated','Open the question to see it');
+    const ae=document.activeElement;if(!(ae&&ae.tagName==='TEXTAREA'))route()}}
 /* email links: Firebase sends students here (Templates → Customize action URL) */
 const ACT=(()=>{const q=new URLSearchParams(location.search);return q.get('oobCode')&&q.get('mode')?{mode:q.get('mode'),code:q.get('oobCode')}:null})();
 function clearAct(){const q=new URLSearchParams(location.search);['mode','oobCode','apiKey','lang','continueUrl'].forEach(k=>q.delete(k));

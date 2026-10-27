@@ -7,7 +7,7 @@ const CLOUD=(()=>{
     storageBucket:'mkt301-f8830.firebasestorage.app',messagingSenderId:'372346043261',appId:'1:372346043261:web:5e01df4385f46e5a50aa14'};
   const DOMAIN='student.mnu.edu.mv',local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname),q=location.search;
   const emu=local&&/[?&]emu=1\b/.test(q),off=local&&!emu&&!/[?&]cloud=1\b/.test(q);
-  let F,auth,db,user=null,authReady,state='off',synced=null,timer=null,busy=false,again=false,boardX,unsubs=[],getState=null;
+  let F,auth,db,user=null,authReady,state='off',synced=null,timer=null,busy=false,again=false,boardX,unsubs=[],getState=null,own=null;
   const subs=new Set(),set=s=>{state=s;subs.forEach(f=>{try{f(s)}catch(e){}})};
   const C={ok:false,emu,
     email:sid=>String(sid).toLowerCase()+'@'+DOMAIN,
@@ -36,7 +36,7 @@ const CLOUD=(()=>{
   C.confirmReset=(code,pin)=>F.confirmPasswordReset(auth,code,pin);
   C.checkCode=code=>F.checkActionCode(auth,code);
   C.applyCode=code=>F.applyActionCode(auth,code);
-  C.signOut=async()=>{C.unwatch();synced=null;clearTimeout(timer);set('off');if(C.ok&&auth)try{await F.signOut(auth)}catch(e){}};
+  C.signOut=async()=>{C.unwatch();C.unwatchMine();synced=null;clearTimeout(timer);set('off');if(C.ok&&auth)try{await F.signOut(auth)}catch(e){}};
   C.mine=sid=>!!(user&&user.email===C.email(sid));
 
   /* friendly text for Firebase error codes */
@@ -77,5 +77,11 @@ const CLOUD=(()=>{
     s=>cb(s.docs.map(d=>Object.assign({id:d.id},d.data()))),e=>err&&err(e)))};
   C.watchUsers=(cb,err)=>{unsubs.push(F.onSnapshot(F.collection(db,'users'),
     s=>cb(s.docs.map(d=>{const x=d.data();let u=null;try{u=JSON.parse(x.u)}catch(e){}return {id:d.id,name:x.name,xp:x.xp,ts:x.ts&&x.ts.toDate?x.ts.toDate():null,u}})),e=>err&&err(e)))};
+  /* marks from the lecturer (or Claude marking): reviews/{SID} = {m:{key:{q,band,xp,fb,at,by}}}.
+     The student's own listener stays on across page changes; the lecturer's listeners are page-scoped. */
+  C.watchMine=(sid,cb)=>{C.unwatchMine();own=F.onSnapshot(F.doc(db,'reviews',sid),d=>cb(d.exists()?(d.data().m||{}):{}),e=>console.warn('Marks unavailable',e))};
+  C.unwatchMine=()=>{if(own){try{own()}catch(e){}own=null}};
+  C.watchReviews=(cb,err)=>{unsubs.push(F.onSnapshot(F.collection(db,'reviews'),s=>{const o={};s.docs.forEach(d=>o[d.id]=d.data().m||{});cb(o)},e=>err&&err(e)))};
+  C.saveReview=(sid,key,v)=>F.setDoc(F.doc(db,'reviews',sid),{m:{[key]:v}},{merge:true});
   return C})();
 CLOUD.init();

@@ -18,7 +18,7 @@ async function page(opts={}){
   p.on('pageerror',e=>p.errs.push('pageerror: '+e.message));
   p.on('console',m=>{if(m.type()==='error'&&!/mailto|favicon|fonts\.g/.test(m.text()))p.errs.push('console: '+m.text())});
   p.on('dialog',d=>d.accept());
-  if(opts.clock)await p.clock.install();
+  if(opts.clock)await p.clock.install();if(opts.init)await p.addInitScript(opts.init);
   await p.goto(URL0);
   if(opts.sid){await p.evaluate(([sid,theme,tour])=>{localStorage.setItem('mkt301_session',JSON.stringify({sid,name:'Test Student'}));
       if(tour)localStorage.setItem('mkt301_u_'+sid,JSON.stringify({tour:1}));if(theme)localStorage.setItem('mkt301_theme',JSON.stringify(theme))},[opts.sid,opts.theme,opts.tour!==false]);
@@ -35,7 +35,16 @@ async function plan(p,k){const q=p.locator('.qcard').first();
     for(const j of good)await q.locator(`.chip[data-j="${j}"]`).click()}
   await q.locator('[data-a="check"]').click();await p.waitForTimeout(40)}
 
+/* type into the focused answer box like a person: small chunks, with time passing (needs page({clock:true})) */
+async function typeAnswer(p,text,o={}){const ta=p.locator('.qcard textarea');await ta.click();const w=text.split(/\s+/);
+  for(let i=0;i<w.length;i+=8){await p.keyboard.insertText(w.slice(i,i+8).join(' ')+' ');if(!o.fast)await p.clock.runFor(6000)}await p.waitForTimeout(20)}
+/* an answer built from the focused question's key ideas, with definition, example, evaluation and recommendation */
+async function goodText(p){const id=(await p.locator('.qcard').first().getAttribute('id')).slice(2);
+  return p.evaluate(id=>{const q=CASES.flatMap(c=>c.questions).concat(BANK_B).find(x=>x.id===id);
+    return 'This means '+q.chips.filter(c=>c.g).map(c=>c.t).join('. ')+'. For example, the company can test this first. However, there is a risk. Overall I recommend this approach.'},id)}
 const T={
+async concepts(){const r=require('child_process').spawnSync(process.execPath,[path.join(__dirname,'concepts.js')],{encoding:'utf8'});ok(r.status===0,'concept unit tests failed:\n'+r.stdout+r.stderr)},
+
 async signin(){const p=await page();
   ok(await p.$('#sid'),'sign-in form missing');
   await p.fill('#nm','Test Student');await p.type('#sid','0814');ok((await p.textContent('#mla')).startsWith('s0814'),'email does not fill while typing');
@@ -65,8 +74,8 @@ async sectionB(){const p=await page({sid:STUDENT,clock:true});const ids=await p.
   for(const [k,id] of ids.entries()){await p.evaluate(id=>{U.sets._b=[id];U.bweek=0;(U.focus=U.focus||{})._b=0;save();location.hash='#/short';shortPage()},id);await p.waitForTimeout(60);
     ok(await p.$('#q-'+id),'question not shown: '+id);await plan(p);const r=['rplan','rpaper','rtyped'][k%3];await p.click(`[data-a="${r}"]`);
     if(r==='rpaper'){await p.click('[data-a="tgo"]');await p.clock.fastForward(300000);await p.click('[data-a="done"]');await p.locator('[data-k]').first().check();await p.click('[data-a="fin"]')}
-    if(r==='rtyped'){await p.fill('.qcard textarea','A clear explanation of the concept with an applied example. '.repeat(8));await p.click('[data-a="tdone"]');
-      await p.locator('[data-kp]').first().check();await p.locator('.band input[value="5"]').check();await p.click('[data-a="tfin"]')}
+    if(r==='rtyped'){await typeAnswer(p,await goodText(p));await p.click('[data-a="tdone"]');ok(+(await p.textContent('.autob b.big')).split('/')[0]>=4,id+': good typed answer scored low');
+      await p.locator('.band input[value="5"]').check();await p.click('[data-a="tfin"]')}
     await p.waitForTimeout(30)}
   const u=await p.U();ok(u.n.timed>=18&&u.n.typed>=18,'routes not counted: timed '+u.n.timed+', typed '+u.n.typed);ok(u.badges.includes('wordsmith'),'Wordsmith badge missing');await p.done()},
 
@@ -91,12 +100,32 @@ async antiFarming(){const p=await page({sid:STUDENT,clock:true});await p.go('#/c
   let u=await p.U();ok(u.n.plans===1&&u.n.perfect===1,'re-planning inflated counters: '+JSON.stringify(u.n));const x1=u.xp;
   await p.click('[data-a="restart"]');await p.waitForTimeout(80);u=await p.U();ok(u.xp===x1-25&&u.n.plans===0,'restart did not refund plan XP/counters');
   await plan(p);await p.click('[data-a="rpaper"]');await p.click('[data-a="tgo"]');await p.clock.runFor(5000);await p.click('[data-a="done"]');u=await p.U();ok(u.n.timed===0,'instant timer earned timed credit');
-  await p.click('[data-a="restart"]');await plan(p);await p.click('[data-a="rtyped"]');await p.fill('.qcard textarea','too short');await p.click('[data-a="tdone"]');
-  await p.locator('.band input[value="2"]').check();await p.click('[data-a="tfin"]');u=await p.U();ok(!u.n.typed,'short typed answer earned credit');
-  await p.click('[data-a="restart"]');await plan(p);await p.click('[data-a="rtyped"]');await p.fill('.qcard textarea','word '.repeat(60));await p.click('[data-a="tdone"]');
-  await p.locator('[data-kp]').first().check();await p.locator('.band input[value="4"]').check();const x2=(await p.U()).xp;await p.click('[data-a="tfin"]');u=await p.U();
-  ok(u.xp===x2+22&&u.n.typed===1,'typed XP should be +22 for one key point, got +'+(u.xp-x2));
+  await p.click('[data-a="restart"]');await plan(p);await p.click('[data-a="rtyped"]');await typeAnswer(p,'too short');await p.click('[data-a="tdone"]');
+  await p.click('[data-a="tfin"]');u=await p.U();ok(!u.n.typed,'short typed answer earned credit');
+  await p.click('[data-a="restart"]');await plan(p);await p.click('[data-a="rtyped"]');await typeAnswer(p,'word '.repeat(60));await p.click('[data-a="tdone"]');
+  ok((await p.textContent('.qcard')).includes('no key ideas'),'off-topic typed answer should earn nothing');await p.click('[data-a="tedit"]');
+  await p.locator('.qcard textarea').fill('');await typeAnswer(p,await goodText(p));await p.click('[data-a="tdone"]');
+  const exp=await p.evaluate(()=>{const id=document.querySelector('.qcard').id.slice(2);return U.plansSaved[id].chk.xp});const x2=(await p.U()).xp;await p.click('[data-a="tfin"]');u=await p.U();
+  ok(exp>=20&&u.xp===x2+exp&&u.n.typed===1,'typed XP should be +'+exp+', got +'+(u.xp-x2));
+  ok(await p.evaluate(()=>Object.values(U.ans||{}).some(a=>a.b>=4&&a.t.length>100)),'submitted answer not stored for marking');
   await p.click('[data-a="restart"]');u=await p.U();ok(!u.n.typed&&u.xp===x2-25,'restart did not refund typed XP');await p.done()},
+
+async integrity(){const p=await page({sid:STUDENT,clock:true});await p.go('#/short');await plan(p);await p.click('[data-a="rtyped"]');
+  const ta=p.locator('.qcard textarea');await ta.click();await p.evaluate(()=>navigator.clipboard.writeText('Pasted from somewhere else. '.repeat(10)));
+  await p.keyboard.press('Control+V');await p.waitForTimeout(80);ok(!(await ta.inputValue()).includes('Pasted'),'paste was not blocked');
+  await ta.fill('One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty.');await p.waitForTimeout(50);
+  ok((await ta.inputValue())==='','big insertion was not removed');let g=await p.evaluate(()=>U.integ||{});ok(g.paste>=1&&g.big>=1,'flags not counted: '+JSON.stringify(g));
+  ok((await p.textContent('.flagnote')).includes('removed'),'no notice shown');
+  await typeAnswer(p,await goodText(p),{fast:true});await p.click('[data-a="tdone"]');ok((await p.textContent('.qcard')).includes('faster than typing'),'too-fast answer not caught');
+  const x=(await p.U()).xp;await p.click('[data-a="tfin"]');ok((await p.U()).xp===x,'too-fast answer earned XP');
+  ok(await p.evaluate(()=>Object.values(U.ans).some(a=>a.fl.fast&&a.fl.paste&&a.fl.big)),'flags not stored with the answer');await p.done()},
+
+async mic(){const p=await page({sid:STUDENT,clock:true,init:()=>{window.SpeechRecognition=class{start(){setTimeout(()=>{const t='A grey market is when genuine goods are resold outside the planned channel, for example cheaper cups from Thailand resold in Singapore, which harms the brand and partners.';
+    this.onresult&&this.onresult({resultIndex:0,results:[Object.assign([{transcript:t}],{isFinal:true})]});this.onend&&this.onend()},50)}stop(){this.onend&&this.onend()}}}});
+  await p.go('#/short');await plan(p);await p.click('[data-a="rtyped"]');ok(await p.$('[data-a="mic"]'),'mic button missing');await p.click('[data-a="mic"]');await p.waitForTimeout(300);
+  ok((await p.locator('.qcard textarea').inputValue()).includes('grey market'),'speech not added');ok(!(await p.evaluate(()=>U.integ&&U.integ.big)),'speech was treated as a big insertion');
+  ok(await p.evaluate(()=>LS.get('micnote',0)===1),'privacy note not shown');await p.done()},
+
 
 async backup(){const p=await page({sid:STUDENT});await p.evaluate(()=>{U.xp=777;save()});const code=await p.evaluate(()=>backupCode());ok(/^MKT301[ZB]-/.test(code),'bad backup code');
   await p.evaluate(()=>{localStorage.removeItem('mkt301_u_S081441')});await p.reload();await p.waitForTimeout(200);
