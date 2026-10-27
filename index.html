@@ -48,6 +48,8 @@ textarea.answer{min-height:220px;font:16px/1.6 Inter,sans-serif}
 .bands{display:grid;gap:6px;margin-bottom:12px}.band{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--sunk);font:400 .9rem Inter;color:var(--ink);margin:0;cursor:pointer}
 .band.on{border-color:var(--teal);background:var(--w0d)}.band input{accent-color:var(--teal)}.band b{font:800 1.05rem Lexend;min-width:16px}
 details.mine{margin:6px 0 4px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--sunk)}details.mine summary{cursor:pointer;font:600 .9rem Lexend}details.mine p{margin:10px 0 0;font-size:.92rem;color:var(--ink2)}
+.rv{display:flex;gap:10px;align-items:flex-start;font:400 .92rem/1.5 Inter;color:var(--ink);margin:8px 0;padding:8px 0;border-bottom:1px dashed var(--line);cursor:pointer}.rv input{width:18px;height:18px;margin-top:3px;flex:none;accent-color:var(--teal)}
+mark{background:#ffc94d40;color:inherit;border-radius:4px;padding:0 2px}
 .sumlist{margin:0;padding-left:1.2em}.sumlist li{margin-bottom:6px}
 .rst{margin-left:auto;min-height:30px!important;padding:3px 10px!important;font-size:.78rem!important}
 .pill.save{cursor:pointer;color:var(--ink);font:600 .85rem Lexend}.pill.save:hover{border-color:var(--teal)}
@@ -974,16 +976,36 @@ function demo(){
   document.querySelectorAll('[data-dm]').forEach(b=>b.onclick=()=>{mode=b.dataset.dm;draw()});
   $('#fs').onclick=()=>{const d=$('#demo');if(document.fullscreenElement)document.exitFullscreen();else if(d.requestFullscreen)d.requestFullscreen()};
   draw()}
+/* lecturer content review: every invented or simplified fact to check, mostly pulled from the data files */
+const REVIEW_NOTES={
+ iceto:['Founders\' surnames (Rasheed, Nadha, Zahir) and the four other people are invented','Flagship cost estimate: about USD 450,000, more than half of available cash','7-Eleven Singapore sales peaks: 2–5 pm near schools and universities, after 9 pm near offices and housing','Exhibit 4 (market snapshot), Exhibit 6 (freezer price ladder) and Exhibit 7 (brand calendar) were added for the extended case','Magnum pop-up description is simplified from public information'],
+ cbtl:['All seven people are invented','Survey of 400 people: 62% visit a café at least 3 times a week; only 18% would regularly pay more than MVR 70','Exhibit 2 cost shares, Exhibit 4 price ranges and Exhibit 6 first-months results are invented','Hulhumalé café details: about 60 seats, two trainer visits, equipment held at the port','Waterscape\'s Maldivian black tea test (six months) is invented','CBTL history (Brentwood 1963, Ice Blended 1987, Singapore 1996, Jollibee 2019, ~1,200 cafés) is from public information, simplified'],
+ tuna:['Kandu Bites, its founder and every person in the case are invented','Exhibit 1 figures: ~180,000 packs, MVR 11 million, capacity ~400,000 packs, USD 60,000 budget','Import duties: about 20% into the EU and a "modest" duty into Japan are case assumptions','Exhibit 3 margins and freight costs, Exhibit 5 tasting scores and Exhibit 6 price escalation are invented','Population figures for Japan (~124 million) and Italy (~59 million) are approximate']};
+const REAL=['Naver','World Bank','WTO','Starbucks','Global Exchange','Magnum','7-Eleven','Jollibee','McDonald','Coca-Cola','KFC','IKEA','Toyota','Unilever','Nestlé','Samsung','Apple','Google','Amazon','Alibaba','Netflix','Uber','Airbnb','Nike','Zara','Dhiraagu','Ooredoo','Bank of Maldives','MIFCO','STO','Facebook','Instagram','TikTok','WhatsApp','Visa','Mastercard','DHL','Maersk','Emirates','SriLankan'];
+function reviewHTML(){const rv=LS.get('review',{}),num=t=>esc(t).replace(/(\b(?:MVR|USD|SGD|MYR|THB|EUR|JPY)\s?)?\d[\d,.]*\s?(%|percent|million|billion|years?|divers|boats|users|craftspeople|followers|outlets|stores)?/g,m=>`<mark>${m}</mark>`);
+  const strip=h=>String(h).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(),box=(id,html)=>`<label class="rv"><input type="checkbox" data-rv="${id}" ${rv[id]?'checked':''}><span>${html}</span></label>`;
+  const cases=CASES.map(c=>{const ppl=[...(c.sections.find(x=>x.id==='people')||{html:''}).html.matchAll(/<b>([^<]+)<\/b><span>([^<]+)<\/span>/g)].map(m=>m[1]+' ('+m[2]+')');
+    return `<details class="mine"><summary>${c.icon} ${esc(c.title)}</summary><p class="muted" style="font-size:.85rem">${esc(c.note)}</p>
+    <h4>Check these</h4>${(REVIEW_NOTES[c.id]||[]).map((t,j)=>box(c.id+':n'+j,esc(t))).join('')}
+    <h4>People</h4>${box(c.id+':ppl',esc(ppl.join(' · ')))}
+    <h4>Exhibits</h4>${c.exhibits.map((x,j)=>box(c.id+':x'+j,`<b>${esc(x.title)}</b><br><span class="muted" style="font-size:.85rem">${x.rows.map(r=>num(r.join(': '))).join(' · ')}</span>`)).join('')}</details>`}).join('');
+  const sc=BANK_C.structured.concat(BANK_C.essays).map(x=>box('c:'+x.id,`<b>${x.icon} ${esc(x.name)}</b> <span class="muted">· ${esc(x.tag)}</span><br><span style="font-size:.88rem">${num(strip(x.brief))}</span>${x.table?`<br><span class="muted" style="font-size:.82rem">${x.table.map(r=>num(r.join(': '))).join('<br>')}</span>`:''}`)).join('');
+  const named=BANK_B.map(q=>[q,REAL.filter(n=>JSON.stringify(q).includes(n))]).filter(x=>x[1].length);
+  const bq=named.map(([q,n])=>box('b:'+q.id,`<b>${esc(n.join(', '))}</b> in ${esc(q.id)} (Week ${q.week}, ${esc(q.topic)}): <span class="muted" style="font-size:.85rem">${esc(q.q)}</span>`)).join('');
+  return `<p class="muted" style="font-size:.9rem;margin-top:0">Everything below was created or simplified for practice. Tick each item once you've checked it. Ticks are saved on this device. Numbers are highlighted.</p>
+  <h3>Section A cases</h3>${cases}<h3 style="margin-top:16px">Section C companies</h3><details class="mine"><summary>All ${BANK_C.structured.length+BANK_C.essays.length} Section C scenarios (all invented)</summary>${sc}</details>
+  <h3 style="margin-top:16px">Section B: real organisations named</h3><details class="mine"><summary>${named.length} question${named.length===1?'':'s'} name real organisations: check the claims</summary>${bq||'<p class="muted">None found.</p>'}</details>`}
 function lecturer(){
   if(ME.sid!==LECTURER)return home();
   shell('#/lecturer',`<h1>Lecturer</h1>
   <div class="card" id="demo" style="margin-bottom:22px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Show the class</h2><button class="btn ghost sm" id="fs">⛶ Full screen</button></div>
   <p class="muted" style="font-size:.9rem;margin:6px 0 12px">Example students only, made up to explain how scoring works. Real scores appear on the Leaderboard tab.</p>
   <div class="subnav"><button data-dm="board" class="on">🏆 Example leaderboard</button><button data-dm="vs">⚔️ Student 1 vs Student 2</button><button data-dm="tips">💡 How to climb</button></div><div id="dm"></div></div>
+  <h2>Content review</h2><div class="card" id="rvw" style="margin-bottom:22px"></div>
   <h2>Update the leaderboard</h2>
   <div class="card"><ol style="padding-left:1.2em;margin-top:0"><li>Paste all the score emails or codes below (everything at once is fine).</li><li>Check the preview, then <b>Download leaderboard.js</b>.</li><li>On GitHub, open the <b>mkt301</b> repo → <b>Add file → Upload files</b> → drop in <code>leaderboard.js</code> → <b>Commit changes</b>.</li></ol>
   <textarea id="tx" placeholder="Paste score emails or codes here"></textarea><div class="row" style="margin-top:12px"><button class="btn" id="go">Read codes</button></div><div id="out" style="margin-top:16px"></div></div>`);
-  demo();
+  demo();$('#rvw').innerHTML=reviewHTML();$('#rvw').querySelectorAll('[data-rv]').forEach(b=>b.onchange=()=>{const r=LS.get('review',{});r[b.dataset.rv]=b.checked;LS.set('review',r)});
   $('#go').onclick=async()=>{const found=$('#tx').value.match(/MKT301-[A-Za-z0-9_-]+-[0-9a-f]{8}/g)||[];const best={};let bad=0,off=0;
     for(const code of found){const m=code.match(/^MKT301-(.+)-([0-9a-f]{8})$/);if((await sha('mkt301-score|'+m[1])).slice(0,8)!==m[2]){bad++;continue}
       let p;try{p=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,'+').replace(/_/g,'/')))))}catch(e){bad++;continue}
