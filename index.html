@@ -447,16 +447,17 @@ function pinStep(sid,name,mt,mode){mode=mode||'in';const card=document.querySele
   <label for="pin">${mode==='in'?'Your 6-digit PIN':'Choose a 6-digit PIN'}</label><input type="password" id="pin" inputmode="numeric" maxlength="32" autocomplete="${mode==='in'?'current-password':'new-password'}" class="pinbox">
   ${mode==='new'?'<label for="pin2">Type it again</label><input type="password" id="pin2" inputmode="numeric" maxlength="6" autocomplete="new-password" class="pinbox"><p class="hint">Pick something you will remember but others can\'t guess. Not 123456 or your birthday.</p>':''}
   <div class="err" id="per"></div><button class="btn" id="pgo">${mode==='in'?'Sign in':'Create PIN and start'}</button></form>
-  ${mode==='in'?'<p style="margin:12px 0 0"><a href="javascript:void 0" id="fgt">Forgot PIN?</a></p>':''}
+  ${mode==='in'?'<p class="row" style="margin:12px 0 0;justify-content:space-between"><a href="javascript:void 0" id="fgt">Forgot PIN?</a><a href="javascript:void 0" id="abc" style="font-size:.85rem">My PIN has letters</a></p>':''}
   <div id="pof"></div>
   <p class="muted" style="font-size:.8rem;margin-top:14px">Your PIN protects your progress and lets you carry on from any device.</p>`;
   const er=t=>{$('#per').textContent=t},pin=$('#pin');pin.focus();
   card.querySelectorAll('[data-pm]').forEach(b=>b.onclick=()=>pinStep(sid,name,mt,b.dataset.pm));
+  $('#abc')&&($('#abc').onclick=()=>{const t=pin.inputMode==='numeric';pin.inputMode=t?'text':'numeric';pin.classList.toggle('pinbox',!t);$('#abc').textContent=t?'My PIN is only numbers':'My PIN has letters';pin.focus()});
   $('#chg').onclick=()=>{clearInterval(mt);gate()};
   const offline=()=>{$('#pof').innerHTML=`<div class="fb no" style="margin-top:12px">No connection to your account right now. <a href="javascript:void 0" id="loc">Use this device only for now</a>: your progress will stay on this phone or laptop until you sign in with your PIN again.</div>`;
     $('#loc').onclick=()=>{clearInterval(mt);LS.set('session',{sid,name});start()}};
   $('#fgt')&&($('#fgt').onclick=async()=>{if(sid===LECTURER)return er('The lecturer PIN can be reset in the Firebase console (Authentication → Users).');
-    er('');try{await CLOUD.reset(sid);$('#per').style.color='var(--green)';er(`We sent a PIN reset link to ${em}. Check your MNU student inbox (and the spam folder), choose a new 6-digit PIN, then come back and sign in.`)}
+    er('');try{await CLOUD.reset(sid);$('#per').style.color='var(--green)';$('#per').innerHTML=`📧 We sent a reset link to <b>${esc(em)}</b>.<br>Check your MNU student inbox and the <b>spam / junk</b> folder for an email from <b>noreply@mkt301-f8830.firebaseapp.com</b>. It may say <i>password</i>: that means your PIN.<br>Open the link and choose a new PIN of at least 6 characters (6 digits recommended), then come back and sign in.`}
     catch(e){$('#per').style.color='';er(CLOUD.say(e));if(CLOUD.isNetwork(e))offline()}});
   $('#pf').onsubmit=async e=>{e.preventDefault();$('#per').style.color='';const p=pin.value.trim();
     if(mode==='new'){if(!/^\d{6}$/.test(p))return er('Your PIN must be exactly 6 digits.');if(p!==$('#pin2').value.trim())return er('The two PINs don\'t match.');if(/^(\d)\1{5}$|^(123456|654321|012345)$/.test(p))return er('That PIN is too easy to guess. Choose another.')}
