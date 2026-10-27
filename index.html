@@ -123,7 +123,8 @@ textarea{width:100%;min-height:160px;font:14px/1.5 ui-monospace,monospace;paddin
 table{width:100%;border-collapse:collapse;font-size:.9rem}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font:600 .8rem Lexend;color:var(--ink2);background:#ffffff08}
-.tablewrap{overflow-x:auto}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.wide{min-width:560px}
 
 /* boardroom */
 .arg{display:grid;grid-template-columns:48px 1fr;gap:12px}
@@ -181,6 +182,8 @@ footer .row{justify-content:space-between}
 <script src="roster.js"></script>
 <script src="leaderboard.js"></script>
 <script src="cases.js"></script>
+<script src="case-cbtl.js"></script>
+<script src="case-tuna.js"></script>
 <script>
 /* ---------- basics ---------- */
 const $=s=>document.querySelector(s), app=$('#app');
@@ -283,8 +286,6 @@ function home(){
   </div>
   <h2 style="margin-top:26px">Section A · Case studies</h2>
   <div class="grid g3">${caseCards}
-   <div class="card zone" style="opacity:.6"><span class="lock">🔒 Coming soon</span><div class="em">☕</div><h3>The Coffee Bean & Tea Leaf</h3><p class="muted" style="font-size:.9rem">A global café brand finds its place in the Maldives</p></div>
-   <div class="card zone" style="opacity:.6"><span class="lock">🔒 Coming soon</span><div class="em">🐟</div><h3>Maldivian tuna jerky</h3><p class="muted" style="font-size:.9rem">From pole-and-line to Japan and Italy</p></div>
   </div>
   <h2 style="margin-top:26px">More practice</h2>
   <div class="grid g2">
@@ -296,9 +297,7 @@ function soon(active,title,em,text){shell(active,`<div class="card" style="text-
 
 /* ---------- cases ---------- */
 function caseList(){shell('#/cases',`<h1>Section A · Case studies</h1><p class="muted">Read each case in full, judge the boardroom, then practise answers on paper. Any of these cases could be the one you meet later, so practise them all.</p>
- <div class="grid g3">${CASES.map(c=>`<a class="card zone" href="#/case/${c.id}/read"><div class="em">${c.icon}</div><h3>${esc(c.title)}</h3><p class="muted" style="font-size:.9rem">${esc(c.subtitle)}</p><div class="chipline"><span class="tag">${esc(c.tag)}</span></div></a>`).join('')}
- <div class="card zone" style="opacity:.6"><span class="lock">🔒 Coming soon</span><div class="em">☕</div><h3>The Coffee Bean & Tea Leaf</h3></div>
- <div class="card zone" style="opacity:.6"><span class="lock">🔒 Coming soon</span><div class="em">🐟</div><h3>Maldivian tuna jerky</h3></div></div>`)}
+ <div class="grid g3">${CASES.map(c=>`<a class="card zone" href="#/case/${c.id}/read"><div class="em">${c.icon}</div><h3>${esc(c.title)}</h3><p class="muted" style="font-size:.9rem">${esc(c.subtitle)}</p><div class="chipline"><span class="tag">${esc(c.tag)}</span></div></a>`).join('')}</div>`)}
 
 const COLORS=['#3ee6c1','#ffc94d','#ff6b9a','#6aa8ff','#a98bff','#4fd88a','#ff9f43'];
 function caseView(id,tab){
@@ -320,7 +319,7 @@ function readPane(c){
     P.querySelector(`.toc a[data-s="${b.dataset.r}"]`)?.classList.add('read');
     if(c.sections.every(s=>U.log['read:'+c.id+':'+s.id]))award('readall:'+c.id,30,'Whole case read')})}
 
-function exhibitPane(c){$('#pane').innerHTML=c.exhibits.map(x=>`<div class="card" style="margin-bottom:14px"><h3>${esc(x.title)}</h3><div class="tablewrap"><table>${x.head?`<tr>${x.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>`:''}${x.rows.map(r=>`<tr>${r.map((d,i)=>`<td>${i===0&&!x.head?'<b>'+esc(d)+'</b>':esc(d)}</td>`).join('')}</tr>`).join('')}</table></div></div>`).join('')}
+function exhibitPane(c){$('#pane').innerHTML=c.exhibits.map(x=>`<div class="card" style="margin-bottom:14px"><h3>${esc(x.title)}</h3><div class="tablewrap"><table class="${x.head&&x.head.length>3?'wide':''}">${x.head?`<tr>${x.head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr>`:''}${x.rows.map(r=>`<tr>${r.map((d,i)=>`<td>${i===0&&!x.head?'<b>'+esc(d)+'</b>':esc(d)}</td>`).join('')}</tr>`).join('')}</table></div></div>`).join('')}
 
 function boardPane(c){
   const topics=[...new Set(c.boardroom.map(a=>a.topic))];let cur=LS.get('bt_'+c.id,topics[0]);if(!topics.includes(cur))cur=topics[0];
