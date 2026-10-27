@@ -290,17 +290,39 @@ const BADGES=[
  {id:'essayist',ico:'🖋️',name:'Essayist',d:'Write a full 40-minute essay on paper',t:u=>u.n.essays>=1},
  {id:'regional',ico:'🌏',name:'Regional Director',d:'Reach Regional Director level',t:u=>u.xp>=1400}
 ];
-const MISSIONS=[{k:'verdicts',n:3,t:'Judge 3 boardroom arguments'},{k:'plans',n:1,t:'Build 1 answer plan'},{k:'timed',n:1,t:'Finish 1 timed answer on paper'}];
+/* daily missions: 3 a day from a pool, harder as the student levels up (tier 0: levels 1-2, tier 1: 3-4, tier 2: 5-6) */
+const MPOOL=[
+ {id:'read2',t:0,k:'read',n:2,x:'Read 2 case sections'},{id:'verd3',t:0,k:'verdicts',n:3,x:'Judge 3 Boardroom arguments'},
+ {id:'right2',t:0,k:'verdictsRight',n:2,x:'Make 2 Boardroom calls that match our reading'},{id:'plan1',t:0,k:'plans',n:1,x:'Build 1 answer plan'},
+ {id:'bplan1',t:0,k:'bplans',n:1,x:'Plan 1 Section B short answer'},{id:'timed1',t:0,k:'timed',n:1,x:'Finish 1 timed answer on paper'},
+ {id:'esstool1',t:0,k:'esstool',n:1,x:'Check 1 Essay Coach planning tool'},
+ {id:'read4',t:1,k:'read',n:4,x:'Read 4 case sections'},{id:'verd6',t:1,k:'verdicts',n:6,x:'Judge 6 Boardroom arguments'},
+ {id:'right4',t:1,k:'verdictsRight',n:4,x:'Make 4 Boardroom calls that match our reading'},{id:'plan3',t:1,k:'plans',n:3,x:'Build 3 answer plans'},
+ {id:'perfect1',t:1,k:'perfect',n:1,x:'Build 1 flawless plan (every key idea, no decoys)'},{id:'timed2',t:1,k:'timed',n:2,x:'Finish 2 timed answers on paper'},
+ {id:'btimed1',t:1,k:'btimed',n:1,x:'Write 1 Section B answer against the clock'},{id:'catool1',t:1,k:'catool',n:1,x:'Complete 1 Section C strategy tool'},
+ {id:'esstool3',t:1,k:'esstool',n:3,x:'Check 3 Essay Coach planning tools'},
+ {id:'right6',t:2,k:'verdictsRight',n:6,x:'Make 6 Boardroom calls that match our reading'},{id:'perfect2',t:2,k:'perfect',n:2,x:'Build 2 flawless plans'},
+ {id:'timed3',t:2,k:'timed',n:3,x:'Finish 3 timed answers on paper'},{id:'btimed2',t:2,k:'btimed',n:2,x:'Write 2 Section B answers against the clock'},
+ {id:'catimed1',t:2,k:'catimed',n:1,x:'Write 1 Section C part on paper, timed'},{id:'ecplan1',t:2,k:'ecplan',n:1,x:'Complete a full Essay Coach plan'},
+ {id:'essay1',t:2,k:'essays',n:1,x:'Write a full 40-minute essay on paper'}];
+const MBONUS=[25,35,50],TIERS=['Starter','Pro','Elite'];
+function tier(xp){const i=level(xp).i;return i<=1?0:i<=3?1:2}
+function seeded(str){let h=2166136261;for(const c of str){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return ()=>{h=Math.imul(h^h>>>15,2246822507);h=Math.imul(h^h>>>13,3266489909);return ((h^=h>>>16)>>>0)/4294967296}}
+function pickMissions(t){const r=seeded(today()+'|'+ME.sid),used=new Set(),out=[];
+  const pool=MPOOL.filter(m=>m.t===t).concat(t?MPOOL.filter(m=>m.t===t-1):[]);
+  const order=pool.map(m=>[m,r()+(m.t===t?0:.6)]).sort((a,b)=>a[1]-b[1]).map(x=>x[0]);
+  for(const m of order){if(out.length===3)break;if(!used.has(m.k)){used.add(m.k);out.push(m.id)}}return out}
+function missions(){rollDay();return U.day.m.map(id=>MPOOL.find(m=>m.id===id)).filter(Boolean)}
 
 let ME=null, U=null;
 function me(){const r=LS.get('session',null);return r&&/^S0\d{5}$/.test(r.sid||'')?r:null}
-function blank(){return {xp:0,log:{},days:[],badges:{},n:{verdicts:0,verdictsRight:0,weakSpotted:0,plans:0,perfect:0,timed:0,missions:0,strat:0,errc:0,eplans:0,essays:0},day:{d:'',verdicts:0,plans:0,timed:0,done:0},nick:'',hide:false,sets:{},verd:{},plansSaved:{},cw:{},ess:{},bweek:0}}
+function blank(){return {xp:0,log:{},days:[],badges:{},n:{verdicts:0,verdictsRight:0,weakSpotted:0,plans:0,perfect:0,timed:0,missions:0,strat:0,errc:0,eplans:0,essays:0},day:{d:'',c:{},m:[],t:0,done:0},nick:'',hide:false,sets:{},verd:{},plansSaved:{},cw:{},ess:{},bweek:0}}
 function load(){U=Object.assign(blank(),LS.get('u_'+ME.sid,{}));U.n=Object.assign(blank().n,U.n);if(!U.nick)U.nick=defaultNick(ME.name)}
 function save(){LS.set('u_'+ME.sid,U)}
 function defaultNick(n){const p=String(n||'').trim().split(/\s+/);return p.length>1?p[0]+' '+p[p.length-1][0]+'.':(p[0]||'Player')}
 function level(xp){let i=0;LEVELS.forEach((l,j)=>{if(xp>=l[0])i=j});const nx=LEVELS[i+1];return {i,name:LEVELS[i][1],from:LEVELS[i][0],to:nx?nx[0]:null,pct:nx?Math.round((xp-LEVELS[i][0])/(nx[0]-LEVELS[i][0])*100):100}}
 function streak(u){const s=new Set(u.days);let n=0,d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');if(!s.has(f(d)))d.setDate(d.getDate()-1);while(s.has(f(d))){n++;d.setDate(d.getDate()-1)}return n}
-function rollDay(){if(U.day.d!==today())U.day={d:today(),verdicts:0,plans:0,timed:0,done:0}}
+function rollDay(){if(U.day.d!==today()||!U.day.c||!U.day.m){const t=tier(U.xp);U.day={d:today(),c:{},m:pickMissions(t),t,done:0}}}
 
 /* award XP once per key (key=null: always) */
 function award(key,xp,label){
@@ -312,8 +334,8 @@ function award(key,xp,label){
   if(xp)toast('✨',label,'+'+xp+' XP');
   if(level(U.xp).i>before)toast('🚀','Level up!','You are now '+level(U.xp).name);
   checkBadges();save();hud();return true}
-function count(k){rollDay();U.n[k]=(U.n[k]||0)+1;if(k in U.day){U.day[k]++;
-  if(!U.day.done&&MISSIONS.every(m=>U.day[m.k]>=m.n)){U.day.done=1;U.n.missions++;save();award(null,25,'Daily mission complete')}}
+function count(k){rollDay();U.n[k]=(U.n[k]||0)+1;U.day.c[k]=(U.day.c[k]||0)+1;
+  const ms=missions();if(!U.day.done&&ms.length&&ms.every(m=>(U.day.c[m.k]||0)>=m.n)){U.day.done=1;U.n.missions++;save();award(null,MBONUS[U.day.t],'Daily mission complete')}
   checkBadges();save()}
 function checkBadges(){BADGES.forEach(b=>{if(!U.badges[b.id]&&b.t(U)){U.badges[b.id]=today();toast(b.ico,'Badge unlocked: '+b.name,b.d)}})}
 function toast(em,t,s){const el=document.createElement('div');el.className='toast';el.innerHTML=`<span class="em">${em}</span><div><b class="lex">${esc(t)}</b><div class="muted" style="font-size:.85rem">${esc(s)}</div></div>`;const box=$('#toasts');box.append(el);while(box.children.length>3)box.firstChild.remove();setTimeout(()=>el.remove(),2800)}
@@ -352,7 +374,7 @@ function gate(msg){
   <div class="mail" id="ml"><span style="font-size:1.2rem">✉️</span><div><small><span id="mll">Your student email</span><span class="st" id="mst"></span></small><b id="mla">s0·····@student.mnu.edu.mv</b></div></div>
   <div class="err" id="er">${msg||''}</div>
   <button class="btn" id="go" disabled>Verify and start</button></form>
-  <p class="muted" style="font-size:.8rem;margin-top:14px">Your progress is saved on this device, under your student ID.</p></div></div>`;
+  <p class="muted" style="font-size:.8rem;margin-top:14px">Your progress is saved on this device. To move it to another device, use <b>Save my progress</b> on the home page.</p></div></div>`;
   let mi=0;const mt=setInterval(()=>{const m=$('#motto');if(!m)return clearInterval(mt);m.style.opacity=0;setTimeout(()=>{mi=(mi+1)%MOTTOS.length;m.textContent=MOTTOS[mi];m.style.opacity=1},500)},4500);
   let ok=false,seq=0;const sidIn=$('#sid'),nmIn=$('#nm');
   const ready=()=>{$('#go').disabled=!(ok&&nmIn.value.trim().length>1)};
@@ -383,17 +405,38 @@ function shell(active,body){
   <p style="margin-top:10px">Practice material only. Write your full answers on paper.</p></footer></div>`;
   $('#so').onclick=signOut;scrollTo(0,0)}
 
+/* ---------- backup and restore (no server: a signed code the student keeps) ---------- */
+const b64e=t=>btoa(unescape(encodeURIComponent(t))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const b64d=t=>decodeURIComponent(escape(atob(t.replace(/-/g,'+').replace(/_/g,'/'))));
+async function backupCode(){const j=b64e(JSON.stringify({v:1,s:ME.sid,at:today(),u:U}));return 'MKT301B-'+j+'-'+(await sha('mkt301-backup|'+j)).slice(0,10)}
+async function restore(text){const m=String(text).replace(/\s+/g,'').match(/MKT301B-([A-Za-z0-9_-]+)-([0-9a-f]{10})/);
+  if(!m)return 'That doesn\'t look like an MKT301 backup code.';
+  if((await sha('mkt301-backup|'+m[1])).slice(0,10)!==m[2])return 'This backup is damaged or incomplete. Copy the whole code, or use the backup file.';
+  let p;try{p=JSON.parse(b64d(m[1]))}catch(e){return 'This backup could not be read.'}
+  if(p.s!==ME.sid)return 'This backup belongs to a different student ID ('+esc(p.s)+'). Sign in with that ID to restore it.';
+  if(!confirm(`Restore your backup from ${p.at}?\n\nBackup: ${p.u.xp} XP\nThis device now: ${U.xp} XP\n\nYour progress on this device will be replaced.`))return '';
+  U=Object.assign(blank(),p.u);U.n=Object.assign(blank().n,U.n);save();hud();home();toast('💾','Progress restored',U.xp+' XP · '+level(U.xp).name);return ''}
+function backupCard(){
+  const last=LS.get('bk_'+ME.sid,'');$('#bkl').textContent=last?'Last saved '+last:'Not saved yet';
+  const mark=()=>{LS.set('bk_'+ME.sid,today());$('#bkl').textContent='Last saved '+today()};
+  $('#bkd').onclick=async()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([await backupCode()],{type:'text/plain'}));a.download='mkt301-progress-'+ME.sid+'-'+today()+'.txt';a.click();mark();toast('💾','Backup saved','Keep the file somewhere safe')};
+  $('#bkc').onclick=async()=>{const c=await backupCode();try{await navigator.clipboard.writeText(c);mark();toast('📋','Backup code copied','Paste it somewhere safe, e.g. a note or email to yourself')}catch(e){$('#bkp').classList.remove('hide');$('#bkt').value=c;$('#bke').textContent='Copy the code above and keep it somewhere safe.';mark()}};
+  $('#bkr').onclick=()=>$('#bkp').classList.toggle('hide');
+  $('#bkf').onchange=async e=>{const f=e.target.files[0];if(f)$('#bkt').value=(await f.text()).trim()};
+  $('#bkgo').onclick=async()=>{$('#bke').textContent=await restore($('#bkt').value)}}
+
 /* ---------- home ---------- */
 function home(){
   rollDay();const L=level(U.xp),got=Object.keys(U.badges).length;
-  const ms=MISSIONS.map(m=>{const v=Math.min(U.day[m.k],m.n);return `<div class="mission"><span class="tick ${v>=m.n?'on':''}">${v>=m.n?'✓':''}</span><div style="flex:1">${m.t}<div class="bar" style="margin-top:6px"><i style="width:${v/m.n*100}%"></i></div></div><span class="muted">${v}/${m.n}</span></div>`}).join('');
+  const GO={read:'#/cases',verdicts:'#/cases',verdictsRight:'#/cases',plans:'#/cases',timed:'#/cases',perfect:'#/short',bplans:'#/short',btimed:'#/short',catool:'#/essay',catimed:'#/essay',esstool:'#/essay',ecplan:'#/essay',essays:'#/essay'};
+  const ms=missions().map(m=>{const v=Math.min(U.day.c[m.k]||0,m.n);return `<div class="mission"><span class="tick ${v>=m.n?'on':''}">${v>=m.n?'✓':''}</span><div style="flex:1">${esc(m.x)}<div class="bar" style="margin-top:6px"><i style="width:${v/m.n*100}%"></i></div></div><span class="muted">${v}/${m.n}</span>${v<m.n?`<a class="btn ghost sm" href="${GO[m.k]||'#/cases'}" style="min-height:32px;padding:4px 10px">Go</a>`:''}</div>`}).join('');
   const caseCards=CASES.map(c=>{const read=c.sections.filter(s=>U.log['read:'+c.id+':'+s.id]).length;return `<a class="card zone" href="#/case/${c.id}/read"><div class="em">${c.icon}</div><h3>${esc(c.title)}</h3><p class="muted" style="font-size:.9rem">${esc(c.subtitle)}</p><div class="bar"><i style="width:${read/c.sections.length*100}%;background:var(--teal)"></i></div><p class="muted" style="font-size:.8rem;margin:6px 0 0">${read}/${c.sections.length} sections read</p></a>`}).join('');
   shell('#/',`
   <div class="card hero"><div class="ring" style="--p:${L.pct}"><div><b>${L.i+1}</b><small>LEVEL</small></div></div>
   <div><h1>Welcome back, ${esc(String(ME.name).split(' ')[0])}</h1><p class="muted" style="margin:0">${esc(L.name)} · ${L.to?(L.to-U.xp)+' XP to '+LEVELS[L.i+1][1]:'Top level reached'}</p>
   <div class="stats"><div class="stat"><b>${U.xp}</b><span>XP</span></div><div class="stat"><b>🔥 ${streak(U)}</b><span>day streak</span></div><div class="stat"><b>${got}/${BADGES.length}</b><span>badges</span></div><div class="stat"><b>${U.n.timed}</b><span>timed answers</span></div></div></div></div>
   <div class="grid g2" style="margin-top:16px">
-   <div class="card"><h2>Today's mission</h2><p class="muted" style="font-size:.9rem">Complete all three for a +25 XP bonus.</p>${ms}</div>
+   <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Today's mission</h2><span class="tag">${TIERS[U.day.t]} · +${MBONUS[U.day.t]} XP</span></div><p class="muted" style="font-size:.9rem;margin-top:6px">${U.day.done?'✅ Done for today. New missions tomorrow.':'Complete all three for the bonus. New missions every day, and they get tougher as you level up.'}</p>${ms}</div>
    <div class="card"><h2>Recent badges</h2>${got?`<div class="badges">${BADGES.filter(b=>U.badges[b.id]).slice(-4).map(b=>`<div class="badge got"><div class="ico">${b.ico}</div><b>${b.name}</b></div>`).join('')}</div>`:'<p class="muted">None yet. Start a case to earn your first.</p>'}<p style="margin:12px 0 0"><a href="#/badges">See all badges →</a></p></div>
   </div>
   <h2 style="margin-top:26px">Section A · Case studies</h2>
@@ -403,7 +446,13 @@ function home(){
   <div class="grid g2">
    <a class="card zone" href="#/short"><div class="em">🧩</div><h3>Section B · Short answers</h3><p class="muted" style="font-size:.9rem">Build answer plans from chips, then write against the clock.</p><div class="chipline"><span class="tag">${BANK_B.length} questions</span></div></a>
    <a class="card zone" href="#/essay"><div class="em">🏆</div><h3>Section C · Strategy & essay</h3><p class="muted" style="font-size:.9rem">Competitive advantage tools and an essay coach for 20-mark answers.</p><div class="chipline"><span class="tag">${BANK_C.structured.length} strategy scenarios</span><span class="tag">${BANK_C.essays.length} essays</span></div></a>
-  </div>`)}
+  </div>
+  <div class="card" style="margin-top:26px" id="bk"><div class="row" style="justify-content:space-between"><h2 style="margin:0">💾 Save my progress</h2><span class="tag" id="bkl"></span></div>
+  <p class="muted" style="font-size:.9rem;margin:8px 0 12px">Your progress lives on this device only. Save a backup to move it to another phone or laptop, or to keep it safe before clearing your browser.</p>
+  <div class="row"><button class="btn" id="bkd">⬇ Download backup file</button><button class="btn ghost" id="bkc">Copy backup code</button><button class="btn ghost" id="bkr">Restore a backup</button></div>
+  <div id="bkp" class="hide" style="margin-top:14px"><label for="bkt">Paste your backup code, or choose your backup file</label><textarea id="bkt" style="min-height:90px" placeholder="MKT301B-..."></textarea>
+  <div class="row" style="margin-top:10px"><input type="file" id="bkf" accept=".txt,text/plain" style="max-width:100%;color:var(--ink2)"><button class="btn gold" id="bkgo">Restore</button></div><div class="err" id="bke"></div></div></div>`);
+  backupCard()}
 
 function soon(active,title,em,text){shell(active,`<div class="card" style="text-align:center;padding:40px 20px"><div style="font-size:3rem">${em}</div><h1>${title}</h1><p class="muted">${text}</p><a class="btn" href="#/cases">Practise a case meanwhile</a></div>`)}
 
@@ -427,7 +476,7 @@ function readPane(c){
   <div class="row" style="margin-top:12px">${U.log['read:'+c.id+':'+s.id]?'<span class="tag">✓ Read</span>':`<button class="btn sm" data-r="${s.id}">Mark as read · +5 XP</button>`}</div></article>`).join('')}
   <p class="muted" style="font-size:.8rem">${esc(c.note)}</p></div></div>`;
   P.querySelectorAll('.toc a').forEach(a=>a.onclick=()=>$('#s-'+a.dataset.s).scrollIntoView({behavior:'smooth'}));
-  P.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{award('read:'+c.id+':'+b.dataset.r,5,'Section read');b.outerHTML='<span class="tag">✓ Read</span>';
+  P.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{if(award('read:'+c.id+':'+b.dataset.r,5,'Section read'))count('read');b.outerHTML='<span class="tag">✓ Read</span>';
     P.querySelector(`.toc a[data-s="${b.dataset.r}"]`)?.classList.add('read');
     if(c.sections.every(s=>U.log['read:'+c.id+':'+s.id]))award('readall:'+c.id,30,'Whole case read')})}
 
@@ -493,10 +542,10 @@ function qCard(q,i,o={}){
   el.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const j=+b.dataset.j;st.sel=st.sel.includes(j)?st.sel.filter(x=>x!==j):st.sel.concat(j);save();qCard(q,i,o)});
   const A=a=>el.querySelector(`[data-a="${a}"]`);
   A('check')&&(A('check').onclick=()=>{st.checked=true;const good=q.chips.filter(x=>x.g).length,hit=st.sel.filter(j=>q.chips[j].g).length,bad=st.sel.some(j=>!q.chips[j].g);
-    count('plans');award('plan:'+q.id+':'+today(),15,'Answer plan built');if(!bad&&hit===good){count('perfect');award('perfect:'+q.id,10,'Flawless plan')}save();qCard(q,i,o)});
+    count('plans');if(o.week)count('bplans');award('plan:'+q.id+':'+today(),15,'Answer plan built');if(!bad&&hit===good){count('perfect');award('perfect:'+q.id,10,'Flawless plan')}save();qCard(q,i,o)});
   A('replan')&&(A('replan').onclick=()=>{st.checked=false;st.sel=[];save();qCard(q,i,o)});
   A('go')&&(A('go').onclick=()=>{st.step=1;save();qCard(q,i,o)});
-  if(st.step===1)timer(q.id,secs,el,()=>{st.step=2;count('timed');award('timed:'+q.id+':'+today(),30,'Timed answer finished');save();qCard(q,i,o)});
+  if(st.step===1)timer(q.id,secs,el,()=>{st.step=2;count('timed');if(o.week)count('btimed');award('timed:'+q.id+':'+today(),30,'Timed answer finished');save();qCard(q,i,o)});
   el.querySelectorAll('[data-k]').forEach(b=>b.onchange=()=>{const j=+b.dataset.k;st.ticks=b.checked?st.ticks.concat(j):st.ticks.filter(x=>x!==j);save()});
   A('fin')&&(A('fin').onclick=()=>{st.final=true;award('check:'+q.id+':'+today(),st.ticks.length*3,'Self-check');save();qCard(q,i,o)})}
 
@@ -583,10 +632,10 @@ function partCard(s,p){
     ${st.final?`<div class="fb ok"><b>Part (${p}) done.</b> ${st.ticks.length}/${cl.length} checks met.</div>`:`<button class="btn" data-a="fin">Finish part (${p})</button>`}`}
   el.innerHTML=h;bindTools(el,st,redraw);
   const A=a=>el.querySelector(`[data-a="${a}"]`);
-  A('check')&&(A('check').onclick=()=>{st.checked=true;count('plans');if(p==='c')count('errc');award('ca:'+k+':'+today(),15,'Tool completed');save();redraw()});
+  A('check')&&(A('check').onclick=()=>{st.checked=true;count('plans');count('catool');if(p==='c')count('errc');award('ca:'+k+':'+today(),15,'Tool completed');save();redraw()});
   A('redo')&&(A('redo').onclick=()=>{Object.assign(st,{checked:false,def:[],f:{},d:{},in:[],e:{},mv:[],cp:[]});save();redraw()});
   A('go')&&(A('go').onclick=()=>{st.step=1;save();redraw()});
-  if(st.step===1)timer('c_'+s.id+'_'+p,P.mins*60,el,()=>{st.step=2;count('timed');award('catimed:'+k+':'+today(),30,'Part written on paper');save();redraw()});
+  if(st.step===1)timer('c_'+s.id+'_'+p,P.mins*60,el,()=>{st.step=2;count('timed');count('catimed');award('catimed:'+k+':'+today(),30,'Part written on paper');save();redraw()});
   el.querySelectorAll('[data-k]').forEach(b=>b.onchange=()=>{const j=+b.dataset.k;st.ticks=b.checked?st.ticks.concat(j):st.ticks.filter(x=>x!==j);save()});
   A('fin')&&(A('fin').onclick=()=>{st.final=true;award('cacheck:'+k+':'+today(),st.ticks.length*3,'Self-check');
     if(['a','b','c'].every(q=>(U.cw[s.id+':'+q]||{}).final)&&award('cadone:'+s.id,40,'Scenario complete'))count('strat');save();redraw()})}
@@ -643,12 +692,12 @@ function coachPlan(s,E){
   el.querySelectorAll('[data-m]').forEach(x=>x.onchange=()=>{E.mode[x.dataset.m]=x.value;save()});
   el.querySelectorAll('[data-ch]').forEach(b=>b.onclick=()=>{const t=b.dataset.ch;E.chain=E.chain.includes(t)?E.chain.filter(x=>x!==t):E.chain.concat(t);save();redraw()});
   el.querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{E.risk=+b.dataset.rk;E.mitOrd=null;E.mit=[];save();redraw()});
-  const A=a=>el.querySelector(`[data-a="${a}"]`),chk=(f,lbl)=>()=>{E[f]=true;award('ess:'+f+':'+s.id+':'+today(),5,lbl);save();redraw()};
+  const A=a=>el.querySelector(`[data-a="${a}"]`),chk=(f,lbl)=>()=>{E[f]=true;if(award('ess:'+f+':'+s.id+':'+today(),5,lbl))count('esstool');save();redraw()};
   A('entry')&&(A('entry').onclick=chk('entryChk','Entry reasons checked'));A('rev')&&(A('rev').onclick=chk('revChk','Revenue checked'));
   A('risk')&&(A('risk').onclick=chk('riskChk','Risk plan checked'));A('chain')&&(A('chain').onclick=chk('chainChk','Supply chain checked'));
   A('chclear')&&(A('chclear').onclick=()=>{E.chain=[];save();redraw()});
-  A('plandone')&&(A('plandone').onclick=()=>{E.planDone=true;count('plans');if(award('eplan:'+s.id,40,'Essay plan complete'))count('eplans');save();redraw()});
-  A('toscript')&&(A('toscript').onclick=()=>{if(!E.planDone){E.planDone=true;count('plans');if(award('eplan:'+s.id,40,'Essay plan complete'))count('eplans')}next(s,E,2)})}
+  A('plandone')&&(A('plandone').onclick=()=>{E.planDone=true;count('plans');count('ecplan');if(award('eplan:'+s.id,40,'Essay plan complete'))count('eplans');save();redraw()});
+  A('toscript')&&(A('toscript').onclick=()=>{if(!E.planDone){E.planDone=true;count('plans');count('ecplan');if(award('eplan:'+s.id,40,'Essay plan complete'))count('eplans')}next(s,E,2)})}
 const SCRIPT=[['Introduction','State your overall recommendation in one or two sentences and preview your main decisions.',['This essay recommends that ___ expands into ___ by ___.','The plan rests on three decisions: ___, ___ and ___.']],
  ['Market choice, order and pace','Name the first market and justify it with data from the table. Compare it with the others. Explain the order and timing.',['I recommend entering ___ first because the data shows ___.','Compared with ___, it offers ___, although ___.','___ should follow in year ___ once ___.']],
  ['Entry mode','Give the entry mode for each market and justify it with control, cost and risk.',['In ___, the most suitable entry mode is ___ because ___.','This gives ___ control at ___ cost.','An alternative would be ___, but ___.']],
@@ -688,7 +737,7 @@ function badgesPage(){shell('#/badges',`<h1>Badges</h1><p class="muted">${Object
  <tr><td>Build an answer plan</td><td>+15 (+10 bonus for a flawless plan)</td></tr><tr><td>Finish a timed answer on paper</td><td>+30</td></tr><tr><td>Self-check</td><td>+3 per check met</td></tr>
  <tr><td>Section C: complete a part's tool</td><td>+15</td></tr><tr><td>Section C: write a part on paper</td><td>+30</td></tr><tr><td>Section C: finish a whole scenario</td><td>+40</td></tr>
  <tr><td>Essay Coach: check a planning tool</td><td>+5 each</td></tr><tr><td>Essay Coach: complete a plan</td><td>+40</td></tr><tr><td>Essay Coach: write the 40-minute essay</td><td>+60</td></tr><tr><td>Essay Coach: self-mark</td><td>+20</td></tr>
- <tr><td>Practise on a new day</td><td>+10</td></tr><tr><td>Complete the daily mission</td><td>+25</td></tr></table></div></div>`)}
+ <tr><td>Practise on a new day</td><td>+10</td></tr><tr><td>Complete the daily mission</td><td>+25 Starter · +35 Pro · +50 Elite (missions get tougher as you level up)</td></tr></table></div></div>`)}
 
 /* ---------- leaderboard (weekly, from score codes) ---------- */
 async function scoreCode(){const p={v:1,s:ME.sid,n:U.hide?'':U.nick,x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,d:today()};
@@ -713,7 +762,7 @@ async function boardPage(){
 /* ---------- lecturer tools ---------- */
 /* classroom demo: made-up students, XP worked out from the real scoring rules */
 const DEMO_ROWS=[ // [activity, XP each, Student 1 count, Student 2 count]
- ['Practise on a new day',10,6,1],['Daily mission completed',25,5,1],['Case sections read',5,23,12],['Whole case read',30,2,1],
+ ['Practise on a new day',10,6,1],['Daily missions completed (Starter)',25,2,1],['Daily missions completed (Pro)',35,3,0],['Case sections read',5,23,12],['Whole case read',30,2,1],
  ['Boardroom verdicts that match our reading',10,22,11],['Other boardroom verdicts',3,8,9],['Answer plans built',15,12,6],['Flawless plans (bonus)',10,4,0],
  ['Timed answers written on paper',30,8,2],['Self-check points met',3,24,4],['Essay Coach tools checked',5,6,0],['Essay Coach plan completed',40,1,0]];
 const DEMO_P=[{n:'Student 1',who:'Practises about 35 minutes a day, 6 days a week',em:'🐢',time:'≈ 3.5 hours',streak:6,
@@ -736,7 +785,7 @@ function demo(){
       <tr><th>Total</th><th></th><th style="color:var(--gold)">${x1} XP</th><th style="color:var(--gold)">${x2} XP</th></tr></table></div>
       <div class="callout" style="margin-top:14px"><b>Less time, ${(x1/x2).toFixed(1)}× the XP.</b> Student 1 spent about the same time but practised a little every day: daily check-ins and missions add up, timed writing on paper earns the most, and repeat practice makes plans flawless.</div>`}
     else h=`<div class="grid g2">${[
-      ['📅','Show up daily','+10 for each new day and +25 for the daily mission. Six short days beat one long night.'],
+      ['📅','Show up daily','+10 for each new day and +25 to +50 for the daily mission. Six short days beat one long night.'],
       ['✍️','Write on paper, timed','+30 per timed answer: the biggest single reward, and the habit that matters most.'],
       ['🎯','Judge the boardroom carefully','+10 when your verdict matches our reading, +3 otherwise. Read the reasons; they teach the theory.'],
       ['💎','Plan without decoys','+15 per plan, +10 more when it has every key idea and no decoys.'],
