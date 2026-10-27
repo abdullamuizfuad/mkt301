@@ -6,3 +6,6 @@ ClassList_*
 *.docx
 *.pdf
 .DS_Store
+
+# Firebase rules contain the class list
+firestore.rules
