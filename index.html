@@ -51,6 +51,11 @@ details.mine{margin:6px 0 4px;padding:10px 12px;border:1px solid var(--line);bor
 .rv{display:flex;gap:10px;align-items:flex-start;font:400 .92rem/1.5 Inter;color:var(--ink);margin:8px 0;padding:8px 0;border-bottom:1px dashed var(--line);cursor:pointer}.rv input{width:18px;height:18px;margin-top:3px;flex:none;accent-color:var(--teal)}
 mark{background:#ffc94d40;color:inherit;border-radius:4px;padding:0 2px}
 .sumlist{margin:0;padding-left:1.2em}.sumlist li{margin-bottom:6px}
+.pinbox{letter-spacing:.5em;font:600 1.2rem Lexend!important;text-align:center}
+.sync{display:inline-flex;gap:6px;align-items:center;font:600 .78rem Lexend;padding:3px 10px;border-radius:999px;background:var(--w0d);color:var(--ink2)}
+.sync.ok{color:var(--green)}.sync.bad{color:var(--red)}
+.live{display:inline-flex;align-items:center;gap:6px;font:700 .75rem Lexend;color:var(--red);letter-spacing:.06em}.live i{width:8px;height:8px;border-radius:50%;background:var(--red);animation:blinkdot 1.4s infinite}
+@keyframes blinkdot{50%{opacity:.25}}
 .rst{margin-left:auto;min-height:30px!important;padding:3px 10px!important;font-size:.78rem!important}
 .pill.save{cursor:pointer;color:var(--ink);font:600 .85rem Lexend}.pill.save:hover{border-color:var(--teal)}
 @media (max-width:640px){.pill .lbl{display:none}}
@@ -112,8 +117,8 @@ main{padding:18px 0 40px}
 .gate{min-height:calc(100vh - 60px);display:grid;place-items:center;padding:30px 16px}
 .gate .card{max-width:440px;width:100%}
 label{display:block;font:600 .85rem Lexend;color:var(--ink2);margin:14px 0 6px}
-input[type=text]{width:100%;font:16px Inter;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--field);color:var(--ink)}
-input[type=text]:focus{outline:2px solid var(--teal);outline-offset:1px}
+input[type=text],input[type=password]{width:100%;font:16px Inter;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--field);color:var(--ink)}
+input[type=text]:focus,input[type=password]:focus{outline:2px solid var(--teal);outline-offset:1px}
 textarea{width:100%;min-height:160px;font:14px/1.5 ui-monospace,monospace;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--field);color:var(--ink)}
 .err{color:var(--red);font-size:.9rem;margin-top:8px}
 /* ---- sign-in ---- */
@@ -280,6 +285,8 @@ footer .row{justify-content:space-between}
 <script src="case-tuna.js"></script>
 <script src="bank-b.js"></script>
 <script src="bank-c.js"></script>
+<script src="vendor/firebase.js"></script>
+<script src="cloud.js"></script>
 <script>
 /* ---------- basics ---------- */
 const $=s=>document.querySelector(s), app=$('#app');
@@ -344,11 +351,12 @@ function pickMissions(t){const r=seeded(today()+'|'+ME.sid),used=new Set(),out=[
   for(const m of order){if(out.length===3)break;if(!used.has(m.k)){used.add(m.k);out.push(m.id)}}return out}
 function missions(){rollDay();return U.day.m.map(id=>MPOOL.find(m=>m.id===id)).filter(Boolean)}
 
-let ME=null, U=null;
+let ME=null, U=null, LOAD_T=-1;
 function me(){const r=LS.get('session',null);return r&&/^S0\d{5}$/.test(r.sid||'')?r:null}
 function blank(){return {xp:0,log:{},days:[],badges:{},n:{verdicts:0,verdictsRight:0,weakSpotted:0,plans:0,perfect:0,timed:0,missions:0,strat:0,errc:0,eplans:0,essays:0},day:{d:'',c:{},m:[],t:0,done:0},nick:'',hide:false,sets:{},focus:{},verd:{},plansSaved:{},cw:{},ess:{},bweek:0}}
-function load(){U=Object.assign(blank(),LS.get('u_'+ME.sid,{}));U.n=Object.assign(blank().n,U.n);if(!U.nick)U.nick=defaultNick(ME.name)}
-function save(){LS.set('u_'+ME.sid,U)}
+function load(){const st=LS.get('u_'+ME.sid,null);LOAD_T=st?(st._t||0):-1;U=Object.assign(blank(),st||{});U.n=Object.assign(blank().n,U.n);if(!U.nick)U.nick=defaultNick(ME.name)}
+function save(){U._t=Date.now();LS.set('u_'+ME.sid,U);if(ME&&ME.cloud)CLOUD.push()}
+const cloudOn=()=>!!(ME&&ME.cloud&&CLOUD.ok);
 function defaultNick(n){const p=String(n||'').trim().split(/\s+/);return p.length>1?p[0]+' '+p[p.length-1][0]+'.':(p[0]||'Player')}
 function level(xp){let i=0;LEVELS.forEach((l,j)=>{if(xp>=l[0])i=j});const nx=LEVELS[i+1];return {i,name:LEVELS[i][1],from:LEVELS[i][0],to:nx?nx[0]:null,pct:nx?Math.round((xp-LEVELS[i][0])/(nx[0]-LEVELS[i][0])*100):100}}
 function streak(u){const s=new Set(u.days);let n=0,d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');if(!s.has(f(d)))d.setDate(d.getDate()-1);while(s.has(f(d))){n++;d.setDate(d.getDate()-1)}return n}
@@ -408,8 +416,8 @@ function gate(msg){
   <div class="hint" id="hn">Type the 6 numbers after the S. They start with 0.</div>
   <div class="mail" id="ml"><span style="font-size:1.2rem">✉️</span><div><small><span id="mll">Your student email</span><span class="st" id="mst"></span></small><b id="mla">s0·····@student.mnu.edu.mv</b></div></div>
   <div class="err" id="er">${msg||''}</div>
-  <button class="btn" id="go" disabled>Verify and start</button></form>
-  <p class="muted" style="font-size:.8rem;margin-top:14px">Your progress is saved on this device. To move it to another device, use <b>Save my progress</b> on the home page.</p></div></div>`;
+  <button class="btn" id="go" disabled>${CLOUD.ok?'Continue':'Verify and start'}</button></form>
+  <p class="muted" style="font-size:.8rem;margin-top:14px">${CLOUD.ok?'Sign in with your own 6-digit PIN. Your progress saves to your account, so you can carry on from any phone or laptop.':'Your progress is saved on this device. To move it to another device, use <b>Save my progress</b>.'}</p></div></div>`;
   let mi=0;const mt=setInterval(()=>{const m=$('#motto');if(!m)return clearInterval(mt);m.style.opacity=0;setTimeout(()=>{mi=(mi+1)%MOTTOS.length;m.textContent=MOTTOS[mi];m.style.opacity=1},500)},4500);
   let ok=false,seq=0;const sidIn=$('#sid'),nmIn=$('#nm');
   const ready=()=>{$('#go').disabled=!(ok&&nmIn.value.trim().length>1)};
@@ -428,8 +436,35 @@ function gate(msg){
     else if(!nmIn.value.trim())nmIn.focus();ready()};
   sidIn.oninput=check;nmIn.oninput=ready;
   $('#f').onsubmit=e=>{e.preventDefault();if(!ok){check();return}const name=nmIn.value.trim();if(name.length<2){$('#er').textContent='Please type your full name.';nmIn.focus();return}
-    clearInterval(mt);LS.set('session',{sid:'S'+sidIn.value,name});start()}}
-function signOut(){LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
+    const sid='S'+sidIn.value;if(CLOUD.ok)return pinStep(sid,name,mt);
+    clearInterval(mt);LS.set('session',{sid,name});start()}}
+/* step 2 (cloud): sign in with a 6-digit PIN, or create one the first time */
+function pinStep(sid,name,mt,mode){mode=mode||'in';const card=document.querySelector('.signcard'),em=CLOUD.email(sid);
+  card.innerHTML=`<h2 style="margin-top:6px">${mode==='in'?'Enter your PIN':'Create your PIN'}</h2>
+  <p class="muted" style="font-size:.88rem;margin:0 0 10px">${esc(sid)} · ${esc(sid===LECTURER?'Lecturer access':em)} · <a href="javascript:void 0" id="chg">Change</a></p>
+  <div class="subnav" role="tablist"><button type="button" data-pm="in" class="${mode==='in'?'on':''}">Sign in</button><button type="button" data-pm="new" class="${mode==='new'?'on':''}">First time? Create PIN</button></div>
+  <form id="pf" novalidate><input type="text" autocomplete="username" value="${esc(em)}" hidden>
+  <label for="pin">${mode==='in'?'Your 6-digit PIN':'Choose a 6-digit PIN'}</label><input type="password" id="pin" inputmode="numeric" maxlength="32" autocomplete="${mode==='in'?'current-password':'new-password'}" class="pinbox">
+  ${mode==='new'?'<label for="pin2">Type it again</label><input type="password" id="pin2" inputmode="numeric" maxlength="6" autocomplete="new-password" class="pinbox"><p class="hint">Pick something you will remember but others can\'t guess. Not 123456 or your birthday.</p>':''}
+  <div class="err" id="per"></div><button class="btn" id="pgo">${mode==='in'?'Sign in':'Create PIN and start'}</button></form>
+  ${mode==='in'?'<p style="margin:12px 0 0"><a href="javascript:void 0" id="fgt">Forgot PIN?</a></p>':''}
+  <div id="pof"></div>
+  <p class="muted" style="font-size:.8rem;margin-top:14px">Your PIN protects your progress and lets you carry on from any device.</p>`;
+  const er=t=>{$('#per').textContent=t},pin=$('#pin');pin.focus();
+  card.querySelectorAll('[data-pm]').forEach(b=>b.onclick=()=>pinStep(sid,name,mt,b.dataset.pm));
+  $('#chg').onclick=()=>{clearInterval(mt);gate()};
+  const offline=()=>{$('#pof').innerHTML=`<div class="fb no" style="margin-top:12px">No connection to your account right now. <a href="javascript:void 0" id="loc">Use this device only for now</a>: your progress will stay on this phone or laptop until you sign in with your PIN again.</div>`;
+    $('#loc').onclick=()=>{clearInterval(mt);LS.set('session',{sid,name});start()}};
+  $('#fgt')&&($('#fgt').onclick=async()=>{if(sid===LECTURER)return er('The lecturer PIN can be reset in the Firebase console (Authentication → Users).');
+    er('');try{await CLOUD.reset(sid);$('#per').style.color='var(--green)';er(`We sent a PIN reset link to ${em}. Check your MNU student inbox (and the spam folder), choose a new 6-digit PIN, then come back and sign in.`)}
+    catch(e){$('#per').style.color='';er(CLOUD.say(e));if(CLOUD.isNetwork(e))offline()}});
+  $('#pf').onsubmit=async e=>{e.preventDefault();$('#per').style.color='';const p=pin.value.trim();
+    if(mode==='new'){if(!/^\d{6}$/.test(p))return er('Your PIN must be exactly 6 digits.');if(p!==$('#pin2').value.trim())return er('The two PINs don\'t match.');if(/^(\d)\1{5}$|^(123456|654321|012345)$/.test(p))return er('That PIN is too easy to guess. Choose another.')}
+    else if(p.length<6)return er('Type your 6-digit PIN.');
+    $('#pgo').disabled=true;$('#pgo').textContent=mode==='in'?'Signing in…':'Creating…';
+    try{await (mode==='in'?CLOUD.signIn(sid,p):CLOUD.create(sid,p));clearInterval(mt);LS.set('session',{sid,name,cloud:true});start()}
+    catch(e){$('#pgo').disabled=false;$('#pgo').textContent=mode==='in'?'Sign in':'Create PIN and start';er(CLOUD.say(e));if(CLOUD.isNetwork(e))offline()}}}
+async function signOut(){if(ME&&ME.cloud){await CLOUD.flush();await CLOUD.signOut()}LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
 
 /* ---------- layout ---------- */
 const NAV=[['#/','Home'],['#/cases','Section A · Cases'],['#/short','Section B · Short answers'],['#/essay','Section C · Strategy & essay'],['#/badges','Badges'],['#/board','Leaderboard']];
@@ -478,7 +513,7 @@ const TOUR=[['🧩','Plan with chips','Every question starts with a plan. Tap th
  ['🏁','Finish your way','After planning, choose: <b>📝 Plan only</b> to move on, <b>✍️ Write on paper</b> against the clock, or <b>⌨️ Type my answer</b> and compare it with the key points.'],
  ['✨','XP, missions and badges','Earn XP for reading, planning and writing. Three daily missions change every day and get tougher as you level up. Unlock badges and climb the leaderboard.'],
  ['💾','Keep your progress safe','Your progress lives on this device. Tap <b>💾 Save</b> in the top bar to email a copy to your lecturer or download it.']];
-function tour(n){closeModal();const t=TOUR[n],m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','How it works');
+function tour(n){closeModal();const t=n===3&&cloudOn()?['☁️','Your progress follows you','You signed in with your PIN, so your progress saves to your account automatically. Carry on from any phone or laptop. Tap <b>💾 Save</b> any time for an extra backup copy.']:TOUR[n],m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','How it works');
   const done=()=>{U.tour=1;save();closeModal()};
   m.innerHTML=`<div class="card" style="text-align:center"><button class="x" aria-label="Close">✕</button><div style="font-size:2.6rem;margin-top:6px">${t[0]}</div>
   <p class="muted" style="font:700 .75rem Lexend;letter-spacing:.08em;margin:6px 0 2px">STEP ${n+1} OF ${TOUR.length}</p><h2 style="margin:0 0 8px">${t[1]}</h2><p style="color:var(--ink2)">${t[2]}</p>
@@ -493,7 +528,7 @@ function openSave(){closeModal();const last=LS.get('bk_'+ME.sid,''),L=level(U.xp
   const m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','Save my progress');
   m.innerHTML=`<div class="card"><button class="x" aria-label="Close">✕</button><h2 style="margin-right:40px">💾 Save my progress</h2>
   <p class="muted" style="font-size:.9rem;margin:0">${U.xp} XP · ${esc(L.name)} · ${Object.keys(U.badges).length} badge${Object.keys(U.badges).length===1?'':'s'} · 🔥 ${streak(U)}<br>${last?'Last saved '+last:'Not saved yet'}</p>
-  <p style="font-size:.92rem;margin:12px 0 0">Your progress lives on this device only. Keep a copy so you never lose it.</p>
+  ${cloudOn()?`<p style="margin:10px 0 0">${syncChip()}</p><p style="font-size:.92rem;margin:10px 0 0">Your progress saves to your account automatically. These copies are an extra backup.</p>`:'<p style="font-size:.92rem;margin:12px 0 0">Your progress lives on this device only. Keep a copy so you never lose it.</p>'}
   <button class="opt" id="mem"><span class="em">📧</span><span><b>Email a copy to my lecturer</b><small>Opens your email app with your backup ready to send to ${SCORE_EMAIL}. If you ever lose your progress, your lecturer can send it back.</small></span></button>
   <button class="opt" id="mdl"><span class="em">⬇️</span><span><b>Download a copy to this device</b><small>Saves a small .txt file. Open it on another device to carry on.</small></span></button>
   <button class="opt" id="mcp"><span class="em">📋</span><span><b>Copy backup code</b><small>Paste it into a note or a message to yourself.</small></span></button>
@@ -925,7 +960,22 @@ async function scoreCode(){const p={v:1,s:ME.sid,n:U.hide?'':U.nick,x:U.xp,l:lev
   const j=btoa(unescape(encodeURIComponent(JSON.stringify(p)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   return 'MKT301-'+j+'-'+(await sha('mkt301-score|'+j)).slice(0,8)}
 async function rowKey(sid){return (await sha(ROSTER.salt+'|'+sid)).slice(0,12)}
-async function boardPage(){
+/* live leaderboard (cloud): updates as soon as anyone earns XP */
+function liveBoard(){
+  shell('#/board',`<div class="row" style="justify-content:space-between"><h1 style="margin:0">Leaderboard</h1><span class="live"><i></i>LIVE</span></div>
+  <p class="muted">Scores update the moment anyone earns XP. Student IDs are never shown.</p>
+  <div class="grid g2"><div class="card lb" id="lbl"><p class="muted">Loading the class…</p></div>
+  <div class="card"><h2>You on the board</h2><p style="margin:0 0 6px">Your score: <b>${U.xp} XP</b> · ${esc(level(U.xp).name)} · ${Object.keys(U.badges).length} badges</p>
+   ${ME.sid===LECTURER?'<p class="muted" style="font-size:.9rem">The lecturer account is not shown on the board.</p>':`
+   <label for="nk">Name on the board</label><input type="text" id="nk" maxlength="24" value="${esc(U.nick)}">
+   <label style="display:flex;gap:8px;align-items:center;font:400 .95rem Inter;color:var(--ink)"><input type="checkbox" id="hd" ${U.hide?'checked':''} style="width:20px;height:20px;accent-color:var(--teal)"> Show me as "Hidden player"</label>
+   <p class="muted" style="font-size:.85rem;margin-top:12px">No need to send anything: your score updates automatically. ${syncChip()}</p>`}</div></div>`);
+  const upd=()=>{U.nick=$('#nk').value.trim().slice(0,24)||defaultNick(ME.name);U.hide=$('#hd').checked;save();toast('🏷️','Saved','The board will update in a moment')};
+  $('#nk')&&($('#nk').onchange=upd);$('#hd')&&($('#hd').onchange=upd);
+  CLOUD.watchBoard(rows=>{const el=$('#lbl');if(!el)return;rows=rows.filter(r=>r.id!==LECTURER);
+    el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r ${r.id===ME.sid?'me':''}"><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><div><b>${esc(r.n||'Hidden player')}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Earn some XP and you will appear here.</p>'},
+    e=>{const el=$('#lbl');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
+async function boardPage(){if(cloudOn())return liveBoard();
   const rows=(LEADERBOARD.rows||[]).slice().sort((a,b)=>b.x-a.x),mine=await rowKey(ME.sid);
   shell('#/board',`<h1>Leaderboard</h1><p class="muted">${LEADERBOARD.updated?'Updated '+esc(LEADERBOARD.updated)+'. ':''}The board is updated weekly from the scores students send in.</p>
   <div class="grid g2"><div class="card lb">${rows.length?rows.map((r,i)=>`<div class="r ${r.k===mine?'me':''}"><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><div><b>${esc(r.n||'Hidden player')}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badges</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Be the first: send your score →</p>'}</div>
@@ -996,16 +1046,42 @@ function reviewHTML(){const rv=LS.get('review',{}),num=t=>esc(t).replace(/(\b(?:
   return `<p class="muted" style="font-size:.9rem;margin-top:0">Everything below was created or simplified for practice. Tick each item once you've checked it. Ticks are saved on this device. Numbers are highlighted.</p>
   <h3>Section A cases</h3>${cases}<h3 style="margin-top:16px">Section C companies</h3><details class="mine"><summary>All ${BANK_C.structured.length+BANK_C.essays.length} Section C scenarios (all invented)</summary>${sc}</details>
   <h3 style="margin-top:16px">Section B: real organisations named</h3><details class="mine"><summary>${named.length} question${named.length===1?'':'s'} name real organisations: check the claims</summary>${bq||'<p class="muted">None found.</p>'}</details>`}
+/* live class dashboard (cloud): every student's progress, class-wide decoys and the least-practised topics */
+let QIDX=null;
+function qIndex(){if(QIDX)return QIDX;QIDX={};CASES.forEach(c=>c.questions.forEach(q=>QIDX[q.id]={q,area:'c:'+c.id,label:c.title+': '+q.skill}));
+  BANK_B.forEach(q=>QIDX[q.id]={q,area:'w'+q.week,label:'Week '+q.week+': '+q.topic});return QIDX}
+const practised=u=>new Set(Object.keys((u&&u.log)||{}).map(k=>(k.match(/^(?:plan|timed|typed|check):([^:]+):/)||[])[1]).filter(Boolean));
+function weakOf(u){const t=((u&&u.wk)||{}).t||{};return Object.keys(t).filter(k=>t[k][1]>0).sort((a,b)=>t[b][1]/Math.max(1,t[b][0])-t[a][1]/Math.max(1,t[a][0])).slice(0,2).map(tkLabel)}
+function ago(d){if(!d)return '–';const m=Math.round((Date.now()-d)/60000);return m<2?'just now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago'}
+function classDash(){
+  $('#cdash').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Class dashboard</h2><span class="live"><i></i>LIVE</span></div><div id="cdb"><p class="muted">Loading students…</p></div>`;
+  CLOUD.watchUsers(list=>{const el=$('#cdb');if(!el)return;const I=qIndex();
+    const st=list.filter(x=>x.id!==LECTURER&&x.u).map(x=>{const u=x.u,n=u.n||{};return {id:x.id,name:x.name||'',xp:u.xp|0,lv:level(u.xp|0).name,str:streak(Object.assign({days:[]},u)),ts:x.ts,
+      plans:n.plans|0,timed:n.timed|0,typed:n.typed|0,badges:Object.keys(u.badges||{}).length,weak:weakOf(u),done:practised(u),u}}).sort((a,b)=>b.xp-a.xp);
+    const day=864e5,now=Date.now(),act=d=>st.filter(x=>x.ts&&now-x.ts<d).length,total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:st.length);
+    const dec={};st.forEach(x=>Object.entries(x.u.plansSaved||{}).forEach(([id,p])=>{const e=I[id];if(!e||!p.checked)return;(p.sel||[]).forEach(j=>{const c=e.q.chips[j];if(c&&!c.g){const k=id+'|'+j;dec[k]=dec[k]||{t:c.t,why:c.why,where:e.label,n:0};dec[k].n++}})}));
+    const topDec=Object.values(dec).sort((a,b)=>b.n-a.n).slice(0,8);
+    const areas=[...new Set(Object.values(I).map(e=>e.area))].map(a=>({a,label:a[0]==='w'?tkLabel(a):CASES.find(c=>'c:'+c.id===a).title+' (case practice)',n:st.filter(x=>[...x.done].some(id=>I[id]&&I[id].area===a)).length})).sort((a,b)=>a.n-b.n).slice(0,6);
+    el.innerHTML=`<div class="stats" style="margin:12px 0"><div class="stat"><b>${st.length}/${total}</b><span>signed up</span></div><div class="stat"><b>${act(day)}</b><span>active today</span></div><div class="stat"><b>${act(7*day)}</b><span>active this week</span></div><div class="stat"><b>${st.length?Math.round(st.reduce((t,x)=>t+x.xp,0)/st.length):0}</b><span>average XP</span></div></div>
+    <div class="tablewrap"><table class="wide"><tr><th>#</th><th>Name</th><th>ID</th><th>XP</th><th>Level</th><th>🔥</th><th>Last active</th><th>Plans</th><th>Timed</th><th>Typed</th><th>Badges</th><th>Weak topics</th></tr>
+    ${st.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.id)}</td><td><b>${x.xp}</b></td><td>${esc(x.lv)}</td><td>${x.str}</td><td>${ago(x.ts)}</td><td>${x.plans}</td><td>${x.timed}</td><td>${x.typed}</td><td>${x.badges}</td><td style="font-size:.82rem">${esc(x.weak.join('; ')||'–')}</td></tr>`).join('')||'<tr><td colspan="12" class="muted">No students have signed in with a PIN yet.</td></tr>'}</table></div>
+    <div class="grid g2" style="margin-top:16px"><div><h3>Decoys the class picks most</h3>${topDec.length?`<ol class="sumlist">${topDec.map(d=>`<li><b>${esc(d.t)}</b> <span class="tag">${d.n} student${d.n===1?'':'s'}</span><div class="muted" style="font-size:.82rem">${esc(d.where)}${d.why?' · '+esc(d.why):''}</div></li>`).join('')}</ol>`:'<p class="muted">No decoys picked yet.</p>'}</div>
+    <div><h3>Practised by the fewest students</h3><ol class="sumlist">${areas.map(a=>`<li>${esc(a.label)} <span class="tag">${a.n}/${st.length||0}</span></li>`).join('')}</ol></div></div>
+    <button class="btn ghost sm" id="csv" style="margin-top:12px">⬇ Download CSV</button>`;
+    $('#csv').onclick=()=>{const q=v=>'"'+String(v).replace(/"/g,'""')+'"',rows=[['Name','ID','XP','Level','Streak','Last active','Plans','Timed','Typed','Badges','Weak topics']].concat(st.map(x=>[x.name,x.id,x.xp,x.lv,x.str,x.ts?x.ts.toISOString():'',x.plans,x.timed,x.typed,x.badges,x.weak.join('; ')]));
+      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='mkt301-class-'+today()+'.csv';a.click()}},
+  e=>{const el=$('#cdb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
 function lecturer(){
   if(ME.sid!==LECTURER)return home();
   shell('#/lecturer',`<h1>Lecturer</h1>
+  ${cloudOn()?'<div class="card" id="cdash" style="margin-bottom:22px"></div>':'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
   <div class="card" id="demo" style="margin-bottom:22px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Show the class</h2><button class="btn ghost sm" id="fs">⛶ Full screen</button></div>
   <p class="muted" style="font-size:.9rem;margin:6px 0 12px">Example students only, made up to explain how scoring works. Real scores appear on the Leaderboard tab.</p>
   <div class="subnav"><button data-dm="board" class="on">🏆 Example leaderboard</button><button data-dm="vs">⚔️ Student 1 vs Student 2</button><button data-dm="tips">💡 How to climb</button></div><div id="dm"></div></div>
   <h2>Content review</h2><div class="card" id="rvw" style="margin-bottom:22px"></div>
-  <h2>Update the leaderboard</h2>
-  <div class="card"><ol style="padding-left:1.2em;margin-top:0"><li>Paste all the score emails or codes below (everything at once is fine).</li><li>Check the preview, then <b>Download leaderboard.js</b>.</li><li>On GitHub, open the <b>mkt301</b> repo → <b>Add file → Upload files</b> → drop in <code>leaderboard.js</code> → <b>Commit changes</b>.</li></ol>
-  <textarea id="tx" placeholder="Paste score emails or codes here"></textarea><div class="row" style="margin-top:12px"><button class="btn" id="go">Read codes</button></div><div id="out" style="margin-top:16px"></div></div>`);
+  <details class="card"${cloudOn()?'':' open'}><summary class="lex" style="cursor:pointer;font-weight:700">Offline fallback: update the leaderboard from score codes</summary><p class="muted" style="font-size:.88rem">Only needed if the live leaderboard is unavailable.</p><ol style="padding-left:1.2em;margin-top:0"><li>Paste all the score emails or codes below (everything at once is fine).</li><li>Check the preview, then <b>Download leaderboard.js</b>.</li><li>On GitHub, open the <b>mkt301</b> repo → <b>Add file → Upload files</b> → drop in <code>leaderboard.js</code> → <b>Commit changes</b>.</li></ol>
+  <textarea id="tx" placeholder="Paste score emails or codes here"></textarea><div class="row" style="margin-top:12px"><button class="btn" id="go">Read codes</button></div><div id="out" style="margin-top:16px"></div></details>`);
+  if(cloudOn())classDash();
   demo();$('#rvw').innerHTML=reviewHTML();$('#rvw').querySelectorAll('[data-rv]').forEach(b=>b.onchange=()=>{const r=LS.get('review',{});r[b.dataset.rv]=b.checked;LS.set('review',r)});
   $('#go').onclick=async()=>{const found=$('#tx').value.match(/MKT301-[A-Za-z0-9_-]+-[0-9a-f]{8}/g)||[];const best={};let bad=0,off=0;
     for(const code of found){const m=code.match(/^MKT301-(.+)-([0-9a-f]{8})$/);if((await sha('mkt301-score|'+m[1])).slice(0,8)!==m[2]){bad++;continue}
@@ -1021,13 +1097,56 @@ function lecturer(){
     $('#dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([file],{type:'text/javascript'}));a.download='leaderboard.js';a.click()}}}
 
 /* ---------- router ---------- */
-function route(){if(!ME)return gate();const h=location.hash.replace(/^#\/?/,'').split('/');
+function route(){CLOUD.unwatch();if(!ME)return gate();const h=location.hash.replace(/^#\/?/,'').split('/');
   if(h[0]==='case')return caseView(h[1],h[2]||'read');
   if(h[0]==='essay'&&h[1]==='ca')return caView(h[2]);
   if(h[0]==='essay'&&h[1]==='coach')return coachView(h[2]);
   ({'':home,cases:caseList,badges:badgesPage,board:boardPage,lecturer:lecturer,
     short:shortPage,essay:essayPage}[h[0]]||home)()}
-function start(){ME=me();if(!ME)return gate();load();if(!U.badges.boarding){checkBadges();save()}hud();route();if(!U.tour)setTimeout(()=>{if(ME&&!U.tour&&!document.querySelector('.modal'))tour(0)},700)}
+/* ---------- cloud sync ---------- */
+const SYNC={synced:['ok','☁️ Saved to your account'],saving:['','⏳ Saving…'],syncing:['','⏳ Syncing…'],offline:['bad','📴 Offline: saves when you reconnect'],error:['bad','⚠️ Couldn\'t save, will retry'],off:['','']};
+const syncChip=()=>{const v=SYNC[CLOUD.state]||SYNC.off;return v[1]?`<span class="sync ${v[0]}" id="sync">${v[1]}</span>`:''};
+CLOUD.onStatus(()=>{const e=$('#sync');if(e)e.outerHTML=syncChip()});
+const rowOf=sid=>sid===LECTURER?null:{n:U.hide?'':String(U.nick||'').slice(0,24),x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,s:streak(U)};
+async function cloudSync(){const sid=ME.sid;
+  if(!CLOUD.ok){toast('📴','Saving on this device only','Your account could not be reached. Sign in again when you are online.');return}
+  const u=await CLOUD.current();if(!ME||ME.sid!==sid)return;
+  if(!u||!CLOUD.mine(sid)){LS.del('session');ME=null;U=null;hud();gate('Please sign in again with your PIN.');return}
+  let r;try{r=await CLOUD.pull(sid)}catch(e){if(!ME||ME.sid!==sid)return;console.warn('Pull failed',e);addEventListener('online',()=>ME&&ME.sid===sid&&cloudSync(),{once:true});
+    toast('📴','Offline for now','Your progress is saved on this device and will sync when you reconnect.');return}
+  if(!ME||ME.sid!==sid)return;const R=r&&r.u;
+  if(R&&(R._t||0)>LOAD_T){U=Object.assign(blank(),R);U.n=Object.assign(blank().n,U.n);LS.set('u_'+sid,U);hud();route();toast('☁️','Progress loaded',U.xp+' XP from your account')}
+  CLOUD.ready(sid,()=>ME&&ME.sid===sid?{sid,name:ME.name,U,row:rowOf(sid)}:null);CLOUD.flush()}
+/* email links: Firebase sends students here (Templates → Customize action URL) */
+const ACT=(()=>{const q=new URLSearchParams(location.search);return q.get('oobCode')&&q.get('mode')?{mode:q.get('mode'),code:q.get('oobCode')}:null})();
+function clearAct(){const q=new URLSearchParams(location.search);['mode','oobCode','apiKey','lang','continueUrl'].forEach(k=>q.delete(k));
+  history.replaceState(null,'',location.pathname+(q.toString()?'?'+q:'')+location.hash)}
+function signInWith(sid,msg){clearAct();gate();if(msg)$('#f').insertAdjacentHTML('beforebegin',`<div class="fb ok" id="gmsg" style="margin-bottom:10px">${esc(msg)}</div>`);const d=String(sid||'').replace(/^S/i,'');if(/^0\d{5}$/.test(d)){$('#sid').value=d;$('#sid').dispatchEvent(new Event('input'))}}
+async function actionPage(a){
+  const box=h=>{app.innerHTML=`<div class="gate"><div class="card signcard" id="act">${h}</div></div>`};
+  const fail=e=>box(`<div style="font-size:2.4rem">⚠️</div><h2>That link didn't work</h2><p class="muted">${esc(CLOUD.say(e))}</p><button class="btn" id="ab">Go to sign in</button>`)||($('#ab').onclick=()=>signInWith(''));
+  if(!CLOUD.ok)return box(`<h2>Can't open this link right now</h2><p class="muted">Check your internet connection and open the link again.</p>`);
+  box('<p class="muted">Checking your link…</p>');
+  if(a.mode==='resetPassword'){let email;try{email=await CLOUD.verifyReset(a.code)}catch(e){return fail(e)}
+    const sid=email.split('@')[0].toUpperCase();
+    box(`<div style="font-size:2.4rem">🔐</div><h2 style="margin-top:6px">Choose a new PIN</h2><p class="muted" style="font-size:.88rem;margin:0 0 6px">${esc(sid)} · ${esc(email)}</p>
+    <form id="rf" novalidate><input type="text" autocomplete="username" value="${esc(email)}" hidden>
+    <label for="np">New 6-digit PIN</label><input type="password" id="np" inputmode="numeric" maxlength="6" autocomplete="new-password" class="pinbox">
+    <label for="np2">Type it again</label><input type="password" id="np2" inputmode="numeric" maxlength="6" autocomplete="new-password" class="pinbox">
+    <p class="hint">Pick something you will remember but others can't guess. Not 123456 or your birthday.</p>
+    <div class="err" id="rer"></div><button class="btn" id="rgo">Save my new PIN</button></form>`);
+    $('#np').focus();
+    $('#rf').onsubmit=async e=>{e.preventDefault();const p=$('#np').value.trim(),er=t=>{$('#rer').textContent=t};
+      if(!/^\d{6}$/.test(p))return er('Your PIN must be exactly 6 digits.');if(p!==$('#np2').value.trim())return er("The two PINs don't match.");
+      if(/^(\d)\1{5}$|^(123456|654321|012345)$/.test(p))return er('That PIN is too easy to guess. Choose another.');
+      $('#rgo').disabled=true;$('#rgo').textContent='Saving…';
+      try{await CLOUD.confirmReset(a.code,p);signInWith(sid,'✅ Your PIN has been changed. Sign in with your new PIN.')}
+      catch(e){$('#rgo').disabled=false;$('#rgo').textContent='Save my new PIN';er(CLOUD.say(e))}};return}
+  if(a.mode==='verifyEmail'||a.mode==='recoverEmail'){try{const info=a.mode==='recoverEmail'?await CLOUD.checkCode(a.code):null;await CLOUD.applyCode(a.code);
+      box(`<div style="font-size:2.4rem">✅</div><h2>${a.mode==='verifyEmail'?'Email confirmed':'Email restored'}</h2><p class="muted">${a.mode==='verifyEmail'?'Thanks, your student email is confirmed.':'Your account email has been changed back'+(info&&info.data&&info.data.email?' to '+esc(info.data.email):'')+'. If you did not ask for a change, reset your PIN to be safe.'}</p><button class="btn" id="ab">Go to sign in</button>`);
+      $('#ab').onclick=()=>signInWith('')}catch(e){fail(e)}return}
+  box(`<h2>Unknown link</h2><p class="muted">This link isn't one the MKT301 Arena understands.</p><button class="btn" id="ab">Go to sign in</button>`);$('#ab').onclick=()=>signInWith('')}
+function start(){if(ACT&&!start.done){start.done=1;return actionPage(ACT)}ME=me();if(!ME)return gate();load();if(!U.badges.boarding){checkBadges();save()}hud();route();if(ME.cloud)cloudSync();if(!U.tour)setTimeout(()=>{if(ME&&!U.tour&&!document.querySelector('.modal'))tour(0)},700)}
 addEventListener('hashchange',route);start();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
