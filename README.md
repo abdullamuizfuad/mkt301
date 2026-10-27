@@ -5,7 +5,8 @@ A gamified study and practice site for MKT301 International Marketing (MNU Busin
 ## What's in it
 
 - **Section A · Cases:** ICETO Gelato, The Coffee Bean & Tea Leaf, and Kandu Bites (tuna jerky to Japan and Italy). Each has an extended case, exhibits, a Boardroom of competing arguments, and random sets of practice questions (plan with chips → timed writing on paper → self-check).
-- **Sections B and C:** coming next.
+- **Section B · Short answers:** 56 practice questions tagged by week (3 angles on each key short-answer skill, plus questions from the other weeks). Random sets of 6, filter by week, plan with chips → 10-minute timer → self-check.
+- **Section C · Strategy & essay:** 4 competitive-advantage scenarios in three parts (Five Forces sort, Diamond sort, Strategic Intent and Blue Ocean canvas, each with its own timer), and an Essay Coach with 4 expansion scenarios (mark bands, market scoring, order and entry modes, supply-chain builder, revenue and risk tools, an essay script, a 40-minute timer and self-marking).
 - **Game:** XP, levels, badges, day streaks, a daily mission and a weekly leaderboard.
 
 ## Files
@@ -14,6 +15,8 @@ A gamified study and practice site for MKT301 International Marketing (MNU Busin
 |---|---|
 | `index.html` | The portal: sign-in, game engine, pages |
 | `cases.js`, `case-cbtl.js`, `case-tuna.js` | One file per case: sections, exhibits, Boardroom arguments, practice questions |
+| `bank-b.js` | Section B short-answer questions |
+| `bank-c.js` | Section C strategy scenarios and essay scenarios |
 | `roster.js` | Scrambled class list |
 | `leaderboard.js` | This week's leaderboard |
 
