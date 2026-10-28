@@ -189,7 +189,8 @@ async screentime(){const p=await page({sid:STUDENT,clock:true});await p.evaluate
   await poke();await p.clock.runFor(30000);ok(await p.evaluate(()=>PR.pendx)<1&&await p.evaluate(()=>PR.pend)>0,'live-session time counted towards bonus blocks');
   await p.evaluate(()=>{PR.sess=null;PR.sessOn=false;PR.joined=false;presBar()});
   await p.evaluate(()=>{U.stArch=5*3600;stFlush(true)});ok((await p.U()).badges.includes('hrs5'),'5 Hours Logged badge missing');
-  await p.go('#/');ok((await p.textContent('#stcard')).includes('GOAL MET'),'Home card does not show the goal met');await shot(p,'st-card');
+  await p.go('#/');ok((await p.textContent('#stcard')).includes('GOAL MET'),'Home card does not show the goal met');
+  await p.evaluate(()=>{document.querySelectorAll('.toast').forEach(t=>t.remove());document.querySelector('#stcard').scrollIntoView({block:'center'})});await shot(p,'st-card');
   await p.go('#/badges');ok((await p.textContent('main')).includes('every 20 active minutes'),'How to earn XP row missing');await p.done()},
 
 /* break reminder: after 20 focused minutes; Not now = 10 more minutes; a break pauses screen time; deferred during a writing timer; never in a live session */
@@ -209,6 +210,6 @@ async offline(){const p=await page({sid:STUDENT});const active=await p.evaluate(
 
 (async()=>{const server=spawn('python3',['-m','http.server',String(PORT)],{cwd:ROOT,stdio:'ignore'});await new Promise(r=>setTimeout(r,800));
   browser=await chromium.launch({headless:!ARGS.headed});
-  for(const [name,fn] of Object.entries(T)){if(ARGS.only&&ARGS.only!==name)continue;const t0=Date.now();
+  for(const [name,fn] of Object.entries(T)){if(ARGS.only&&!String(ARGS.only).split(',').includes(name))continue;const t0=Date.now();
     try{await fn();passes++;console.log(`PASS ${name} (${((Date.now()-t0)/1000).toFixed(1)}s)`)}catch(e){fails++;console.log(`FAIL ${name}: ${e.message.split('\n').slice(0,4).join(' | ')}`)}}
   await browser.close();server.kill();console.log(`\n${passes} passed, ${fails} failed`);process.exit(fails?1:0)})();

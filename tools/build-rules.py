@@ -8,6 +8,7 @@ paste it into Firebase console > Firestore > Rules > Publish.
 
 Usage (same inputs as build-roster.py):
     python3 tools/build-rules.py ClassList_MKT301_*.xls        (or a CSV of IDs)
+    add  -o path/to/firestore.rules  to choose where the file goes (default: ./firestore.rules)
 """
 import importlib.util, sys
 from pathlib import Path
@@ -65,21 +66,58 @@ __EMAILS__
       allow update: if isOwner(sid) && validRow() && request.resource.data.x <= resource.data.x + 3000;
       allow delete: if isOwner(sid) || isLecturer();
     }
+
+    // Live tutorial sessions: only the lecturer starts and ends them; everyone on the class list can see them.
+    // rep = the report the lecturer saves at the end ({SID: {n, on, idle, away, left, lg, pct, pr}}).
+    match /sessions/{id} {
+      allow read: if onRoster();
+      allow create, update: if isLecturer()
+        && request.resource.data.keys().hasOnly(['name', 'startedAt', 'endsAt', 'active', 'endedAt', 'rep'])
+        && request.resource.data.name is string && request.resource.data.name.size() <= 80
+        && request.resource.data.active is bool
+        && request.resource.data.startedAt is timestamp && request.resource.data.endsAt is timestamp
+        && (!('rep' in request.resource.data) || (request.resource.data.rep is map && request.resource.data.rep.size() <= 200));
+      allow delete: if isLecturer();
+
+      // A joined student's presence: written only by that student, only while the session is running.
+      match /p/{sid} {
+        allow read: if isOwner(sid) || isLecturer();
+        allow create, update: if isOwner(sid) && sessionOpen(id) && validPresence();
+        allow delete: if isLecturer();
+      }
+    }
+    function sessionOpen(id) {
+      let s = get(/databases/$(database)/documents/sessions/$(id)).data;
+      return s.active == true && request.time < s.endsAt;
+    }
+    function validPresence() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['st', 'sec', 'pr', 'on', 'idle', 'away', 'left', 'longest', 'ch', 'joinedAt', 't'])
+        && d.st in ['on', 'idle', 'away', 'off']
+        && d.sec is string && d.sec.size() <= 60 && d.pr is string && d.pr.size() <= 200
+        && d.on is int && d.on >= 0 && d.idle is int && d.idle >= 0 && d.away is int && d.away >= 0
+        && d.left is int && d.left >= 0 && d.longest is int && d.longest >= 0 && d.ch is int && d.ch >= 0
+        && d.on + d.idle + d.away <= 43200
+        && d.joinedAt is timestamp && d.t == request.time;
+    }
   }
 }
 """
 
-def main(files):
+def main(argv):
+    out = Path.cwd() / "firestore.rules"
+    if "-o" in argv:
+        i = argv.index("-o"); out = Path(argv[i + 1]); argv = argv[:i] + argv[i + 2:]
+    files = argv
     if not files: sys.exit(__doc__)
     active = set(roster.ALWAYS)
     for f in files:
         a, _ = roster.ids_from_csv(f) if f.lower().endswith(".csv") else roster.ids_from_classlist(f)
         active |= a
     emails = sorted(s.lower() + "@" + DOMAIN for s in active)
-    out = Path.cwd() / "firestore.rules"
     out.write_text(TEMPLATE.replace("__EMAILS__", ",\n".join("      '" + e + "'" for e in emails))
                    .replace("__LECTURER__", LECTURER).replace("__DOMAIN__", DOMAIN), encoding="utf-8")
-    print(f"firestore.rules: {len(emails)} emails (including the lecturer). Paste it into Firestore > Rules and Publish.")
+    print(f"{out.name}: {len(emails)} emails (including the lecturer). Paste it into Firestore > Rules and Publish.")
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -13,6 +13,7 @@ const shot=async(p,name,full)=>{if(ARGS.shots)await p.screenshot({path:path.join
 
 async function page(o={}){const ctx=await browser.newContext({viewport:{width:o.w||390,height:o.h||844}});
   if(o.theme)await ctx.addInitScript(t=>localStorage.setItem('mkt301_theme',JSON.stringify(t)),o.theme);
+  await ctx.addInitScript(()=>{window.__presNoBreak=1});
   const p=await ctx.newPage();p.errs=[];p.allow=o.allow||null;
   p.on('pageerror',e=>p.errs.push('pageerror: '+e.message));
   p.on('console',m=>{const t=m.text();if(m.type()==='error'&&!/mailto|favicon|fonts\.g/.test(t)&&!(p.allow&&p.allow.test(t)))p.errs.push('console: '+t)});
@@ -187,11 +188,51 @@ async profile(){const c=await page();await signIn(c,C,PINC,'Shifa Test');await t
   const ph=await page({theme:'dark'});await signIn(ph,L,PINL,'Abdulla Muiz Fuad');await tourOff(ph);await ph.go('#/student/'+C);await ph.waitForTimeout(1200);ok((await ph.textContent('#prof')).includes('Shifa Test'),'phone profile missing');await shot(ph,'prof-phone-dark',true);await ph.done();
   /* students: no clickable rows, no profiles */
   await c.go('#/board');await c.waitForTimeout(800);ok(!await c.$('#lbl [data-sid]'),'student sees clickable rows');
-  await c.go('#/student/'+A);await c.waitForTimeout(500);ok(!await c.$('#prof')&&await c.evaluate(()=>!location.hash.includes('student')||!!document.querySelector('.hero')),'student opened a profile');await c.done()}
+  await c.go('#/student/'+A);await c.waitForTimeout(500);ok(!await c.$('#prof')&&await c.evaluate(()=>!location.hash.includes('student')||!!document.querySelector('.hero')),'student opened a profile');await c.done()},
+
+/* live tutorial sessions: start, join, on screen / left the app, section, report, focus XP, profile */
+async sessions(){if(process.env.OLDRULES)return;
+  const l=await page({w:1280,h:900,theme:'light',allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+  await l.go('#/lecturer');await waitFor(l,()=>!!document.querySelector('#lsess #lsgo'));await l.fill('#lsname','Week 9 tutorial');await l.click('#lsgo');
+  await waitFor(l,()=>PR.sessOn===true);const sid=await l.evaluate(()=>PR.sess.id);ok((await l.textContent('#lsess')).includes('Week 9 tutorial'),'running session not shown');
+  const c=await page({allow:/400|Failed to load resource|identitytoolkit/});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
+  await waitFor(c,()=>!!document.querySelector('#lbjoin'));ok(await c.evaluate(()=>!PR.joined),'joined without tapping Join');await shot(c,'sess-banner');
+  await c.click('#lbjoin');await c.waitForSelector('#lok');ok((await c.textContent('.modal')).includes('whether this app is on your screen'),'join note missing');await c.click('#lok');
+  await waitFor(c,()=>PR.joined===true);const pp='sessions/'+sid+'/p';
+  let d=await waitDoc(pp,C,x=>x.st.stringValue==='on');ok(d,'presence not written');
+  await l.go('#/live');await waitFor(l,()=>!!document.querySelector('#lvb tr[data-sid]'));ok((await l.textContent('#lvb')).includes('On screen'),'live board row missing');
+  /* the student moves to Section B, then leaves the app */
+  await c.go('#/short');await c.evaluate(()=>{Object.defineProperty(document,'visibilityState',{value:'hidden',configurable:true});document.dispatchEvent(new Event('visibilitychange'))});
+  d=await waitDoc(pp,C,x=>x.st.stringValue==='away');ok(d&&int(d.left)===1,'away / left count not written');ok(d.sec.stringValue.startsWith('Section B'),'section not reported: '+(d&&d.sec.stringValue));
+  await waitFor(l,()=>document.querySelector('#lvb').textContent.includes('Left the app'));await shot(l,'live-board',true);
+  await c.evaluate(()=>{Object.defineProperty(document,'visibilityState',{value:'visible',configurable:true});document.dispatchEvent(new Event('visibilitychange'))});await c.mouse.click(5,500);
+  d=await waitDoc(pp,C,x=>x.st.stringValue==='on');ok(d,'back on screen not written');
+  await c.go('#/live');ok(!await c.$('#lvb'),'student opened the live board');await c.go('#/session/'+sid);ok(!await c.$('#srp'),'student opened a report');
+  ok(await c.evaluate(()=>!document.querySelector('[aria-label="Take a break"]')&&(PR.fc=5000,presTick(),!document.querySelector('[aria-label="Take a break"]'))),'break reminder during a live session');
+  /* focus XP: a long, focused record, then the lecturer ends the session */
+  const x0=await c.evaluate(()=>{const r=U.sess[PR.sess.id];r.on=1000;r.idle=20;r.away=30;PR.fc=0;return U.xp});
+  await l.go('#/live');await waitFor(l,()=>!!document.querySelector('#lvend'));await l.click('#lvend');
+  await waitFor(c,()=>!PR.joined&&!document.querySelector('#livebar'));await waitFor(c,id=>!!U.log['sessfocus:'+id],sid);ok(await c.evaluate(([id,x])=>U.gain['sessfocus:'+id]===20&&U.xp>=x+20,[sid,x0]),'focus XP not +20');
+  const sd=await fsDoc('sessions',sid);ok(sd&&sd.active.booleanValue===false&&sd.rep&&sd.rep.mapValue.fields[C],'report not saved');
+  await l.go('#/session/'+sid);await waitFor(l,()=>!!document.querySelector('#srp tr[data-sid]'));ok((await l.textContent('#srp')).includes('Shifa'),'report row missing');ok(await l.$('#srcsv'),'CSV button missing');await shot(l,'session-report',true);
+  await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes('Week 9 tutorial'));
+  await l.go('#/student/'+C);await waitFor(l,()=>!!document.querySelector('#prof')&&document.querySelector('#prof').textContent.includes('Week 9 tutorial'));
+  ok((await l.textContent('#prof')).includes('Screen time'),'screen time missing from the profile');
+  await c.done();await l.done()},
+
+/* rules without sessions (before the new rules are published): no banner, no errors, screen time still works */
+async sessDenied(){if(!process.env.OLDRULES)return;const c=await page({allow:/permission|insufficient|400|Failed to load resource|identitytoolkit/i});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
+  await c.waitForTimeout(1500);ok(!await c.$('#livebar'),'banner without session rules');ok(await c.$('#stcard'),'screen time card missing');
+  const l=await page({w:1280,h:900,allow:/permission|insufficient|400|Failed to load resource|identitytoolkit/i});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);await l.go('#/lecturer');
+  await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes('updated Firestore rules'));await c.done();await l.done()}
 };
+async function waitFor(p,fn,arg,t=15000){const t0=Date.now();while(Date.now()-t0<t){if(await p.evaluate(fn,arg).catch(()=>false))return;await p.waitForTimeout(250)}throw new Error('timed out waiting for '+String(fn).slice(0,90))}
+async function waitDoc(col,id,test,t=15000){const t0=Date.now();let d=null;while(Date.now()-t0<t){d=await fsDoc(col,id);if(d&&(!test||test(d)))return d;await new Promise(r=>setTimeout(r,300))}return null}
+async function ensure(p,sid,pin){await p.evaluate(async([s,k])=>{try{await CLOUD.create(s,k)}catch(e){}try{await CLOUD.signOut()}catch(e){}},[sid,pin]);await p.reload();await p.waitForTimeout(400)}
+
 
 (async()=>{const server=spawn('python3',['-m','http.server',String(PORT)],{cwd:ROOT,stdio:'ignore'});await new Promise(r=>setTimeout(r,800));
   browser=await chromium.launch();
-  for(const [name,fn] of Object.entries(T)){if(ARGS.only&&ARGS.only!==name)continue;const t0=Date.now();
+  for(const [name,fn] of Object.entries(T)){if(ARGS.only&&!String(ARGS.only).split(',').includes(name))continue;const t0=Date.now();
     try{await fn();passes++;console.log(`PASS ${name} (${((Date.now()-t0)/1000).toFixed(1)}s)`)}catch(e){fails++;console.log(`FAIL ${name}: ${e.message.split('\n').slice(0,4).join(' | ')}`)}}
   await browser.close();server.kill();console.log(`\n${passes} passed, ${fails} failed`);process.exit(fails?1:0)})();

@@ -51,4 +51,5 @@ The lecturer can also mark or change any mark by hand on the Lecturer tab (Marki
 
 - No exam questions, exam scenarios or the word "exam" anywhere students can see.
 - XP always goes through `award()` / `countOnce()` with stable keys so Restart and anti-farming keep working.
+- Screen time, break reminders and live sessions live in `presence.js` (identical in MKT101; change both). Its XP keys are `stgoal:<day>`, `stblock:<day>:<n>` and `sessfocus:<sessionId>`. Never weaken the idle rule (2 minutes) or the 6-block daily cap. Live sessions need the `sessions` rules blocks from `tools/build-rules.py`.
 - Tests: `node tools/tests/run.js` (site) and `RULES=<path to firestore.rules> node tools/tests/firebase-run.js` (cloud, against the Firebase emulators).

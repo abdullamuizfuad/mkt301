@@ -12,8 +12,16 @@ A gamified study and practice site for MKT301 International Marketing (MNU Busin
 - **Save my progress:** the 💾 button in the top bar shows the sync status and makes extra backups: email to the lecturer, download a file or copy a code.
 - **Focus mode:** practice sets show one question at a time (progress bar, Previous/Next, dots). After planning, students finish their way: **Plan only**, **Write on paper** (timed) or **Type my answer** (compare with the key points, self-mark 0–6). Each set ends with a summary and a **Practise my weak spots** option.
 - **Install as an app:** students can add the portal to their home screen; it works offline (`manifest.webmanifest`, `sw.js`). When the list of files changes, bump `CACHE` in `sw.js`.
+- **⏱️ Screen time** on Home: today, this week, total, a 7-day chart and the 20-minute daily goal. It counts only while the portal is on screen and the student is active (it pauses after 2 minutes without a tap, key or scroll, except while a writing timer runs or 🎤 dictation is on). XP: +15 once a day for 20 minutes; +10 for every 20 minutes outside live sessions, up to 6 a day; "Hours logged" badges at 5, 10 and 20 hours; a daily-goal mission in every tier. The lecturer sees minutes per day in each profile and a sortable "This week" column on the dashboard (and in the CSV).
+- **Break reminder** after 20 minutes of continuous focus (a break = 3+ minutes without activity): *Start 5-min break* (screen time pauses) or *Not now* (asks again 10 minutes later). Never during a live session; held back while a writing timer runs, and shown at the next pause.
 - **Restart:** every question, Section C part and Essay Coach scenario has a ↺ Restart button that clears it and removes the XP it earned.
 
+
+## Live tutorial sessions (lecturer)
+
+On the Lecturer tab, **▶ Start session** (default name "Week N tutorial"); it ends with **■ End session** or automatically after 3 hours. Students see a red banner and tap **Join**, after a note that explains exactly what is shared: whether the portal is on screen and which section they're on, nothing else, and only until the session ends. While joined, the portal reports 🟢 on screen / 🟡 idle (2+ minutes untouched) / 🔴 left the app (switched app or tab, locked screen), plus the current section; the lecturer's **live board** (`#/live`) adds ⚫ offline (no check-in for 5+ minutes), on-screen %, times left, longest time away and a "not joined" list, sortable. Ending saves a **report** (attendance, on-screen %, switches, what was practised) under **Past sessions** and in each student's profile, with a CSV download. Students on screen 85%+ of at least 10 joined minutes get **+20 XP**, claimed by their own portal.
+
+Writes: only on a status change, a section change (at most every 30 s) and a heartbeat every 2 minutes: about 60–80 per student per 2-hour session, roughly 2,500 for a class of 32 (the free plan allows 20,000 a day). Data: `sessions/{id}` `{name,startedAt,endsAt,active,endedAt,rep}` (lecturer only) and `sessions/{id}/p/{SID}` `{st,sec,pr,on,idle,away,left,longest,ch,joinedAt,t}` (that student only, only while the session is open). Until the rules with these blocks are published, the session features stay hidden and everything else works.
 
 ## Student profiles (lecturer)
 
@@ -32,6 +40,7 @@ Messages are stored in `reviews/{SID}.m` under keys starting `note_`. The site a
 | `cloud.js` | Firebase connection: PIN accounts, progress sync, live leaderboard, lecturer dashboard |
 | `vendor/firebase.js` | The Firebase SDK, bundled so the site needs no CDN (rebuild: `sh tools/firebase/build.sh`) |
 | `concepts.js` | Automatic concept check for typed answers |
+| `presence.js` | Screen time, break reminders and live tutorial sessions (the same file as MKT101's) |
 | `CLAUDE.md`, `tools/marking/` | How Claude marks typed answers, and the fetch/apply scripts |
 | `roster.js` | Scrambled class list |
 | `leaderboard.js` | Leaderboard for device-only mode (the live board is in Firebase) |
@@ -41,7 +50,7 @@ Messages are stored in `reviews/{SID}.m` under keys starting `note_`. The site a
 Project `mkt301-f8830` (Authentication: Email/Password; Firestore in `asia-south1`). The web config in `cloud.js` is public by design; the data is protected by the security rules.
 
 - **Sign-in:** the account email is `<student id>@student.mnu.edu.mv`, the password is the student's PIN. **Forgot PIN?** sends a reset link to that inbox. The portal handles the link itself if Authentication → Templates → *Customize action URL* is set to `https://abdullamuizfuad.github.io/mkt301/`; otherwise Firebase's own page is used, which also works.
-- **Data:** `users/<ID>` holds each student's progress (readable by the student and the lecturer only); `board/<ID>` holds the leaderboard row (readable by the class).
+- **Data:** `users/<ID>` holds each student's progress (readable by the student and the lecturer only); `board/<ID>` holds the leaderboard row (readable by the class); `sessions/<id>` and `sessions/<id>/p/<ID>` hold live tutorial sessions (see above).
 - **Each new term, update the security rules** (they contain the class list, so they are not committed):
 
   ```bash
@@ -82,7 +91,7 @@ It also accepts a CSV with student IDs in the first column. Then commit and push
 
 ## Tests
 
-End-to-end tests cover sign-in, the tour, all three cases, every Section B question, every Section C scenario, restart and anti-farming rules, backup/restore, missions, the lecturer tools, layout at 320/390/1280px in both themes, and offline support.
+End-to-end tests cover sign-in, the tour, all three cases, every Section B question, every Section C scenario, restart and anti-farming rules, backup/restore, missions, screen time and break reminders, the lecturer tools, layout at 320/390/1280px in both themes, and offline support.
 
 ```bash
 npm i -D playwright && npx playwright install chromium   # once
@@ -94,5 +103,6 @@ Cloud tests run against the Firebase emulators (needs Java and `firebase-tools`)
 
 ```bash
 python3 tools/build-rules.py <class list>   # once, writes firestore.rules (git-ignored)
-node tools/tests/firebase-run.js           # PIN accounts, sync, live board, dashboard, reset links, fallback
+node tools/tests/firebase-run.js           # PIN accounts, sync, live board, dashboard, reset links, fallback, live sessions
+OLDRULES=1 RULES=<published rules> node tools/tests/firebase-run.js --only=sessDenied   # session features stay hidden on the old rules
 ```
