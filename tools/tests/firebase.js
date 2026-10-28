@@ -8,7 +8,7 @@ const ARGS=Object.fromEntries(process.argv.slice(2).map(a=>a.replace(/^--/,'').s
 const EMU='http://127.0.0.1:9099/emulator/v1/projects/demo-mkt301',FS='http://127.0.0.1:8085/v1/projects/demo-mkt301/databases/(default)/documents';
 const A='S081441',B='S085542',L='S000001',C='S082110',PIN='482913',PINB='730516',PINL='905127',PINC='371946';
 const fs=require('fs'),os=require('os'),{spawnSync}=require('child_process');
-let browser,fails=0,passes=0;const ok=(c,m)=>{if(!c)throw new Error(m)};
+let browser,fails=0,passes=0;const R2=process.env.RULES2==='1';const ok=(c,m)=>{if(!c)throw new Error(m)};
 const shot=async(p,name,full)=>{if(ARGS.shots)await p.screenshot({path:path.join(ARGS.shots,name+'.png'),fullPage:!!full})};
 
 async function page(o={}){const ctx=await browser.newContext({viewport:{width:o.w||390,height:o.h||844}});
@@ -32,6 +32,8 @@ async function synced(p,t=12000){const t0=Date.now();await p.waitForTimeout(300)
 const tourOff=p=>p.evaluate(()=>{if(U&&(!U.tour||!U.inst)){U.tour=1;U.inst=U.inst||1;save()}document.querySelector('.modal')?.remove()});
 const fsDoc=async(col,id)=>{const r=await fetch(`${FS}/${col}/${id}`,{headers:{Authorization:'Bearer owner'}});return r.ok?(await r.json()).fields:null};
 const int=f=>f?+(f.integerValue??f.doubleValue):null;
+const enc=x=>typeof x==='string'?{stringValue:x}:Number.isInteger(x)?{integerValue:String(x)}:typeof x==='number'?{doubleValue:x}:typeof x==='boolean'?{booleanValue:x}:x instanceof Date?{timestampValue:x.toISOString()}:x==null?{nullValue:null}:{mapValue:{fields:Object.fromEntries(Object.entries(x).map(([k,v])=>[k,enc(v)]))}};
+const fsPut=async(col,id,o)=>{const r=await fetch(`${FS}/${col}/${id}`,{method:'PATCH',headers:{Authorization:'Bearer owner','Content-Type':'application/json'},body:JSON.stringify({fields:Object.fromEntries(Object.entries(o).map(([k,v])=>[k,enc(v)]))})});if(!r.ok)throw new Error('fsPut '+r.status)};
 
 const T={
 async create(){const p=await page();await shot(p,'fb-gate');await toPin(p,A);await shot(p,'fb-pin');
@@ -42,7 +44,7 @@ async create(){const p=await page();await shot(p,'fb-gate');await toPin(p,A);awa
   ok(await p.evaluate(()=>ME.cloud&&CLOUD.user&&CLOUD.user.email==='s081441@student.mnu.edu.mv'),'not signed in to the account');
   await p.go('#/case/iceto/read');await p.click('[data-r]');await p.waitForTimeout(2600);await synced(p);
   const d=await fsDoc('users',A);ok(d&&int(d.xp)===15,'users doc not saved (xp '+(d&&int(d.xp))+')');
-  const b=await fsDoc('board',A);ok(b&&int(b.x)===15&&b.n.stringValue==='Test S.','board row not saved');
+  const b=await fsDoc('board',A);ok(b&&int(b.x)===15&&b.n.stringValue===(R2?'':'Test S.'),'board row not saved');
   await p.reload();await p.waitForTimeout(1500);ok(await p.evaluate(()=>ME&&ME.sid==='S081441'&&U.xp===15),'not signed in after reload');await p.done()},
 
 async secondDevice(){const p=await page({w:1280,h:800});await signIn(p,A,PIN);await p.waitForTimeout(400);
@@ -61,18 +63,17 @@ async forgot(){const p=await page();await toPin(p,A);await p.click('#fgt');await
   const codes=await (await fetch(EMU+'/oobCodes')).json();ok((codes.oobCodes||[]).some(c=>c.email==='s081441@student.mnu.edu.mv'&&c.requestType==='PASSWORD_RESET'),'no reset email sent');await p.done()},
 
 async liveBoard(){const a=await page({w:1280,h:800});await signIn(a,A,PIN);await tourOff(a);await a.go('#/board');await a.waitForTimeout(800);
-  ok((await a.textContent('#lbl')).includes('Test S.'),'own row missing');ok(await a.$('#lbl .r.me'),'own row not highlighted');
+  ok((await a.textContent('#lbl')).includes(R2?'S081441':'Test S.'),'own row missing');ok(await a.$('#lbl .r.me'),'own row not highlighted');
   const b=await page();await createPin(b,B,PINB,'Mariyam Ali');await tourOff(b);await b.go('#/case/cbtl/read');await b.click('[data-r]');await b.waitForTimeout(100);
   const rows=b.locator('[data-r]');await rows.first().click();await b.waitForTimeout(2600);await synced(b);
-  await a.waitForTimeout(800);ok((await a.textContent('#lbl')).includes('Mariyam A.'),'live board did not show the other student');await shot(a,'fb-board');
-  await b.go('#/board');await b.waitForTimeout(400);await b.check('#hd');await b.waitForTimeout(2800);await a.waitForTimeout(800);
-  const t=await a.textContent('#lbl');ok(t.includes('Hidden player')&&!t.includes('Mariyam'),'hidden player still named');await a.done();await b.done()},
+  await a.waitForTimeout(800);ok((await a.textContent('#lbl')).includes(R2?'S085542':'Mariyam A.'),'live board did not show the other student');await shot(a,'fb-board');
+  await b.go('#/board');await b.waitForTimeout(400);ok(!await b.$('#hd')&&!await b.$('#nk'),'nickname or Hidden player option still offered');await a.done();await b.done()},
 
 async restartSync(){const p=await page();await signIn(p,A,PIN);await tourOff(p);await p.go('#/short');
   const q=p.locator('.qcard').first();await q.locator('.chip').nth(0).click();await q.locator('[data-a="check"]').click();await p.waitForTimeout(2600);await synced(p);
   const x1=int((await fsDoc('board',A)).x);await q.locator('[data-a="restart"]').click();await p.waitForTimeout(2600);await synced(p);
   const x2=int((await fsDoc('board',A)).x);ok(x2===x1-15,`restart not synced to the board (${x1} → ${x2})`);
-  await p.evaluate(()=>{U.xp=9000;save()});await p.waitForTimeout(2600);await synced(p,20000);ok(int((await fsDoc('board',A)).x)===9000,'big XP jump did not reach the board in steps');
+  await p.evaluate(()=>{U.xp=9000;save()});await p.waitForTimeout(2600);await synced(p,20000);ok(R2?int((await fsDoc('board',A)).x)<9000:int((await fsDoc('board',A)).x)===9000,R2?'board followed a 9,000 XP jump at once':'big XP jump did not reach the board in steps');
   await p.evaluate(()=>{U.xp-=8985;save()});await p.waitForTimeout(2600);await synced(p);await p.done()},
 
 async lecturer(){const p=await page({w:1280,h:900});await createPin(p,L,PINL,'Abdulla Muiz Fuad');await tourOff(p);await p.go('#/lecturer');await p.waitForTimeout(1200);
@@ -254,7 +255,52 @@ async sessDenied(){if(!process.env.OLDRULES)return;const c=await page({allow:/pe
   const l=await page({w:1280,h:900,allow:/permission|insufficient|400|Failed to load resource|identitytoolkit/i});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
   await l.evaluate(()=>{window.__formSeen=0;new MutationObserver(()=>{if(document.querySelector('#lsess #lsgo'))window.__formSeen=1}).observe(document.body,{childList:true,subtree:true})});await l.go('#/lecturer');
   await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes("rules haven't been published"));await l.waitForTimeout(800);
-  ok(await l.evaluate(()=>!window.__formSeen),'the Start form flashed before the rules check');ok((await l.textContent('#lsess')).includes('Screen time'),'fallback should say screen time still works');await c.done();await l.done()}
+  ok(await l.evaluate(()=>!window.__formSeen),'the Start form flashed before the rules check');ok((await l.textContent('#lsess')).includes('Screen time'),'fallback should say screen time still works');await c.done();await l.done()},
+/* ---------- combined rules (RULES2=1): names, usernames, the XP guard and the Phase 1 features ---------- */
+async gated(){if(R2)return;const p=await page();await signIn(p,A,PIN);await tourOff(p);
+  ok(await p.evaluate(()=>!CLOUD.rules2&&!document.body.classList.contains('rules2')),'combined-rules features switched on under the old rules');
+  await p.go('#/short');ok(!(await p.isVisible('.rpt')),'report button shown under the old rules');
+  const b=await fsDoc('board',A);ok(b&&!('u' in b)&&!('a' in b),'old rules: board row should keep the old shape');await p.done()},
+async names(){if(!R2)return;await fsPut('directory',A,{n:'Hawwa Uyoon Ali',g:'H01'});
+  const p=await page();await signIn(p,A,PIN);await p.waitForSelector('.modal[aria-label="Confirm your name"]',{timeout:15000});
+  ok((await p.textContent('.modal')).includes('Hawwa Uyoon Ali'),'official name not shown');await shot(p,'fb-name');
+  await p.click('.modal [data-w="Uyoon"]');await p.click('#nmok');await p.waitForTimeout(2600);await synced(p);await tourOff(p);
+  const b=await waitDoc('board',A,d=>d.u&&d.u.stringValue==='@Uyoon441');ok(b&&b.n.stringValue==='Hawwa Uyoon Ali','board row not updated with the official name and username');
+  const bad=await p.evaluate(async()=>{const base={n:U.dn,u:U.un,a:'',x:0,l:0,b:0,s:0,t:CLOUD.ts()};const tries={nick:{n:'Cool Kid'},digits:{u:'@Uyoon999'},word:{u:'@Zara441'},avatar:{a:'<b>x</b>'},overXP:{x:(U.xp|0)+10}};
+    const out={};for(const [k,v] of Object.entries(tries)){try{await CLOUD.put('board/'+ME.sid,Object.assign({},base,v));out[k]='allowed'}catch(e){out[k]='refused'}}
+    try{await CLOUD.put('board/'+ME.sid,Object.assign({},base,{u:'@Hawwa441'}));out.otherWord='refused-ok'}catch(e){out.otherWord='wrongly refused'}return out});
+  ok(Object.entries(bad).every(([k,v])=>k==='otherWord'?v==='refused-ok':v==='refused'),'board rules: '+JSON.stringify(bad));
+  /* fake XP: the progress jumps by 2,000; the board must not follow at once */
+  await p.evaluate(()=>{U.xp+=2000;save()});await p.waitForTimeout(3000);const d=await fsDoc('users',A),b2=await fsDoc('board',A);
+  ok(int(d.xp)-int(b2.x)>=1900,'board followed a 2,000 XP jump at once ('+int(b2.x)+' of '+int(d.xp)+')');ok(await p.evaluate(()=>CLOUD.state!=='error'),'sync shows an error while the board catches up');
+  await p.evaluate(()=>{U.xp-=2000;save()});await p.waitForTimeout(2600);
+  await p.go('#/board');await p.waitForTimeout(800);ok((await p.textContent('#lbl')).includes('@Uyoon441'),'username not on the board');ok(!await p.$('#hd'),'Hidden player option still offered');await p.done()},
+async reports(){if(!R2)return;const s=await page();await signIn(s,A,PIN);await tourOff(s);await s.go('#/short');await s.waitForSelector('.qcard .rpt',{state:'visible'});
+  await s.click('.qcard .rpt');await s.click('.modal input[value="unclear"]');await s.fill('#rtx','Typo in the second chip');await s.click('#rsend');await s.waitForTimeout(800);
+  ok((await s.textContent('.qcard .rpt')).includes('Reported'),'report not confirmed');
+  const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await l.waitForSelector('#rptb .note',{timeout:15000});
+  ok((await l.textContent('#rptb')).includes('Typo in the second chip'),'report not in the lecturer queue');
+  await l.fill('#rptb textarea','Thanks, fixed!');await l.click('#rptb [data-rsend]');await l.waitForTimeout(1200);
+  await s.go('#/');await waitFor(s,()=>document.body.textContent.includes('Thanks, fixed!'));
+  /* announcements */
+  await l.fill('#ant','Tutorial moved');await l.fill('#anb','Thursday 10 am in Room 3');await l.click('#ango');await l.waitForTimeout(1000);
+  await s.go('#/');await waitFor(s,()=>document.body.textContent.includes('Thursday 10 am in Room 3'));await s.click('[data-annread]');await s.waitForTimeout(300);
+  ok(!(await s.textContent('#app')).includes('Thursday 10 am in Room 3'),'announcement not dismissed');
+  /* a student can't post an announcement or read someone else's report */
+  const r=await s.evaluate(async()=>{const o={};try{await CLOUD.add('announcements',{t:'x',b:'y',at:CLOUD.ts()});o.ann='allowed'}catch(e){o.ann='refused'}
+    try{await CLOUD.add('reports',{sid:'S085542',q:'x',w:'',k:'other',tx:'',st:'open',t:CLOUD.ts()});o.spoof='allowed'}catch(e){o.spoof='refused'}return o});
+  ok(r.ann==='refused'&&r.spoof==='refused','student rules: '+JSON.stringify(r));await s.done();await l.done()},
+async errors(){if(!R2)return;const s=await page({allow:/boom-test/});await signIn(s,A,PIN);await tourOff(s);
+  await s.evaluate(()=>setTimeout(()=>{throw new Error('boom-test')},0));await s.waitForTimeout(1500);
+  const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#errb')||{}).textContent?.includes('boom-test'));
+  await s.done();await l.done()},
+async xpAudit(){if(!R2)return;const u=await fsDoc('users',B);const U2=JSON.parse(u.u.stringValue);U2.xp=(U2.xp|0)+5000;await fsPut('users',B,{name:u.name.stringValue,u:JSON.stringify(U2),xp:U2.xp,ts:new Date()});
+  const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#xpab')||{}).textContent?.includes('S085542'));
+  ok((await l.textContent('#xpab')).includes('not explained'),'inflated XP not flagged');
+  await l.go('#/student/S085542');await waitFor(l,()=>!!document.querySelector('#pxa'));ok((await l.textContent('#pxa')).includes('flag'),'flag not on the profile');
+  /* full class backup */
+  await l.go('#/lecturer');await l.waitForSelector('#bkgo');const [dl]=await Promise.all([l.waitForEvent('download'),l.click('#bkgo')]);
+  const j=JSON.parse(fs.readFileSync(await dl.path(),'utf8'));ok(j.students>=3&&j.data.users[A]&&j.data.board&&j.data.directory,'backup incomplete: '+JSON.stringify(j.counts));await l.done()},
 };
 async function waitFor(p,fn,arg,t=15000){const t0=Date.now();while(Date.now()-t0<t){if(await p.evaluate(fn,arg).catch(()=>false))return;await p.waitForTimeout(250)}throw new Error('timed out waiting for '+String(fn).slice(0,90))}
 async function waitDoc(col,id,test,t=15000){const t0=Date.now();let d=null;while(Date.now()-t0<t){d=await fsDoc(col,id);if(d&&(!test||test(d)))return d;await new Promise(r=>setTimeout(r,300))}return null}

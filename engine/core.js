@@ -4,6 +4,7 @@
 const HOOKS={},ROUTES={};
 function onHook(name,f){(HOOKS[name]=HOOKS[name]||[]).push(f)}
 function hook(name,...a){(HOOKS[name]||[]).forEach(f=>{try{f(...a)}catch(e){console.error(e)}})}
+async function hookA(name,...a){for(const f of HOOKS[name]||[])try{await f(...a)}catch(e){console.error(e)}}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LS={get(k,d){try{const v=localStorage.getItem(CRS.ls+k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(CRS.ls+k,JSON.stringify(v))}catch(e){}},del(k){try{localStorage.removeItem(CRS.ls+k)}catch(e){}}};
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
@@ -24,7 +25,7 @@ function save(){U._t=Date.now();LS.set('u_'+ME.sid,U);if(ME&&ME.cloud)CLOUD.push
 const cloudOn=()=>!!(ME&&ME.cloud&&CLOUD.ok);
 function defaultNick(n){const p=String(n||'').trim().split(/\s+/);return p.length>1?p[0]+' '+p[p.length-1][0]+'.':(p[0]||'Player')}
 function level(xp){let i=0;LEVELS.forEach((l,j)=>{if(xp>=l[0])i=j});const nx=LEVELS[i+1];return {i,name:LEVELS[i][1],from:LEVELS[i][0],to:nx?nx[0]:null,pct:nx?Math.round((xp-LEVELS[i][0])/(nx[0]-LEVELS[i][0])*100):100}}
-function streak(u){const s=new Set(u.days);let n=0,d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');if(!s.has(f(d)))d.setDate(d.getDate()-1);while(s.has(f(d))){n++;d.setDate(d.getDate()-1)}return n}
+function streak(u){const s=new Set(u.days),fz=(u.frz&&u.frz.d)||{};let n=0,d=new Date();const f=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');if(!s.has(f(d)))d.setDate(d.getDate()-1);while(s.has(f(d))||fz[f(d)]){if(s.has(f(d)))n++;d.setDate(d.getDate()-1)}return n}
 function rollDay(){if(U.day.d!==today()||!U.day.c||!U.day.m){const t=tier(U.xp);U.day={d:today(),c:{},m:pickMissions(t),t,done:0}}}
 function count(k){rollDay();U.n[k]=(U.n[k]||0)+1;U.day.c[k]=(U.day.c[k]||0)+1;
   const ms=missions();if(!U.day.done&&ms.length&&ms.every(m=>(U.day.c[m.k]||0)>=m.n)){U.day.done=1;U.n.missions++;save();award(null,MBONUS[U.day.t],'Daily mission complete')}
@@ -37,12 +38,12 @@ function checkBadges(){BADGES.forEach(b=>{if(!U.badges[b.id]&&b.t(U)){U.badges[b
 function toast(em,t,s){const el=document.createElement('div');el.className='toast';el.innerHTML=`<span class="em">${em}</span><div><b class="lex">${esc(t)}</b><div class="muted" style="font-size:.85rem">${esc(s)}</div></div>`;const box=$('#toasts');box.append(el);while(box.children.length>3)box.firstChild.remove();setTimeout(()=>el.remove(),2800)}
 function hud(){if(!ME){$('#hud').innerHTML='';return}const L=level(U.xp);
   $('#hud').innerHTML=`<button class="pill save" id="svb" title="Save my progress" aria-label="Save my progress">💾<span class="lbl">&nbsp;Save</span></button><span class="pill fire" title="Day streak">🔥 ${streak(U)}</span><span class="pill gold" title="XP">✨ ${U.xp}</span><span class="pill lvl">${esc(L.name)}</span><span class="xpmini" title="${L.pct}% to next level"><i style="width:${L.pct}%"></i></span>`}
-async function signOut(){if(ME&&U)presOff();if(ME&&ME.cloud){await CLOUD.flush();await CLOUD.signOut()}LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
+async function signOut(){if(ME&&U)presOff();hook('signout');if(ME&&ME.cloud){await CLOUD.flush();await CLOUD.signOut()}LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
 function shell(active,body){
   const nav=NAV.concat(ME.sid===LECTURER?[['#/lecturer','Lecturer']]:[]).map(n=>`<a href="${n[0]}" class="${n[0]===active?'on':''}">${n[1]}</a>`).join('');
   app.innerHTML=`<div class="wrap"><nav class="tabs">${nav}</nav><main>${body}</main>
   <footer><div class="row"><span>Signed in as <b>${esc(ME.name)}</b> · ${esc(ME.sid)}</span><button class="btn ghost sm" id="so">Sign out</button></div>
-  <p style="margin-top:10px">Practice material only. Write your full answers on paper. · <a href="javascript:void 0" id="help">? How it works</a> · <a href="javascript:void 0" id="inst">📲 Install the app</a></p></footer></div>`;
+  <p style="margin-top:10px">Practice material only. Write your full answers on paper. · <a href="javascript:void 0" id="help">? How it works</a> · <a href="javascript:void 0" id="inst">📲 Install the app</a> · <a href="#/privacy">Privacy</a></p></footer></div>`;
   $('#so').onclick=signOut;$('#help').onclick=()=>tour(0);$('#inst').onclick=()=>installPop(0);scrollTo(0,0)}
 function xpFor(test){U.gain=U.gain||{};return Object.keys(U.log).filter(test).reduce((t,k)=>t+(k in U.gain?U.gain[k]:(XP_DEFAULT[k.split(':')[0]]||0)),0)}
 function restartItem(test,what,clear){const x=Math.min(xpFor(test),U.xp);
@@ -98,7 +99,8 @@ function backupCard(){
   $('#bkr').onclick=()=>$('#bkp').classList.toggle('hide');
   $('#bkf').onchange=async e=>{const f=e.target.files[0];if(f)$('#bkt').value=(await f.text()).trim()};
   $('#bkgo').onclick=async()=>{$('#bke').textContent=await restore($('#bkt').value)}}
-function inboxHTML(){const N=U.notes||{},R=U.notesRead||{},ks=Object.keys(N).filter(k=>!R[k]).sort((a,b)=>String(N[a].at)<String(N[b].at)?1:-1);if(!ks.length)return '';
+function inboxHTML(){return annHTML()+frzHTML()+notesHTML()}
+function notesHTML(){const N=U.notes||{},R=U.notesRead||{},ks=Object.keys(N).filter(k=>!R[k]).sort((a,b)=>String(N[a].at)<String(N[b].at)?1:-1);if(!ks.length)return '';
   return `<div class="card inbox" style="margin-bottom:16px"><h2 style="margin:0 0 6px">✉️ Message${ks.length>1?'s':''} from your lecturer</h2>${ks.slice(0,5).map(k=>`<div class="note"><p style="margin:0">${esc(N[k].fb).replace(/\n/g,'<br>')}</p><div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" style="font-size:.8rem">${esc(String(N[k].at).slice(0,10))}</span><button class="btn ghost sm" data-noteread="${esc(k)}">Got it</button></div></div>`).join('')}</div>`}
 function argCard(c,a,i,col){const k=c.id+':'+i,mine=U.verd[k],L={strong:'Strong',mixed:'Partly right',weak:'Weak'};
   return `<div class="card arg" style="margin-bottom:12px"><div class="avatar" style="background:${col}">${esc(a.who[0])}</div><div>
@@ -211,38 +213,36 @@ function timer(id,total,el,done,tick){
     if(!ok&&!confirm(`Only ${Math.floor(used/60)} min ${used%60} s on the clock.\n\nTimed XP needs at least ${minMins(total)} minutes of writing. Finish without XP?`))return;
     LS.del(key);clearInterval(TIMERS[id]);done(ok)}}
 const noTimeXP=t=>toast('⏱️','No XP this time','Write for at least '+minMins(t)+' minutes to earn timed XP');
-async function scoreCode(){const p={v:1,s:ME.sid,n:U.hide?'':U.nick,x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,d:today()};
+async function scoreCode(){const p={v:1,s:ME.sid,n:String(U.dn||defaultNick(ME.name)).slice(0,24),x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,d:today()};
   const j=btoa(unescape(encodeURIComponent(JSON.stringify(p)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   return CRS.CODE+'-'+j+'-'+(await sha(CRS.id+'-score|'+j)).slice(0,8)}
 async function rowKey(sid){return (await sha(ROSTER.salt+'|'+sid)).slice(0,12)}
 function liveBoard(){
   shell('#/board',`<div class="row" style="justify-content:space-between"><h1 style="margin:0">Leaderboard</h1><span class="live"><i></i>LIVE</span></div>
-  <p class="muted">Scores update the moment anyone earns XP. Student IDs are never shown.${ME.sid===LECTURER?' <b>Lecturer: tap a student to open their profile.</b>':''}</p>
+  <p class="muted">Scores update as classmates earn XP. Everyone appears under their name from the class list.${ME.sid===LECTURER?' <b>Lecturer: tap a student to open their profile.</b>':''}</p>
   <div class="grid g2"><div class="card lb" id="lbl"><p class="muted">Loading the class…</p></div>
   <div class="card"><h2>You on the board</h2><p style="margin:0 0 6px">Your score: <b>${U.xp} XP</b> · ${esc(level(U.xp).name)} · ${Object.keys(U.badges).length} badges</p>
    ${ME.sid===LECTURER?'<p class="muted" style="font-size:.9rem">The lecturer account is not shown on the board.</p>':`
-   <label for="nk">Name on the board</label><input type="text" id="nk" maxlength="24" value="${esc(U.nick)}">
-   <label style="display:flex;gap:8px;align-items:center;font:400 .95rem Inter;color:var(--ink)"><input type="checkbox" id="hd" ${U.hide?'checked':''} style="width:20px;height:20px;accent-color:var(--teal)"> Show me as "Hidden player"</label>
+   <p style="margin:6px 0">You appear as <b>${CLOUD.rules2?nameLine(U.dn,U.un,ME.sid):esc(defaultNick(ME.name))}</b></p>
+   ${CLOUD.rules2&&U.dn?`<button class="btn ghost sm" id="nkun">🪪 ${U.un?'Change my @username':'Pick my @username'}</button>`:''}
    <p class="muted" style="font-size:.85rem;margin-top:12px">No need to send anything: your score updates automatically. ${syncChip()}</p>`}</div></div>`);
-  const upd=()=>{U.nick=$('#nk').value.trim().slice(0,24)||defaultNick(ME.name);U.hide=$('#hd').checked;save();toast('🏷️','Saved','The board will update in a moment')};
-  $('#nk')&&($('#nk').onchange=upd);$('#hd')&&($('#hd').onchange=upd);
+  $('#nkun')&&($('#nkun').onclick=()=>namePrompt(true));
   CLOUD.watchBoard(rows=>{const el=$('#lbl');if(!el)return;rows=rows.filter(r=>r.id!==LECTURER);
-    const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(r.n||'Hidden player')}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><div><b>${esc(r.n||'Hidden player')}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Earn some XP and you will appear here.</p>';
+    const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r av ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(showName(r.n,r.id))}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span>${typeof avatarSVG==='function'?avatarSVG(r.a||avFor(r.id),36,''):''}<div style="flex:1;min-width:0"><b>${nameLine(r.n,r.u,r.id)}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Earn some XP and you will appear here.</p>';
     if(lec)el.querySelectorAll('[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStudent(r.dataset.sid)}}})},
     e=>{const el=$('#lbl');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
 async function boardPage(){if(cloudOn())return liveBoard();
   const rows=(LEADERBOARD.rows||[]).slice().sort((a,b)=>b.x-a.x),mine=await rowKey(ME.sid);
   shell('#/board',`<h1>Leaderboard</h1><p class="muted">${LEADERBOARD.updated?'Updated '+esc(LEADERBOARD.updated)+'. ':''}The board is updated weekly from the scores students send in.</p>
-  <div class="grid g2"><div class="card lb">${rows.length?rows.map((r,i)=>`<div class="r ${r.k===mine?'me':''}"><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><div><b>${esc(r.n||'Hidden player')}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badges</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Be the first: send your score →</p>'}</div>
+  <div class="grid g2"><div class="card lb">${rows.length?rows.map((r,i)=>`<div class="r ${r.k===mine?'me':''}"><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><div><b>${esc(r.n||'Student')}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badges</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Be the first: send your score →</p>'}</div>
   <div class="card"><h2>Send my score</h2><p class="muted" style="font-size:.9rem">Send your score each week to appear on the board. Your student ID is never shown.</p>
-   <label for="nk">Name on the board</label><input type="text" id="nk" maxlength="24" value="${esc(U.nick)}">
-   <label style="display:flex;gap:8px;align-items:center;font:400 .95rem Inter;color:var(--ink)"><input type="checkbox" id="hd" ${U.hide?'checked':''} style="width:20px;height:20px;accent-color:var(--teal)"> Show me as "Hidden player"</label>
+   <p style="margin:6px 0">You appear as <b>${esc(U.dn||defaultNick(ME.name))}</b></p>
    <p style="margin-top:14px">Your score: <b>${U.xp} XP</b> · ${esc(level(U.xp).name)} · ${Object.keys(U.badges).length} badges</p>
    <div class="row"><a class="btn" id="em">📧 Email my score</a><button class="btn ghost" id="cp">Copy code</button></div>
    <p class="muted" style="font-size:.8rem;margin-top:10px">If email doesn't open, copy the code and send it to your lecturer.</p><div class="code hide" id="cd"></div></div></div>`);
-  const upd=async()=>{U.nick=$('#nk').value.trim().slice(0,24)||defaultNick(ME.name);U.hide=$('#hd').checked;save();const code=await scoreCode();
-    $('#em').href='mailto:'+SCORE_EMAIL+'?subject='+encodeURIComponent(CRS.CODE+' score: '+(U.hide?'Hidden player':U.nick))+'&body='+encodeURIComponent('My '+CRS.name+' score code:\n\n'+code+'\n');return code};
-  $('#nk').onchange=upd;$('#hd').onchange=upd;await upd();
+  const upd=async()=>{const code=await scoreCode();
+    $('#em').href='mailto:'+SCORE_EMAIL+'?subject='+encodeURIComponent(CRS.CODE+' score: '+(U.dn||defaultNick(ME.name)))+'&body='+encodeURIComponent('My '+CRS.name+' score code:\n\n'+code+'\n');return code};
+  await upd();
   $('#cp').onclick=async()=>{const code=await upd();$('#cd').textContent=code;$('#cd').classList.remove('hide');try{await navigator.clipboard.writeText(code);toast('📋','Copied','Paste it into a message to your lecturer')}catch(e){}}}
 function demoXP(i){return DEMO_ROWS.reduce((t,r)=>t+r[1]*r[2+i],0)}
 const REAL=['Naver','World Bank','WTO','Starbucks','Global Exchange','Magnum','7-Eleven','Jollibee','McDonald','Coca-Cola','KFC','IKEA','Toyota','Unilever','Nestlé','Samsung','Apple','Google','Amazon','Alibaba','Netflix','Uber','Airbnb','Nike','Zara','Dhiraagu','Ooredoo','Bank of Maldives','MIFCO','STO','Facebook','Instagram','TikTok','WhatsApp','Visa','Mastercard','DHL','Maersk','Emirates','SriLankan'];
@@ -289,7 +289,8 @@ let PFROM='';
 const openStudent=sid=>{PFROM=location.hash||'#/lecturer';location.hash='#/student/'+sid};
 const SYNC={synced:['ok','☁️ Saved to your account'],saving:['','⏳ Saving…'],syncing:['','⏳ Syncing…'],offline:['bad','📴 Offline: saves when you reconnect'],error:['bad','⚠️ Couldn\'t save, will retry'],off:['','']};
 const syncChip=()=>{const v=SYNC[CLOUD.state]||SYNC.off;return v[1]?`<span class="sync ${v[0]}" id="sync">${v[1]}</span>`:''};
-const rowOf=sid=>sid===LECTURER?null:{n:U.hide?'':String(U.nick||'').slice(0,24),x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,s:streak(U)};
+/* leaderboard row: everyone appears under their official name (directory) once the combined rules are published; until then a short form of the sign-in name */
+const rowOf=sid=>sid===LECTURER?null:{n:CLOUD.rules2?(U.dn||''):defaultNick(ME.name).slice(0,24),u:U.un||'',a:U.av||'',x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,s:streak(U)};
 async function cloudSync(){const sid=ME.sid;
   if(!CLOUD.ok){toast('📴','Saving on this device only','Your account could not be reached. Sign in again when you are online.');return}
   const u=await CLOUD.current();if(!ME||ME.sid!==sid)return;
@@ -298,8 +299,9 @@ async function cloudSync(){const sid=ME.sid;
     toast('📴','Offline for now','Your progress is saved on this device and will sync when you reconnect.');return}
   if(!ME||ME.sid!==sid)return;const R=r&&r.u;
   if(R&&(R._t||0)>LOAD_T){U=Object.assign(blank(),R);U.n=Object.assign(blank().n,U.n);LS.set('u_'+sid,U);hud();route();toast('☁️','Progress loaded',U.xp+' XP from your account')}
+  await hookA('preSync',sid);if(!ME||ME.sid!==sid)return;
   CLOUD.ready(sid,()=>ME&&ME.sid===sid?{sid,name:ME.name,U,row:rowOf(sid)}:null);CLOUD.flush();
-  if(sid!==LECTURER)CLOUD.watchMine(sid,m=>{if(ME&&ME.sid===sid)applyMarks(m)});presCloud()}
+  if(sid!==LECTURER)CLOUD.watchMine(sid,m=>{if(ME&&ME.sid===sid)applyMarks(m)});presCloud();hook('cloud')}
 function flagText(f){f=f||{};return [f.paste?'paste blocked ×'+f.paste:'',f.bigKept?'large insert (kept) ×'+f.bigKept:'',f.big?'big insert removed ×'+f.big:'',f.fast?'too fast':''].filter(Boolean).join(' · ')}
 function flagEvHTML(f){const ev=(f&&f.ev)||[];return ev.length?`<ul class="sumlist" style="font-size:.82rem;margin:8px 0 0">${ev.map(x=>`<li><b>${x.k==='paste'?'Paste blocked':'Large insert (kept)'}</b> · ${esc(x.t)}${x.c?' · while composing':''} · ${esc(String(x.at).slice(0,16).replace('T',' '))}<div class="muted">“${esc(x.s)}${String(x.s).length>=120?'…':''}”</div></li>`).join('')}</ul>`:''}
 const isNote=k=>/^note_/.test(k);
@@ -358,7 +360,7 @@ function award(key,xp,label,quiet){
   const before=level(U.xp).i;U.xp+=xp;
   if(xp&&!quiet)toast('✨',label,'+'+xp+' XP');
   if(level(U.xp).i>before)toast('🚀','Level up!','You are now '+level(U.xp).name);
-  checkBadges();save();hud();return true}
+  checkBadges();save();hud();hook('award',key,xp);return true}
 function pinStep(sid,name,mt,mode){mode=mode||'in';const card=document.querySelector('.signcard'),em=CLOUD.email(sid);
   card.innerHTML=`<h2 style="margin-top:6px">${mode==='in'?'Enter your PIN':'Create your PIN'}</h2>
   <p class="muted" style="font-size:.88rem;margin:0 0 10px">${esc(sid)} · ${esc(sid===LECTURER?'Lecturer access':em)} · <a href="javascript:void 0" id="chg">Change</a></p>
@@ -423,14 +425,14 @@ function recentHTML(u){const by={};Object.keys(u.log||{}).forEach(k=>{const m=k.
 function lecturer(){
   if(ME.sid!==LECTURER)return home();
   shell('#/lecturer',`<h1>Lecturer</h1>
-  ${liveCardHTML()}${cloudOn()?'<div class="card" id="cdash" style="margin-bottom:22px"></div><div class="card" id="mq" style="margin-bottom:22px"></div><div class="card" id="cov" style="margin-bottom:22px"></div>':'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
+  ${liveCardHTML()}${cloudOn()?'<div class="card" id="cdash" style="margin-bottom:22px"></div><div class="card" id="mq" style="margin-bottom:22px"></div><div class="card" id="cov" style="margin-bottom:22px"></div>'+lcardsHTML():'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
   <div class="card" id="demo" style="margin-bottom:22px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Show the class</h2><button class="btn ghost sm" id="fs">⛶ Full screen</button></div>
   <p class="muted" style="font-size:.9rem;margin:6px 0 12px">Example students only, made up to explain how scoring works. Real scores appear on the Leaderboard tab.</p>
   <div class="subnav"><button data-dm="board" class="on">🏆 Example leaderboard</button><button data-dm="vs">⚔️ Student 1 vs Student 2</button><button data-dm="tips">💡 How to climb</button></div><div id="dm"></div></div>
   <h2>Content review</h2><div class="card" id="rvw" style="margin-bottom:22px"></div>
   <details class="card"${cloudOn()?'':' open'}><summary class="lex" style="cursor:pointer;font-weight:700">Offline fallback: update the leaderboard from score codes</summary><p class="muted" style="font-size:.88rem">Only needed if the live leaderboard is unavailable.</p><ol style="padding-left:1.2em;margin-top:0"><li>Paste all the score emails or codes below (everything at once is fine).</li><li>Check the preview, then <b>Download leaderboard.js</b>.</li><li>On GitHub, open the <b>${CRS.repo}</b> repo → <b>Add file → Upload files</b> → drop in <code>leaderboard.js</code> → <b>Commit changes</b>.</li></ol>
   <textarea id="tx" placeholder="Paste score emails or codes here"></textarea><div class="row" style="margin-top:12px"><button class="btn" id="go">Read codes</button></div><div id="out" style="margin-top:16px"></div></details>`);
-  if(cloudOn()){liveCardInit();classDash();markQueue();covCard()}
+  if(cloudOn()){liveCardInit();classDash();markQueue();covCard();lecturerCards()}
   demo();$('#rvw').innerHTML=reviewHTML();$('#rvw').querySelectorAll('[data-rv]').forEach(b=>b.onchange=()=>{const r=LS.get('review',{});r[b.dataset.rv]=b.checked;LS.set('review',r)});
   $('#go').onclick=async()=>{const found=$('#tx').value.match(new RegExp(CRS.CODE+'-[A-Za-z0-9_-]+-[0-9a-f]{8}','g'))||[];const best={};let bad=0,off=0;
     for(const code of found){const m=code.match(new RegExp('^'+CRS.CODE+'-(.+)-([0-9a-f]{8})$'));if((await sha(CRS.id+'-score|'+m[1])).slice(0,8)!==m[2]){bad++;continue}
@@ -441,7 +443,7 @@ function lecturer(){
     const prev=(LEADERBOARD.rows||[]).filter(r=>!rows.some(x=>x.k===r.k));const all=prev.concat(rows).sort((a,b)=>b.x-a.x);
     const file='/* Weekly leaderboard. Made on the lecturer page from students\' score codes, then uploaded here.\n   k = scrambled student ID (no readable IDs), n = nickname, x = XP, l = level, b = badges. */\nconst LEADERBOARD='+JSON.stringify({updated:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),rows:all})+';\n';
     $('#out').innerHTML=`<p><b>${rows.length}</b> students read from ${found.length} codes${bad?` · ${bad} damaged codes skipped`:''}${off?` · ${off} not on the class list skipped`:''}. Students not in this batch keep their last score.</p>
-    <div class="tablewrap"><table><tr><th>#</th><th>Name</th><th>XP</th><th>Badges</th></tr>${all.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.n||'Hidden player')}</td><td>${r.x}</td><td>${r.b}</td></tr>`).join('')}</table></div>
+    <div class="tablewrap"><table><tr><th>#</th><th>Name</th><th>XP</th><th>Badges</th></tr>${all.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.n||'Student')}</td><td>${r.x}</td><td>${r.b}</td></tr>`).join('')}</table></div>
     <button class="btn gold" id="dl" style="margin-top:12px">⬇ Download leaderboard.js</button>`;
     $('#dl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([file],{type:'text/javascript'}));a.download='leaderboard.js';a.click()}}}
 function classDash(){

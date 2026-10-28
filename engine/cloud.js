@@ -7,7 +7,7 @@ const CLOUD=(()=>{
   const CFG=(typeof CLOUD_CONFIG!=='undefined'&&CLOUD_CONFIG)||{},SWITCH=typeof CLOUD_ON!=='undefined'&&CLOUD_ON===true;
   const DOMAIN='student.mnu.edu.mv',local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname),q=location.search;
   const emu=local&&/[?&]emu=1\b/.test(q),off=!emu&&(!SWITCH||!CFG.apiKey||(local&&!/[?&]cloud=1\b/.test(q)));
-  let F,auth,db,user=null,authReady,state='off',synced=null,timer=null,busy=false,again=false,boardX,unsubs=[],getState=null,own=null;
+  let F,auth,db,user=null,authReady,state='off',synced=null,timer=null,busy=false,again=false,boardX,boardT=0,lagT=null,unsubs=[],getState=null,own=null;
   const subs=new Set(),set=s=>{state=s;subs.forEach(f=>{try{f(s)}catch(e){}})};
   const C={ok:false,emu,
     email:sid=>String(sid).toLowerCase()+'@'+DOMAIN,
@@ -54,7 +54,7 @@ const CLOUD=(()=>{
 
   /* first sync after sign-in: returns the cloud copy of U (or null) and remembers the leaderboard XP */
   C.pull=async sid=>{set('syncing');const [u,b]=await Promise.all([F.getDoc(F.doc(db,'users',sid)),F.getDoc(F.doc(db,'board',sid))]);
-    boardX=b.exists()?b.data().x:null;
+    boardX=b.exists()?b.data().x:null;boardT=b.exists()&&b.data().t&&b.data().t.toMillis?Math.min(Date.now(),b.data().t.toMillis()):0;
     if(!u.exists())return null;const d=u.data();let parsed=null;try{parsed=JSON.parse(d.u)}catch(e){}
     return {name:d.name,u:parsed}};
   /* after pull: allow saving, with a getter for {sid,name,U,row} */
@@ -63,10 +63,17 @@ const CLOUD=(()=>{
   C.flush=async()=>{if(!synced||!getState)return;clearTimeout(timer);if(busy){again=true;return}busy=true;
     try{const s=getState();if(!s||s.sid!==synced)return;set(navigator.onLine?'saving':'offline');
       await F.setDoc(F.doc(db,'users',s.sid),{name:String(s.name||'').slice(0,80),u:JSON.stringify(s.U),xp:Math.round(s.U.xp)|0,ts:F.serverTimestamp()});
-      if(s.row){const r=s.row,x=Math.max(0,Math.round(r.x)|0);
+      if(s.row){const r=s.row,x=Math.max(0,Math.round(r.x)|0),base={l:r.l|0,b:r.b|0,s:r.s|0,t:F.serverTimestamp()};
+        if(C.rules2){
+          /* combined rules: official name, @username and avatar; XP may only climb ~2 XP a second since the last save, so the board catches up in steps */
+          const cur=boardX,nx=cur==null?Math.min(x,5000):x>cur?Math.min(x,cur+3000,cur+Math.max(0,Math.floor((Date.now()-boardT)/550))):x;
+          try{await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,80),u:String(r.u||''),a:String(r.a||''),x:nx},base));boardX=nx;if(nx!==cur)boardT=Date.now()}
+          catch(e){if(C.isNetwork(e))throw e;console.warn('Leaderboard not updated yet',e);boardT=Date.now()}
+          clearTimeout(lagT);if(boardX==null||boardX<x)lagT=setTimeout(()=>C.flush(),20000)}
+        else{
         /* the rules cap a new row at 5,000 XP and each update at +3,000, so big jumps (restores) go up in steps */
         let cur=boardX;do{const nx=cur==null?Math.min(x,5000):x>cur?Math.min(x,cur+3000):x;
-          await F.setDoc(F.doc(db,'board',s.sid),{n:String(r.n||'').slice(0,24),x:nx,l:r.l|0,b:r.b|0,s:r.s|0,t:F.serverTimestamp()});cur=boardX=nx}while(cur<x)}
+          await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,24),x:nx},base));cur=boardX=nx}while(cur<x)}}
       set('synced')}
     catch(e){console.warn('Sync failed',e);set(C.isNetwork(e)||!navigator.onLine?'offline':'error')}
     finally{busy=false;if(again){again=false;C.flush()}}};

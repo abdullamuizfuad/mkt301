@@ -174,7 +174,7 @@ function qCard(q,i,o={}){
   const good=q.chips.map((c,j)=>c.g?j:-1).filter(j=>j>=0),planHTML=`<div class="plan"><b class="lex" style="font-size:.85rem">Your plan</b><ol>${st.sel.filter(j=>q.chips[j].g).map(j=>`<li>${esc(q.chips[j].t)}</li>`).join('')||'<li class="muted">No key ideas picked</li>'}</ol></div>`;
   const steps=st.route==='typed'?['1 · Plan','2 · Type','3 · Mark']:st.route==='plan'?['1 · Plan','✓ Plan only']:['1 · Plan','2 · Write','3 · Check'];
   const nextBtn=`<div class="row" style="margin-top:12px"><button class="btn" data-a="next">${o.last?'See set summary 🏁':'Next question →'}</button></div>`;
-  let h=`<div class="qmeta"><span class="tag">Question ${i+1}</span><span class="tag">${esc(q.skill||q.topic)}</span>${o.week?`<span class="tag">Week ${o.week}</span>`:''}<span class="tag">${q.marks||6} marks</span><button class="btn ghost sm rst" data-a="restart" title="Restart this question">↺ Restart</button></div>
+  let h=`<div class="qmeta"><span class="tag">Question ${i+1}</span><span class="tag">${esc(q.skill||q.topic)}</span>${o.week?`<span class="tag">Week ${o.week}</span>`:''}<span class="tag">${q.marks||6} marks</span><button class="btn ghost sm rst" data-a="restart" title="Restart this question">↺ Restart</button>${rptBtn(q.id,(qIndex()[q.id]||{}).label||q.skill||q.topic)}</div>
   <h3 style="font-weight:600">${esc(q.q)}</h3><div class="steps">${steps.map((s,j)=>`<span class="${st.done&&j===steps.length-1||j===st.step?'on':j<st.step||st.done?'done':''}">${j<st.step||st.done&&j<steps.length-1?'✓ ':''}${s}</span>`).join('')}</div>`;
   if(st.step===0&&!(st.done&&st.route==='plan')){
     h+=`<p class="muted" style="font-size:.9rem">Tap the ideas you would use in your answer. Some are decoys.</p><div class="chips">${st.order.map(j=>{const ch=q.chips[j],s=st.sel.includes(j);
@@ -280,7 +280,7 @@ function essayPage(){
 const PARTS={a:{m:4,mins:7,t:'Definitions and Five Forces'},b:{m:6,mins:11,t:'National advantage: the Diamond'},c:{m:10,mins:18,t:'Strategic Intent and Blue Ocean'}};
 function caView(id){
   const s=BANK_C.structured.find(x=>x.id===id);if(!s)return essayPage();
-  shell('#/essay',`<p><a href="#/essay">← Section C</a></p><div class="casehead" style="--c:#a98bff"><div class="row"><span style="font-size:2.4rem">${s.icon}</span><div><h1 style="margin:0">${esc(s.name)}</h1><p class="muted" style="margin:0">Competitive advantage · 20 marks</p></div></div></div>
+  shell('#/essay',`<p><a href="#/essay">← Section C</a></p><div class="casehead" style="--c:#a98bff"><div class="row"><span style="font-size:2.4rem">${s.icon}</span><div><h1 style="margin:0">${esc(s.name)}</h1><p class="muted" style="margin:0">Competitive advantage · 20 marks</p></div>${rptBtn(s.id,s.name+' (competitive advantage)')}</div></div>
   <div class="card" style="margin-bottom:14px">${s.brief}</div>${['a','b','c'].map(p=>`<div class="card qcard" id="cp-${p}"></div>`).join('')}`);
   ['a','b','c'].forEach(p=>partCard(s,p))}
 function partCard(s,p){
@@ -318,7 +318,7 @@ const COACH=['1 · Brief','2 · Plan','3 · Script','4 · Write','5 · Mark'];
 function coachView(id){
   const s=BANK_C.essays.find(x=>x.id===id);if(!s)return essayPage();
   const E=U.ess[id]||(U.ess[id]={step:0,sc:{},w:{},ord:{},yr:{},mode:{},marks:{}});
-  shell('#/essay',`<p><a href="#/essay">← Section C</a></p><div class="casehead" style="--c:#ffc94d"><div class="row"><span style="font-size:2.4rem">${s.icon}</span><div><h1 style="margin:0">${esc(s.name)}</h1><p class="muted" style="margin:0">Essay Coach · 20 marks · 40 minutes</p></div><button class="btn ghost sm rst" id="erst" title="Restart this essay">↺ Restart</button></div></div>
+  shell('#/essay',`<p><a href="#/essay">← Section C</a></p><div class="casehead" style="--c:#ffc94d"><div class="row"><span style="font-size:2.4rem">${s.icon}</span><div><h1 style="margin:0">${esc(s.name)}</h1><p class="muted" style="margin:0">Essay Coach · 20 marks · 40 minutes</p></div>${rptBtn(s.id,s.name+' (Essay Coach)')}<button class="btn ghost sm rst" id="erst" title="Restart this essay">↺ Restart</button></div></div>
   <div class="subnav">${COACH.map((t,j)=>`<button data-st="${j}" class="${j===E.step?'on':''}" ${j>1&&!E.planDone?'disabled style="opacity:.45"':''}>${t}</button>`).join('')}</div><div id="pane"></div>`);
   document.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{if(b.disabled)return;E.step=+b.dataset.st;save();coachView(id)});
   $('#erst').onclick=()=>restartItem(essKeys(id),'this essay (plan, script, timer and marks)',()=>{delete U.ess[id];LS.del('tm_e_'+id);clearInterval(TIMERS['e_'+id])})&&coachView(id);
@@ -502,7 +502,7 @@ function studentPage(sid){
     el.innerHTML=`<div class="card psec"><div class="prof-h"><div class="av">${esc((X.name||sid).trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>
       <div><h1 style="margin:0">${esc(X.name||sid)}</h1><p class="muted" style="margin:2px 0 0">🎓 ${esc(L.name)} · <b>${u.xp|0} XP</b>${L.to?' · '+(L.to-(u.xp|0))+' XP to '+esc(LEVELS[L.i+1][1]):' · top level'}</p>
       <div class="bar" style="margin-top:8px"><i style="width:${L.pct}%;background:var(--teal)"></i></div></div></div>
-      <div class="kv"><div>ID<b>${esc(sid)}</b></div><div>Student email<b>${esc(CLOUD.email(sid))}</b></div><div>On the leaderboard<b>${u.hide?'Hidden player':esc(u.nick||defaultNick(X.name))}</b></div>
+      <div class="kv"><div>ID<b>${esc(sid)}</b></div><div>Student email<b>${esc(CLOUD.email(sid))}</b></div><div>Name (class list)<b>${u.dn?esc(u.dn):'not added yet'}</b></div><div>Username<b>${u.un?esc(u.un):'not picked yet'}</b></div>
       <div>Streak<b>🔥 ${streak(u)} day${streak(u)===1?'':'s'}</b></div><div>Last active<b>${ago(X.ts)}</b></div><div>First practised<b>${esc(first||'–')}</b></div></div></div>
     <div class="grid g2"><div class="card psec"><h2>Activity</h2>${heatHTML(u.days)}
       <div class="stats" style="grid-template-columns:repeat(3,1fr)"><div class="stat"><b>${n.plans|0}</b><span>plans</span></div><div class="stat"><b>${n.verdicts|0}</b><span>Boardroom calls</span></div><div class="stat"><b>${n.catool|0}</b><span>strategy tools</span></div>
@@ -524,7 +524,7 @@ function studentPage(sid){
       <p class="muted" style="font-size:.8rem">Flags are signals, not proof. Large inserts are usually voice typing; open an answer to see each flag's snippet.</p></div></div>
     <div class="card psec"><h2>Typed answers <span class="tag">${ans.length}</span> <span class="tag">${marked} marked</span></h2>${ans.length?ans.slice(0,30).map(ansItem).join(''):'<p class="muted">No typed answers yet.</p>'}${ans.length>30?'<p class="muted" style="font-size:.85rem">Showing the newest 30.</p>':''}</div>
     <div class="card psec"><h2>Messages you've sent</h2>${notes.length?notes.map(([k,v])=>`<div class="note" style="border-left:3px solid var(--teal);padding:6px 10px;margin-top:6px"><p style="margin:0">${esc(v.fb)}</p><span class="muted" style="font-size:.8rem">${esc(String(v.at).slice(0,16).replace('T',' '))} · ${u.notes&&u.notes[k]?(u.notesRead&&u.notesRead[k]?'read':'delivered'):'not opened yet'}</span></div>`).join(''):'<p class="muted">None yet.</p>'}</div>
-    ${actionsHTML()}`;
+    ${profileXHTML(sid,u)}${nameEditHTML(sid,u)}${actionsHTML()}`;
     bindActions();
     el.querySelectorAll('.mqi').forEach(box=>{const k=box.dataset.k,a=(u.ans||{})[k],r=RV[k];
       box.querySelector('[data-open]')&&(box.querySelector('[data-open]').onclick=()=>{open=k;draw(1)});

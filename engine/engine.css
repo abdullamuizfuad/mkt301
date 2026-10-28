@@ -293,3 +293,17 @@ select{font:15px Inter;padding:9px 10px;border-radius:10px;border:1px solid var(
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 footer{border-top:1px solid var(--line);padding:18px 0 28px;color:var(--muted);font-size:.85rem}
 footer .row{justify-content:space-between}
+/* engine features: hidden until the combined Firestore rules are published */
+body:not(.rules2) [data-need=rules]{display:none!important}
+.rpt{white-space:nowrap;min-height:30px!important;padding:3px 10px!important;font-size:.78rem!important}
+.qmeta .rpt{margin-left:6px}
+/* avatars and the avatar builder */
+.avsvg{display:block;border-radius:50%;flex:none}
+.lb .r .avsvg{margin-right:2px}
+.avrow{margin:0 0 14px}.avrow>b{display:block;font-size:.85rem;margin-bottom:6px}
+.avopts{display:flex;flex-wrap:wrap;gap:6px}
+.avo{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:6px 12px;border-radius:12px;border:1px solid var(--line);background:var(--sunk);color:var(--ink2);font:600 .85rem Inter;cursor:pointer}
+.avo.on{border-color:var(--teal);color:var(--ink);background:color-mix(in srgb,var(--teal) 14%,var(--card))}
+.avo .sw{width:18px;height:18px;border-radius:50%;display:inline-block;border:1px solid var(--line)}
+.uname{font-weight:500;font-size:.85em}
+.lb .r.av{grid-template-columns:36px 36px minmax(0,1fr) auto}
