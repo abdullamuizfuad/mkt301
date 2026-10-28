@@ -155,18 +155,24 @@ async function presClaimOld(){if(!U||!U.sess)return;for(const id of Object.keys(
 
 /* ---------- live sessions: lecturer side ---------- */
 let LIVEREF=null;
-function liveCardHTML(){return cloudOn()?'<div class="card" id="lsess" style="margin-bottom:22px"><p class="muted">Loading live sessions…</p></div>':''}
-function liveCardInit(){if(!document.getElementById('lsess'))return;CLOUD.watchSessions(list=>{PR.sessList=list;liveCardRefresh()},e=>{const el=$('#lsess');if(el)el.innerHTML=`<h2>🔴 Live tutorial session</h2><p class="muted">Live sessions need the updated Firestore rules. Publish them (see the README), then reload.</p>`});liveCardRefresh()}
-function liveCardRefresh(){const el=document.getElementById('lsess');if(!el||el.contains(document.activeElement)&&document.activeElement.tagName==='INPUT')return;
+function liveCardHTML(){return cloudOn()?'<div class="card" id="lsess" style="margin-bottom:22px"><h2>🔴 Live tutorial session</h2><p class="muted" id="lschk">Checking…</p></div>':''}
+/* weeks the lecturer can still run tutorials for; the earliest one without a past session is preselected */
+const SESS_WEEKS=[11,12,13,14];
+function sessWeekDefault(list){const used=new Set(list.map(s=>String(s.name||'')));const w=SESS_WEEKS.find(n=>!used.has('Week '+n+' tutorial'));return w||SESS_WEEKS[SESS_WEEKS.length-1]}
+const SESS_RULES_MSG='<h2>🔴 Live tutorial session</h2><p>Live sessions aren\'t switched on in this Firebase project yet: the live-session rules haven\'t been published.</p><ol style="padding-left:1.2em;margin:6px 0"><li>Firebase console → <b>Firestore</b> → <b>Rules</b>.</li><li>Click in the editor, select all (<b>Ctrl+A</b> / <b>Cmd+A</b>) and delete.</li><li>Paste the <b>full</b> rules file, then click <b>Publish</b>.</li><li>Reload this page.</li></ol><p class="muted" style="font-size:.88rem;margin:0">Screen time, break reminders and everything else still work meanwhile.</p>';
+function liveCardInit(){if(!document.getElementById('lsess'))return;PR.sessErr=0;PR.sessList=null;CLOUD.watchSessions(list=>{PR.sessErr=0;PR.sessList=list;liveCardRefresh()},e=>{PR.sessErr=1;liveCardRefresh()})}
+function liveCardRefresh(){const el=document.getElementById('lsess');if(!el||el.contains(document.activeElement)&&/^(INPUT|SELECT)$/.test(document.activeElement.tagName))return;
+  if(PR.sessErr){el.innerHTML=SESS_RULES_MSG;return}
+  if(PR.sessList==null){if(!$('#lschk'))el.innerHTML='<h2>🔴 Live tutorial session</h2><p class="muted" id="lschk">Checking…</p>';return}
   const S=PR.sess,list=PR.sessList||[],past=list.filter(s=>!(s.active&&(!s.endsAt||Date.now()<s.endsAt)));
   if(S&&S.active&&S.endsAt&&Date.now()>S.endsAt&&!S.rep)liveFinish(S.id);
   el.innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">🔴 Live tutorial session</h2>${sessLive()?'<span class="live"><i></i>LIVE</span>':''}</div>
   ${sessLive()?`<p style="margin:8px 0">Running: <b>${esc(S.name)}</b> · started ${S.startedAt?new Date(S.startedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'just now'} · ends automatically at ${new Date(S.endsAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</p>
     <div class="row"><a class="btn" href="#/live">Open live board</a><button class="btn red" id="lsend">■ End session</button></div>`
   :`<p class="muted" style="font-size:.9rem;margin:6px 0 10px">Start a session in class. Students see a banner and tap <b>Join</b>; you see who has the portal on screen and which section they're on. It ends automatically after ${ST.SESS_H} hours.</p>
-    <div class="row"><input type="text" id="lsname" maxlength="80" value="${esc('Week '+(list.length+1)+' tutorial')}" aria-label="Session name" style="flex:1;min-width:180px"><button class="btn" id="lsgo">▶ Start session</button></div><div class="err" id="lserr"></div>`}
+    <div class="row"><select id="lsname" aria-label="Which week" style="flex:1;min-width:180px">${SESS_WEEKS.map(n=>`<option value="Week ${n} tutorial"${n===sessWeekDefault(list)?' selected':''}>Week ${n} tutorial${list.some(s=>s.name==='Week '+n+' tutorial')?' (run before)':''}</option>`).join('')}</select><button class="btn" id="lsgo">▶ Start session</button></div><div class="err" id="lserr"></div>`}
   <h3 style="margin-top:16px">Past sessions</h3>${past.length?`<ul class="sumlist">${past.slice(0,12).map(s=>`<li><a href="#/session/${esc(s.id)}">${esc(s.name)}</a> <span class="muted" style="font-size:.82rem">${s.startedAt?new Date(s.startedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):''}${s.rep?' · '+Object.keys(s.rep).length+' joined':''}</span></li>`).join('')}</ul>`:'<p class="muted">No sessions yet.</p>'}`;
-  const go=$('#lsgo');if(go)go.onclick=async()=>{const n=($('#lsname').value||'').trim()||'Tutorial session';go.disabled=true;try{await CLOUD.startSession(n,ST.SESS_H);toast('🔴','Session started',n)}catch(e){$('#lserr').textContent=CLOUD.say(e);go.disabled=false}};
+  const go=$('#lsgo');if(go)go.onclick=async()=>{const n=$('#lsname').value||'Week '+sessWeekDefault(list)+' tutorial';go.disabled=true;try{await CLOUD.startSession(n,ST.SESS_H);toast('🔴','Session started',n)}catch(e){$('#lserr').textContent=CLOUD.say(e);go.disabled=false}};
   const en=$('#lsend');if(en)en.onclick=()=>{if(confirm('End "'+S.name+'" now? Students stop being tracked and the report is saved.'))liveFinish(S.id)}}
 const LIVE_LBL={on:'🟢 On screen',idle:'🟡 Idle',away:'🔴 Left the app',off:'⚫ Offline'};
 function liveRow(p,now){const off=!p.t||now-p.t>ST.OFF*1000,st=off&&p.st!=='off'?'off':p.st,tot=(p.on|0)+(p.idle|0)+(p.away|0);

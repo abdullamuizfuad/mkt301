@@ -199,8 +199,10 @@ async profile(){const c=await page();await signIn(c,C,PINC,'Shifa Test');await t
 /* live tutorial sessions: start, join, on screen / left the app, section, report, focus XP, profile */
 async sessions(){if(process.env.OLDRULES)return;
   const l=await page({w:1280,h:900,theme:'light',allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
-  await l.go('#/lecturer');await waitFor(l,()=>!!document.querySelector('#lsess #lsgo'));await l.fill('#lsname','Week 9 tutorial');await l.click('#lsgo');
-  await waitFor(l,()=>PR.sessOn===true);const sid=await l.evaluate(()=>PR.sess.id);ok((await l.textContent('#lsess')).includes('Week 9 tutorial'),'running session not shown');
+  await l.go('#/lecturer');await waitFor(l,()=>!!document.querySelector('#lsess #lsgo'));
+  ok(JSON.stringify(await l.$$eval('#lsname option',o=>o.map(x=>x.value)))===JSON.stringify(['Week 11 tutorial','Week 12 tutorial','Week 13 tutorial','Week 14 tutorial']),'week dropdown should offer only weeks 11-14');
+  ok(await l.$eval('#lsname',s=>s.value)==='Week 11 tutorial','Week 11 should be preselected');await shot(l,'session-start',true);await l.click('#lsgo');
+  await waitFor(l,()=>PR.sessOn===true);const sid=await l.evaluate(()=>PR.sess.id);ok((await l.textContent('#lsess')).includes('Week 11 tutorial'),'running session not shown');
   const c=await page({allow:/400|Failed to load resource|identitytoolkit/});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
   await waitFor(c,()=>!!document.querySelector('#lbjoin'));ok(await c.evaluate(()=>!PR.joined),'joined without tapping Join');await shot(c,'sess-banner');
   await c.click('#lbjoin');await c.waitForSelector('#lok');ok((await c.textContent('.modal')).includes('whether this app is on your screen'),'join note missing');await c.click('#lok');
@@ -221,16 +223,19 @@ async sessions(){if(process.env.OLDRULES)return;
   await waitFor(c,()=>!PR.joined&&!document.querySelector('#livebar'));await waitFor(c,id=>!!U.log['sessfocus:'+id],sid);ok(await c.evaluate(([id,x])=>U.gain['sessfocus:'+id]===20&&U.xp>=x+20,[sid,x0]),'focus XP not +20');
   const sd=await fsDoc('sessions',sid);ok(sd&&sd.active.booleanValue===false&&sd.rep&&sd.rep.mapValue.fields[C],'report not saved');
   await l.go('#/session/'+sid);await waitFor(l,()=>!!document.querySelector('#srp tr[data-sid]'));ok((await l.textContent('#srp')).includes('Shifa'),'report row missing');ok(await l.$('#srcsv'),'CSV button missing');await shot(l,'session-report',true);
-  await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes('Week 9 tutorial'));
-  await l.go('#/student/'+C);await waitFor(l,()=>!!document.querySelector('#prof')&&document.querySelector('#prof').textContent.includes('Week 9 tutorial'));
+  await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes('Week 11 tutorial'));
+  await waitFor(l,()=>!!document.querySelector('#lsname')&&document.querySelector('#lsname').value==='Week 12 tutorial');
+  await l.go('#/student/'+C);await waitFor(l,()=>!!document.querySelector('#prof')&&document.querySelector('#prof').textContent.includes('Week 11 tutorial'));
   ok((await l.textContent('#prof')).includes('Screen time'),'screen time missing from the profile');
   await c.done();await l.done()},
 
 /* rules without sessions (before the new rules are published): no banner, no errors, screen time still works */
 async sessDenied(){if(!process.env.OLDRULES)return;const c=await page({allow:/permission|insufficient|400|Failed to load resource|identitytoolkit/i});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
   await c.waitForTimeout(1500);ok(!await c.$('#livebar'),'banner without session rules');ok(await c.$('#stcard'),'screen time card missing');
-  const l=await page({w:1280,h:900,allow:/permission|insufficient|400|Failed to load resource|identitytoolkit/i});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);await l.go('#/lecturer');
-  await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes('updated Firestore rules'));await c.done();await l.done()}
+  const l=await page({w:1280,h:900,allow:/permission|insufficient|400|Failed to load resource|identitytoolkit/i});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+  await l.evaluate(()=>{window.__formSeen=0;new MutationObserver(()=>{if(document.querySelector('#lsess #lsgo'))window.__formSeen=1}).observe(document.body,{childList:true,subtree:true})});await l.go('#/lecturer');
+  await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes("rules haven't been published"));await l.waitForTimeout(800);
+  ok(await l.evaluate(()=>!window.__formSeen),'the Start form flashed before the rules check');ok((await l.textContent('#lsess')).includes('Screen time'),'fallback should say screen time still works');await c.done();await l.done()}
 };
 async function waitFor(p,fn,arg,t=15000){const t0=Date.now();while(Date.now()-t0<t){if(await p.evaluate(fn,arg).catch(()=>false))return;await p.waitForTimeout(250)}throw new Error('timed out waiting for '+String(fn).slice(0,90))}
 async function waitDoc(col,id,test,t=15000){const t0=Date.now();let d=null;while(Date.now()-t0<t){d=await fsDoc(col,id);if(d&&(!test||test(d)))return d;await new Promise(r=>setTimeout(r,300))}return null}
