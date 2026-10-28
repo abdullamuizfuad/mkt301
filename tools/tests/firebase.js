@@ -77,7 +77,13 @@ async restartSync(){const p=await page();await signIn(p,A,PIN);await tourOff(p);
 
 async lecturer(){const p=await page({w:1280,h:900});await createPin(p,L,PINL,'Abdulla Muiz Fuad');await tourOff(p);await p.go('#/lecturer');await p.waitForTimeout(1200);
   const t=await p.textContent('#cdb');ok(t.includes('S081441')&&t.includes('S085542')&&t.includes('Mariyam Ali'),'dashboard missing students');ok(/(^|\D)3\/32/.test(t),'signed-up count wrong');
-  ok(!await p.$('#cdb tr td:nth-child(3):text("S000001")'),'lecturer listed as a student');await shot(p,'fb-dashboard',true);
+  ok(!await p.$('#cdb tr td:nth-child(3):text("S000001")'),'lecturer listed as a student');
+  const rowsBefore=await p.$$eval('#cdb tr[data-sid]',r=>r.length);await p.click('[data-win="30"]');await p.waitForTimeout(300);
+  ok(await p.$eval('[data-win="30"]',b=>b.classList.contains('sel')),'30-minute filter not selected');
+  ok(await p.$eval('#cdb th[data-sk="ts"]',h=>h.getAttribute('aria-sort'))==='descending','30-minute filter should sort by most recently active');
+  ok(await p.$$eval('#cdb tr[data-sid]',r=>r.length)===rowsBefore,'students active just now should all be listed');
+  ok(/active in last 30 min/.test(await p.textContent('#cdb')),'30-minute count missing');
+  await p.click('[data-win="all"]');await p.waitForTimeout(300);ok(await p.$eval('#cdb th[data-sk="xp"]',h=>h.getAttribute('aria-sort'))==='descending','All should sort by XP again');await shot(p,'fb-dashboard',true);
   ok(!(await fsDoc('board',L)),'lecturer has a board row');await p.done();
   const s=await page();await signIn(s,B,PINB);await tourOff(s);await s.go('#/lecturer');ok(!await s.$('#cdash'),'student sees the dashboard');
   /* ask the server directly with the student's own sign-in token: listing everyone's progress must be refused */
