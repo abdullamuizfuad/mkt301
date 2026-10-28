@@ -2,14 +2,14 @@
 /* The engine (engine/*) is shared by MKT101 and MKT301 and must stay byte-identical in both repos.
    node tools/sync-engine.mjs [other-repo]          copy this repo's engine to the other repo and refresh engine/MANIFEST in both
    node tools/sync-engine.mjs --check [other-repo]  exit 1 if the engine differs from its MANIFEST, or from the other repo when it is present
-   The other repo defaults to the sibling folder (../mkt301 or ../mkt101-cases, or ../n301 / ../n101). */
+   The other repo defaults to the sibling folder (../mkt301 or ../mkt101-cases, or ../n301 / ../n101), or $ENGINE_OTHER. */
 import fs from 'fs';import path from 'path';import crypto from 'crypto';import {fileURLToPath} from 'url';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const args=process.argv.slice(2),check=args.includes('--check'),given=args.find(a=>!a.startsWith('--'));
 const files=d=>fs.readdirSync(path.join(d,'engine')).filter(f=>f!=='MANIFEST').sort();
 const sha=f=>crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 const manifest=d=>files(d).map(f=>sha(path.join(d,'engine',f))+'  '+f).join('\n')+'\n';
-function other(){if(given)return path.resolve(given);const me=fs.readFileSync(path.join(ROOT,'course-config.js'),'utf8').match(/id:'(mkt\d+)'/)[1];
+function other(){if(given)return path.resolve(given);if(process.env.ENGINE_OTHER)return path.resolve(process.env.ENGINE_OTHER);const me=fs.readFileSync(path.join(ROOT,'course-config.js'),'utf8').match(/id:'(mkt\d+)'/)[1];
   const cands=me==='mkt101'?['mkt301','n301']:['mkt101-cases','n101'];for(const c of cands){const p=path.resolve(ROOT,'..',c);if(fs.existsSync(path.join(p,'engine')))return p}return null}
 const O=other();
 if(check){let bad=0;const m=path.join(ROOT,'engine','MANIFEST');

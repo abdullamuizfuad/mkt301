@@ -6,8 +6,8 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 
 | Phase | What | Status |
 |---|---|---|
-| 0 | One shared engine (`engine/`, identical in both repos) | in progress |
-| 1 | CI, XP audit, error reports, streak freeze, at-risk, problem reports, announcements, privacy page, wording fixes, backup export | not started |
+| 0 | One shared engine (`engine/`, identical in both repos) | **live** (main: MKT301 `d244165`, MKT101 `7e9b233`) |
+| 1 | CI, XP audit, error reports, streak freeze, at-risk, problem reports, announcements, privacy page, wording fixes, backup export | in progress (code done on `night`; cloud suites with the combined rules running) |
 | 2 | Home dashboard, avatar builder, streak blocks, countdown grid, spaced review, readiness, flashcards, item analysis, name policy | not started |
 | 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | not started |
 | 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | not started |
@@ -51,9 +51,17 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 - All data changes are additive, and migrations are idempotent.
 - One combined rules file per project, delivered at the end.
 
+## Phase 1 notes
+
+- New engine files: `engine/feat.js` (lecturer-card plumbing, error reports, Report a problem, announcements, streak freeze, XP audit, at-risk, class backup, privacy page), `engine/names.js` (official names and usernames), `engine/avatar.js` (avatar codes, used from Phase 2).
+- Features that need the combined rules carry `data-need="rules"` and stay hidden until `meta/` is readable (`rulesOK()`), so the site keeps working on the old rules.
+- CI: `.github/workflows/tests.yml` runs the site suite, the engine check and the cloud suite on a made-up class list (the test IDs only).
+- `tools/sync-engine.mjs` also reads `$ENGINE_OTHER` (the night working copies live in `n101`/`n301`).
+- Board writes under the combined rules: `n` must equal the directory name (or `''` before names are added), so old clients' nickname rows are refused until they update. Publish the rules together with Version 2.1.
+
 ## Next
 
-- Finish Phase 0: both suites green, screenshot comparison against the baselines, then push.
+- Phase 1: cloud suites green on the combined rules, backup, push to main. Then Phase 2.
 
 ## Open questions
 
