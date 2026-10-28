@@ -111,14 +111,28 @@ async antiFarming(){const p=await page({sid:STUDENT,clock:true});await p.go('#/c
   await p.click('[data-a="restart"]');u=await p.U();ok(!u.n.typed&&u.xp===x2-25,'restart did not refund typed XP');await p.done()},
 
 async integrity(){const p=await page({sid:STUDENT,clock:true});await p.go('#/short');await plan(p);await p.click('[data-a="rtyped"]');
-  const ta=p.locator('.qcard textarea');await ta.click();await p.evaluate(()=>navigator.clipboard.writeText('Pasted from somewhere else. '.repeat(10)));
-  await p.keyboard.press('Control+V');await p.waitForTimeout(80);ok(!(await ta.inputValue()).includes('Pasted'),'paste was not blocked');
-  await ta.fill('One two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty.');await p.waitForTimeout(50);
-  ok((await ta.inputValue())==='','big insertion was not removed');let g=await p.evaluate(()=>U.integ||{});ok(g.paste>=1&&g.big>=1,'flags not counted: '+JSON.stringify(g));
-  ok((await p.textContent('.flagnote')).includes('removed'),'no notice shown');
-  await typeAnswer(p,await goodText(p),{fast:true});await p.click('[data-a="tdone"]');ok((await p.textContent('.qcard')).includes('faster than typing'),'too-fast answer not caught');
+  const ta=p.locator('.qcard textarea'),fl=()=>p.evaluate(()=>{const id=document.querySelector('.qcard').id.slice(2);return U.plansSaved[id].fl||{}});
+  await ta.click();await p.evaluate(()=>navigator.clipboard.writeText('Pasted from somewhere else. '.repeat(10)));
+  await p.keyboard.press('Control+V');await p.waitForTimeout(60);ok(!(await ta.inputValue()).includes('Pasted'),'paste was not blocked');
+  let f=await fl();ok(f.paste>=1&&f.ev.some(x=>x.k==='paste'&&x.s.startsWith('Pasted from somewhere')&&x.t&&x.at),'paste snippet not recorded: '+JSON.stringify(f.ev));
+  /* one 40-word insertion that isn't a paste (e.g. keyboard voice typing): kept, with a soft flag and a snippet */
+  const forty=Array.from({length:40},(_,i)=>'word'+i).join(' ');await ta.fill(forty);await p.waitForTimeout(40);
+  ok((await ta.inputValue())===forty,'large insertion was removed');let g=await p.evaluate(()=>U.integ||{});ok(g.paste>=1&&g.bigKept>=1&&!g.big,'flags not counted: '+JSON.stringify(g));
+  f=await fl();const k=f.ev.find(x=>x.k==='bigKept');ok(k&&k.s.startsWith('word0 word1')&&k.s.length<=120&&'c' in k,'large insert snippet not recorded: '+JSON.stringify(k));
+  ok((await p.textContent('.qcard')).includes('Large inserts are kept but recorded'),'student note missing');
+  await ta.fill('');await typeAnswer(p,await goodText(p),{fast:true});await p.click('[data-a="tdone"]');ok((await p.textContent('.qcard')).includes('faster than typing'),'too-fast answer not caught');
   const x=(await p.U()).xp;await p.click('[data-a="tfin"]');ok((await p.U()).xp===x,'too-fast answer earned XP');
-  ok(await p.evaluate(()=>Object.values(U.ans).some(a=>a.fl.fast&&a.fl.paste&&a.fl.big)),'flags not stored with the answer');await p.done()},
+  ok(await p.evaluate(()=>Object.values(U.ans).some(a=>a.fl.fast&&a.fl.paste&&a.fl.bigKept&&a.fl.ev.length>=2)),'flags not stored with the answer');await p.done()},
+
+/* a 150-word answer spoken with the 🎤 button over about a minute earns XP (speech is timed at 1 s per 3 words) */
+async dictation(){const p=await page({sid:STUDENT,clock:true,init:()=>{window.SpeechRecognition=class{start(){setTimeout(()=>{
+    this.onresult&&this.onresult({resultIndex:0,results:[Object.assign([{transcript:window.__T||''}],{isFinal:true})]});this.onend&&this.onend()},60000)}stop(){this.onend&&this.onend()}}}});
+  await p.go('#/short');await plan(p);await p.click('[data-a="rtyped"]');const g=await goodText(p);
+  const t=(g+' '+'This matters because customers compare options and the firm must respond with a clear plan that fits its market and its budget. '.repeat(8)).split(/\s+/).slice(0,150).join(' ');
+  await p.evaluate(t=>{window.__T=t},t);await p.click('[data-a="mic"]');await p.clock.runFor(61000);await p.waitForTimeout(50);
+  const v=await p.locator('.qcard textarea').inputValue();ok(v.split(/\s+/).filter(Boolean).length>=150,'dictated text missing');
+  const x=(await p.U()).xp;await p.click('[data-a="tdone"]');ok(!(await p.textContent('.qcard')).includes('faster than typing'),'dictated answer marked too fast');
+  await p.click('[data-a="tfin"]');ok((await p.U()).xp>x,'dictated answer earned no XP');ok(!(await p.evaluate(()=>U.integ&&(U.integ.bigKept||U.integ.big))),'the 🎤 button was flagged as a large insert');await p.done()},
 
 async mic(){const p=await page({sid:STUDENT,clock:true,init:()=>{window.SpeechRecognition=class{start(){setTimeout(()=>{const t='A grey market is when genuine goods are resold outside the planned channel, for example cheaper cups from Thailand resold in Singapore, which harms the brand and partners.';
     this.onresult&&this.onresult({resultIndex:0,results:[Object.assign([{transcript:t}],{isFinal:true})]});this.onend&&this.onend()},50)}stop(){this.onend&&this.onend()}}}});

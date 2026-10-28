@@ -18,7 +18,8 @@ Students can type (or speak) answers to practice questions. Each submitted answe
    - **band**: 0–6, using the rubric in the item. Judge the meaning, not keywords; credit ideas written in the student's own words. A strong answer applies ideas to the case or example and evaluates; a list of terms is band 1–2.
    - **xp**: `band × 4`, plus 2 if every key idea is present (max 30).
    - **fb**: plain, friendly English, at most 3 sentences: one strength, the most important missing point, one tip. Speak to the student ("You explained…"). Never mention exams, finals or resits. No marks out of 20, no grades.
-   - Integrity flags (`pastesBlocked`, `bigInsertionsRemoved`, `tooFast`) or text that looks pasted or AI-written: **flag it in your report, do not punish it** in the mark or feedback.
+   - Integrity flags (`pastesBlocked`, `tooFast`, and the older `bigInsertionsRemoved`) or text that looks pasted or AI-written: **flag it in your report, do not punish it** in the mark or feedback.
+   - `largeInsertsKept` (with `events[].snippet`, `inputType`, `composing`) is **informational**: it is usually the phone keyboard's voice typing, which students are encouraged to use. Never penalise it and don't mention it to the student. Mention it in your report only if the snippet itself looks copied (e.g. polished text unrelated to the student's other writing, references or formatting from a website or AI tool).
 
 4. **Write** the marks to `tools/marking/marks.json` as an array:
    ```json

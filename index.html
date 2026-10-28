@@ -749,7 +749,8 @@ function qCard(q,i,o={}){
   else if(st.route==='typed'&&st.step===1){const w=words(st.txt);
     h+=`${planHTML}<label for="ta-${q.id}">Type your answer</label><textarea id="ta-${q.id}" class="answer" placeholder="Use your plan: define, explain, apply to the example, then evaluate. Pasting is turned off: type or speak your own answer.">${esc(st.txt||'')}</textarea>
     <div class="interim" id="im-${q.id}"></div><div class="row" style="justify-content:space-between;margin-top:2px"><span class="muted" style="font-size:.85rem" id="wc-${q.id}">${w} words · aim for 150–250</span><span class="muted" style="font-size:.85rem" id="sw-${q.id}"></span></div>
-    <div class="flagnote" id="fn-${q.id}">${(st.fl&&(st.fl.paste||st.fl.big))?'⚠️ Pasted text was removed. Type or speak your own answer.':''}</div>
+    <div class="flagnote" id="fn-${q.id}">${st.fl&&st.fl.paste?'⚠️ Paste blocked. Type or speak your own answer.':st.fl&&st.fl.bigKept?'ℹ️ A large insert was kept and noted for your lecturer.':''}</div>
+    <p class="muted" style="font-size:.8rem;margin:4px 0 0">Pasting is turned off. Typing and speaking are welcome: use 🎤 Speak or your keyboard's voice typing. Large inserts are kept but recorded for your lecturer.</p>
     <div class="row" style="margin-top:10px"><button class="btn" data-a="tdone">Check my answer →</button>${SR?`<button class="btn ghost sm mic" data-a="mic" aria-pressed="false">🎤 Speak</button>`:''}${st.sw?'':'<button class="btn ghost sm" data-a="sw">⏱ Show a timer</button>'}<button class="btn ghost sm" data-a="back">Choose another way</button></div>`}
   else if(st.route==='typed'){const C=st.chk||CONCEPT.checkAnswer(q,st.txt||'',namesFor(q,o)),SL={def:'Defines the key term',ex:'Gives an example or names the case/company',ev:'Evaluates (however, but, therefore…)',rec:'Makes a recommendation or judgement'};
     const why=typedNoXP(st,C);
@@ -782,7 +783,7 @@ function qCard(q,i,o={}){
   on('sw',()=>{st.sw=Date.now();save();re()});
   on('tdone',()=>{stopMic();st.txt=ta.value;const w=words(st.txt);if(!w){toast('⌨️','Nothing typed yet','Type or speak your answer first');return}
     st.noxp=w<MINWORDS;if(st.noxp&&!confirm(`Only ${w} words.\n\nTyped XP needs at least ${MINWORDS} words. Check it anyway, without XP?`))return;
-    st.fast=(st.act||0)/1000<w*TYPE_SPW;st.chk=CONCEPT.checkAnswer(q,st.txt,namesFor(q,o));clearInterval(TIMERS['sw'+q.id]);st.step=2;save();re()});
+    const sp=Math.min(st.dw||0,w);st.fast=(st.act||0)/1000<(w-sp)*TYPE_SPW+sp*SPEAK_SPW;st.chk=CONCEPT.checkAnswer(q,st.txt,namesFor(q,o));clearInterval(TIMERS['sw'+q.id]);st.step=2;save();re()});
   on('tedit',()=>{st.step=1;st.chk=null;save();re()});
   el.querySelectorAll(`[name="bd-${q.id}"]`).forEach(b=>b.onchange=()=>{st.band=+b.value;save();re()});
   A('tfin')&&(A('tfin').onclick=()=>{const C=st.chk||CONCEPT.checkAnswer(q,st.txt||'',namesFor(q,o)),why=typedNoXP(st,C);st.done=true;st.xpGot=why?0:C.xp;
@@ -792,7 +793,7 @@ function qCard(q,i,o={}){
     weakMark(q,o,(C.band<=2?2:C.band<=4?1:0)+(C.found.length<C.need/2?1:0));save();re()})}
 
 /* ---------- typed answers: integrity, speech, submission ---------- */
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition,TYPE_SPW=.5,BIG=15;
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition,TYPE_SPW=.5,SPEAK_SPW=1/3,BIG=15;
 let MIC=null;
 function stopMic(){if(MIC){const m=MIC;MIC=null;try{m.rec.stop()}catch(e){}m.done()}}
 function namesFor(q,o){const c=o&&o.cid?CASES.find(x=>x.id===o.cid):null,n=[];
@@ -801,16 +802,25 @@ function namesFor(q,o){const c=o&&o.cid?CASES.find(x=>x.id===o.cid):null,n=[];
 function typedNoXP(st,C){if(st.noxp||C.words<MINWORDS)return 'typed XP needs at least '+MINWORDS+' words.';if(!C.found.length)return 'no key ideas were found. Use your plan and try again.';
   if(st.fast)return 'this was entered faster than typing allows. Type or speak your own answer to earn XP.';return ''}
 /* keep the answer box honest: no pasting or dropping, no big insertions (except our own speech button), count active typing time */
-function typingBox(q,st,ta,el){let prev=ta.value,last=0,tmo;st.fl=st.fl||{};const wc=$('#wc-'+q.id),fn=$('#fn-'+q.id);
+function typingBox(q,st,ta,el){let prev=ta.value,last=0,tmo,comp=0,cst=0;st.fl=st.fl||{};const wc=$('#wc-'+q.id),fn=$('#fn-'+q.id);
   const sync=()=>{st.txt=ta.value;prev=ta.value;wc.textContent=words(ta.value)+' words · aim for 150–250';clearTimeout(tmo);tmo=setTimeout(save,400)};
-  const tick=()=>{const t=Date.now();if(last)st.act=(st.act||0)+Math.min(t-last,15000);last=t};
-  const flag=(k,msg)=>{st.fl[k]=(st.fl[k]||0)+1;U.integ=U.integ||{};U.integ[k]=(U.integ[k]||0)+1;fn.textContent='⚠️ '+msg;toast('🚫','Pasting is turned off','Type or speak your own answer');save()};
-  ['paste','drop'].forEach(ev=>ta.addEventListener(ev,e=>{e.preventDefault();flag('paste','Pasted text was removed. Type or speak your own answer.')}));
+  const tick=cap=>{const t=Date.now();if(last)st.act=(st.act||0)+Math.min(t-last,cap||15000);last=t};
+  /* integrity record: a count plus the newest 5 events per answer (kind, first 120 characters, input type, composing?, time) */
+  const rec=(k,txt,type,c)=>{st.fl[k]=(st.fl[k]||0)+1;U.integ=U.integ||{};U.integ[k]=(U.integ[k]||0)+1;
+    st.fl.ev=(st.fl.ev||[]).concat({k,s:String(txt||'').replace(/\s+/g,' ').trim().slice(0,120),t:type||'unknown',c:c?1:0,at:new Date().toISOString()}).slice(-5)};
+  const blocked=(txt,type)=>{rec('paste',txt,type,0);fn.textContent='⚠️ Paste blocked. Type or speak your own answer.';toast('🚫','Pasting is turned off','Type or speak your own answer');save()};
+  ta.addEventListener('paste',e=>{e.preventDefault();blocked(e.clipboardData&&e.clipboardData.getData('text'),'paste')});
+  ta.addEventListener('drop',e=>{e.preventDefault();blocked(e.dataTransfer&&e.dataTransfer.getData('text'),'drop')});
   ta.addEventListener('beforeinput',e=>{const t=e.inputType||'';
-    if(/^insertFrom(Paste|Drop|Yank|PasteAsQuotation)$/.test(t)){e.preventDefault();return flag('paste','Pasted text was removed. Type or speak your own answer.')}
-    if(e.data&&t!=='insertFromDictation'&&words(e.data)>BIG){e.preventDefault();return flag('big','A large block of text was removed. Type or speak your own answer.')}});
-  ta.addEventListener('input',e=>{const t=e.inputType||'';
-    if(t!=='insertFromDictation'&&words(ta.value)-words(prev)>BIG){ta.value=prev;return flag('big','A large block of text was removed. Type or speak your own answer.')}
+    if(/^insertFrom(Paste|Drop|Yank|PasteAsQuotation)$/.test(t)){e.preventDefault();blocked(e.data||(e.dataTransfer&&e.dataTransfer.getData('text')),t)}});
+  /* keyboards that compose (predictive text, voice typing): the time spent composing counts as active time */
+  ta.addEventListener('compositionstart',()=>{comp=1;cst=Date.now()});
+  ta.addEventListener('compositionend',()=>{if(cst){st.act=(st.act||0)+Math.min(Date.now()-cst,120000);last=Date.now()}comp=0;cst=0});
+  ta.addEventListener('input',e=>{const t=e.inputType||'',v=ta.value,d=words(v)-words(prev),spoken=t==='insertFromDictation'||!!comp||!!e.isComposing;
+    if(d>BIG){/* a large block in one go (often the phone keyboard's voice typing): keep it, note it for the lecturer, time it as speech */
+      let a=0;while(a<prev.length&&a<v.length&&prev[a]===v[a])a++;const ins=e.data||v.slice(a,a+Math.max(0,v.length-prev.length));
+      rec('bigKept',ins,t||'unknown',spoken);st.dw=(st.dw||0)+d;tick(120000);fn.textContent='ℹ️ A large insert was kept and noted for your lecturer (that\'s fine for voice typing).';sync();save();return}
+    if(spoken&&d>0)st.dw=(st.dw||0)+d;
     tick();sync()});
   ta.addEventListener('focus',()=>{last=Date.now()});
   const swp=()=>{const s=$('#sw-'+q.id);if(!s)return clearInterval(TIMERS['sw'+q.id]);if(st.sw){const t=Math.floor((Date.now()-st.sw)/1000);s.textContent='⏱ '+Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}};
@@ -822,14 +832,14 @@ function typingBox(q,st,ta,el){let prev=ta.value,last=0,tmo;st.fl=st.fl||{};cons
     rec.lang='en-GB';rec.continuous=true;rec.interimResults=true;const im=$('#im-'+q.id),t0=Date.now();
     MIC={rec,done:()=>{st.act=(st.act||0)+(Date.now()-t0);mb.classList.remove('on');mb.textContent='🎤 Speak';mb.setAttribute('aria-pressed','false');if(im)im.textContent='';save()}};
     rec.onresult=e=>{let tmp='';for(let k=e.resultIndex;k<e.results.length;k++){const r=e.results[k],t=r[0].transcript.trim();
-        if(r.isFinal){if(t){ta.value=(ta.value&&!/\s$/.test(ta.value)?ta.value+' ':ta.value)+t;sync()}}else tmp+=t+' '}if(im)im.textContent=tmp?'🎤 '+tmp:''};
+        if(r.isFinal){if(t){ta.value=(ta.value&&!/\s$/.test(ta.value)?ta.value+' ':ta.value)+t;st.dw=(st.dw||0)+words(t);sync()}}else tmp+=t+' '}if(im)im.textContent=tmp?'🎤 '+tmp:''};
     rec.onerror=e=>{if(e.error==='not-allowed')toast('🎤','Microphone blocked','Allow the microphone for this site in your browser settings.');stopMic()};
     rec.onend=()=>{if(MIC&&MIC.rec===rec){MIC=null;st.act=(st.act||0)+(Date.now()-t0);mb.classList.remove('on');mb.textContent='🎤 Speak';if(im)im.textContent='';save()}};
     try{rec.start();mb.classList.add('on');mb.textContent='⏹ Stop';mb.setAttribute('aria-pressed','true')}catch(e){MIC=null}}}
 /* store a submitted typed answer so the lecturer (and Claude marking) can review it */
 function submitAnswer(q,o,st,C){U.ans=U.ans||{};const key=q.id+'_'+Date.now().toString(36);
   U.ans[key]={q:q.id,sec:o.week?'B':o.cid||'',t:String(st.txt||'').slice(0,3000),at:new Date().toISOString(),b:C.band,f:C.found,s:Object.keys(C.struct).filter(k=>C.struct[k]),w:C.words,x:st.xpGot||0,
-    fl:{paste:(st.fl&&st.fl.paste)||0,big:(st.fl&&st.fl.big)||0,fast:st.fast?1:0}};
+    fl:{paste:(st.fl&&st.fl.paste)||0,bigKept:(st.fl&&st.fl.bigKept)||0,big:(st.fl&&st.fl.big)||0,fast:st.fast?1:0,ev:((st.fl&&st.fl.ev)||[]).slice(-5)}};
   /* keep the newest 80: drop the oldest already-marked answers first, then the oldest */
   const old=()=>Object.keys(U.ans).sort((a,b)=>U.ans[a].at<U.ans[b].at?-1:1);
   for(const k of old()){if(Object.keys(U.ans).length<=80)break;if(U.rev&&U.rev[k]&&k!==key)delete U.ans[k]}
@@ -1140,13 +1150,13 @@ function classDash(){
   CLOUD.watchUsers(list=>{LAST=list;drawDash(list)},e=>{const el=$('#cdb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`});
   function drawDash(list){const el=$('#cdb');if(!el)return;const I=qIndex(),q=($('#csq')&&$('#csq').value||'').trim().toLowerCase();
     const st=list.filter(x=>x.id!==LECTURER&&x.u).map(x=>{const u=x.u,n=u.n||{};return {id:x.id,name:x.name||'',xp:u.xp|0,lv:level(u.xp|0).name,str:streak(Object.assign({days:[]},u)),ts:x.ts,
-      plans:n.plans|0,timed:n.timed|0,typed:n.typed|0,flags:Object.values(u.integ||{}).reduce((t,v)=>t+(v|0),0),badges:Object.keys(u.badges||{}).length,weak:weakOf(u),done:practised(u),u}}).sort((a,b)=>b.xp-a.xp);
+      plans:n.plans|0,timed:n.timed|0,typed:n.typed|0,flags:((u.integ||{}).paste|0)+((u.integ||{}).big|0)+((u.integ||{}).fast|0),badges:Object.keys(u.badges||{}).length,weak:weakOf(u),done:practised(u),u}}).sort((a,b)=>b.xp-a.xp);
     const day=864e5,now=Date.now(),act=d=>st.filter(x=>x.ts&&now-x.ts<d).length,total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:st.length);
     const dec={};st.forEach(x=>Object.entries(x.u.plansSaved||{}).forEach(([id,p])=>{const e=I[id];if(!e||!p.checked)return;(p.sel||[]).forEach(j=>{const c=e.q.chips[j];if(c&&!c.g){const k=id+'|'+j;dec[k]=dec[k]||{t:c.t,why:c.why,where:e.label,n:0};dec[k].n++}})}));
     const topDec=Object.values(dec).sort((a,b)=>b.n-a.n).slice(0,8);
     const areas=[...new Set(Object.values(I).map(e=>e.area))].map(a=>({a,label:a[0]==='w'?tkLabel(a):CASES.find(c=>'c:'+c.id===a).title+' (case practice)',n:st.filter(x=>[...x.done].some(id=>I[id]&&I[id].area===a)).length})).sort((a,b)=>a.n-b.n).slice(0,6);
     el.innerHTML=`<div class="stats" style="margin:12px 0"><div class="stat"><b>${st.length}/${total}</b><span>signed up</span></div><div class="stat"><b>${act(day)}</b><span>active today</span></div><div class="stat"><b>${act(7*day)}</b><span>active this week</span></div><div class="stat"><b>${st.length?Math.round(st.reduce((t,x)=>t+x.xp,0)/st.length):0}</b><span>average XP</span></div></div>
-    <div class="tablewrap"><table class="wide"><tr><th>#</th><th>Name</th><th>ID</th><th>XP</th><th>Level</th><th>🔥</th><th>Last active</th><th>Plans</th><th>Timed</th><th>Typed</th><th title="Pastes blocked, big insertions removed, too-fast answers">Flags</th><th>Badges</th><th>Weak topics</th></tr>
+    <div class="tablewrap"><table class="wide"><tr><th>#</th><th>Name</th><th>ID</th><th>XP</th><th>Level</th><th>🔥</th><th>Last active</th><th>Plans</th><th>Timed</th><th>Typed</th><th title="Pastes blocked and too-fast answers. Large inserts kept (usually voice typing) are listed in each profile.">Flags</th><th>Badges</th><th>Weak topics</th></tr>
     ${st.filter(x=>!q||x.name.toLowerCase().includes(q)||x.id.toLowerCase().includes(q)).map((x,i)=>`<tr class="click" data-sid="${esc(x.id)}" tabindex="0"><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.id)}</td><td><b>${x.xp}</b></td><td>${esc(x.lv)}</td><td>${x.str}</td><td>${ago(x.ts)}</td><td>${x.plans}</td><td>${x.timed}</td><td>${x.typed}</td><td>${x.flags?'<b style="color:var(--gold)">'+x.flags+'</b>':'0'}</td><td>${x.badges}</td><td style="font-size:.82rem">${esc(x.weak.join('; ')||'–')}</td></tr>`).join('')||'<tr><td colspan="13" class="muted">No students have signed in with a PIN yet.</td></tr>'}</table></div>
     <div class="grid g2" style="margin-top:16px"><div><h3>Decoys the class picks most</h3>${topDec.length?`<ol class="sumlist">${topDec.map(d=>`<li><b>${esc(d.t)}</b> <span class="tag">${d.n} student${d.n===1?'':'s'}</span><div class="muted" style="font-size:.82rem">${esc(d.where)}${d.why?' · '+esc(d.why):''}</div></li>`).join('')}</ol>`:'<p class="muted">No decoys picked yet.</p>'}</div>
     <div><h3>Practised by the fewest students</h3><ol class="sumlist">${areas.map(a=>`<li>${esc(a.label)} <span class="tag">${a.n}/${st.length||0}</span></li>`).join('')}</ol></div></div>
@@ -1158,7 +1168,7 @@ function classDash(){
 function markQueue(){let US=null,RV=null,tab='q',open=null;const drafts={},I=qIndex();
   $('#mq').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Marking</h2><span class="live"><i></i>LIVE</span></div>
   <p class="muted" style="font-size:.88rem;margin:6px 0 10px">Typed answers students have submitted. Mark them here, or ask Claude to mark the queue (see CLAUDE.md in the repo). Students see the mark, feedback and XP straight away.</p><div id="mqb"><p class="muted">Loading answers…</p></div>`;
-  const flags=a=>{const f=a.fl||{};return [f.paste?'paste blocked ×'+f.paste:'',f.big?'big insert ×'+f.big:'',f.fast?'too fast':''].filter(Boolean).join(' · ')};
+  const flags=a=>flagText(a.fl);
   const draw=force=>{const el=$('#mqb');if(!el||!US||!RV)return;const ae=document.activeElement;if(!force&&ae&&el.contains(ae)&&/TEXTAREA|INPUT|SELECT/.test(ae.tagName))return;
     const all=[];US.forEach(x=>{if(x.id===LECTURER||!x.u||!x.u.ans)return;Object.entries(x.u.ans).forEach(([k,a])=>{if(a&&a.q)all.push({sid:x.id,name:x.name||'',k,a,r:(RV[x.id]||{})[k]})})});
     all.sort((p,q)=>String(p.a.at)<String(q.a.at)?1:-1);const pend=all.filter(x=>!x.r),done=all.filter(x=>x.r),list=(tab==='q'?pend:done).slice(0,40);
@@ -1166,7 +1176,7 @@ function markQueue(){let US=null,RV=null,tab='q',open=null;const drafts={},I=qIn
       return `<div class="mqi" data-k="${esc(x.k)}"><div class="row" style="justify-content:space-between"><b>${esc(x.name||x.sid)}</b><span class="muted" style="font-size:.8rem">${esc(x.sid)} · ${esc(String(x.a.at||'').slice(0,16).replace('T',' '))}</span></div>
       <div class="muted" style="font-size:.85rem">${esc(e?e.label:x.a.q)}: ${esc(qt.slice(0,150))}${qt.length>150?'…':''}</div>
       <div style="font-size:.85rem;margin:4px 0">Automatic ${x.a.b|0}/6 · ${x.a.w|0} words${fl?` · <span style="color:var(--gold)">⚠️ ${esc(fl)}</span>`:''}${x.r?` · <b>marked ${x.r.band}/6, +${x.r.xp} XP</b> <span class="muted">(${x.r.by==='lecturer'?'you':'Claude'})</span>`:''}</div>
-      ${open===x.k?`<div class="answerprev">${esc(x.a.t||'').replace(/\n/g,'<br>')}</div>
+      ${open===x.k?`<div class="answerprev">${esc(x.a.t||'').replace(/\n/g,'<br>')}</div>${flagEvHTML(x.a.fl)}
       <div class="row" style="margin-top:8px"><label class="inl">Band <select data-f="band">${[0,1,2,3,4,5,6].map(b=>`<option value="${b}" ${b===d.band?'selected':''}>${b}</option>`).join('')}</select></label><label class="inl">XP <input type="number" min="0" max="30" data-f="xp" value="${d.xp}"></label></div>
       <textarea data-f="fb" maxlength="600" style="min-height:80px;margin-top:8px" placeholder="Feedback: one strength, the most important missing point, one tip">${esc(d.fb||'')}</textarea>
       <div class="row" style="margin-top:8px"><button class="btn sm" data-save>Save mark</button><button class="btn ghost sm" data-close>Close</button></div><div class="err" data-er></div>`
@@ -1224,13 +1234,13 @@ function studentPage(sid){
       qd=c.questions.filter(q=>done.has(q.id)).length;
       return `<div class="pb"><span>${c.icon} <b>${esc(c.title)}</b></span><div class="bar"><i style="width:${(rd/c.sections.length*100)|0}%"></i></div>
       <span style="text-align:right;font-size:.82rem">read ${rd}/${c.sections.length} · Boardroom ${vs.length}/${c.boardroom.length}${vs.length?' ('+Math.round(ok/vs.length*100)+'% match)':''}<br>practice ${qd}/${c.questions.length}</span></div>`}).join('');
-    const ansItem=([k,a])=>{const e=I[a.q],r=RV[k],good=e?e.q.chips.filter(c=>c.g).length:0,fl=a.fl||{},flt=[fl.paste?'paste blocked ×'+fl.paste:'',fl.big?'big insert ×'+fl.big:'',fl.fast?'too fast':''].filter(Boolean).join(' · ');
+    const ansItem=([k,a])=>{const e=I[a.q],r=RV[k],good=e?e.q.chips.filter(c=>c.g).length:0,fl=a.fl||{},flt=flagText(fl);
       const d=drafts[k]||{band:r?r.band:a.b|0,xp:r?r.xp:Math.min(30,(a.b|0)*4),fb:r?r.fb:''};
       return `<div class="mqi" data-k="${esc(k)}"><div class="row" style="justify-content:space-between"><b style="font-size:.9rem">${esc(e?e.label:a.q)}</b><span class="muted" style="font-size:.8rem">${esc(String(a.at||'').slice(0,16).replace('T',' '))}</span></div>
       <div class="muted" style="font-size:.85rem">${esc(e?e.q.q.slice(0,140):'')}${e&&e.q.q.length>140?'…':''}</div>
       <div style="font-size:.85rem;margin:4px 0">${a.w|0} words · automatic ${a.b|0}/6 · key ideas ${(a.f||[]).length}/${good}${flt?` · <span style="color:var(--gold)">⚠️ ${esc(flt)}</span>`:''}${r?` · <b>marked ${r.band}/6, +${r.xp} XP</b> <span class="muted">(${r.by==='lecturer'?'you':'Claude'})</span>`:' · <span class="tag">not marked</span>'}</div>
       ${r&&r.fb&&open!==k?`<p class="muted" style="font-size:.85rem;margin:4px 0">“${esc(r.fb)}”</p>`:''}
-      ${open===k?`<div class="answerprev">${esc(a.t||'').replace(/\n/g,'<br>')}</div>
+      ${open===k?`<div class="answerprev">${esc(a.t||'').replace(/\n/g,'<br>')}</div>${flagEvHTML(fl)}
       <div class="row" style="margin-top:8px"><label class="inl">Band <select data-f="band">${[0,1,2,3,4,5,6].map(b=>`<option value="${b}" ${b===d.band?'selected':''}>${b}</option>`).join('')}</select></label><label class="inl">XP <input type="number" min="0" max="30" data-f="xp" value="${d.xp}"></label></div>
       <textarea data-f="fb" maxlength="600" style="min-height:80px;margin-top:8px" placeholder="Feedback: one strength, the most important missing point, one tip">${esc(d.fb||'')}</textarea>
       <div class="row" style="margin-top:8px"><button class="btn sm" data-save>Save mark</button><button class="btn ghost sm" data-close>Close</button></div><div class="err" data-er></div>`
@@ -1255,8 +1265,8 @@ function studentPage(sid){
       return (ks.length?`<ol class="sumlist">${ks.map(k=>`<li>${esc(tkLabel(k))} <span class="tag">${w[k][1]} pts over ${w[k][0]} tries</span></li>`).join('')}</ol>`:'<p class="muted">None recorded yet.</p>')
       +`<h3>Decoys picked (${dec.length})</h3>${dec.length?`<ul class="sumlist">${dec.slice(0,8).map(d=>`<li><b>${esc(d.t)}</b><div class="muted" style="font-size:.8rem">${esc(d.where)}${d.why?' · '+esc(d.why):''}</div></li>`).join('')}</ul>`:'<p class="muted">None.</p>'}
       <h3>Key ideas missed in plans (${miss.length})</h3>${miss.length?`<ul class="sumlist">${miss.slice(0,8).map(d=>`<li>${esc(d.t)}<div class="muted" style="font-size:.8rem">${esc(d.where)}</div></li>`).join('')}</ul>`:'<p class="muted">None.</p>'}`})()}</div>
-    <div class="card psec"><h2>Cases</h2>${caseRows}<h3 style="margin-top:14px">Integrity</h3><p style="font-size:.9rem;margin:0">${Object.keys(ig).length?Object.entries(ig).map(([k,v])=>`${esc({paste:'Pastes blocked',big:'Big insertions removed',fast:'Answers typed too fast'}[k]||k)}: <b>${v|0}</b>`).join(' · '):'No integrity flags.'}</p>
-      <p class="muted" style="font-size:.8rem">Flags are signals, not proof: speech-to-text and fast typists can trigger them.</p></div></div>
+    <div class="card psec"><h2>Cases</h2>${caseRows}<h3 style="margin-top:14px">Integrity</h3><p style="font-size:.9rem;margin:0">${Object.keys(ig).length?Object.entries(ig).map(([k,v])=>`${esc({paste:'Pastes blocked',bigKept:'Large inserts kept (often voice typing)',big:'Big insertions removed (older rule)',fast:'Answers too fast'}[k]||k)}: <b>${v|0}</b>`).join(' · '):'No integrity flags.'}</p>
+      <p class="muted" style="font-size:.8rem">Flags are signals, not proof. Large inserts are usually voice typing; open an answer to see each flag's snippet.</p></div></div>
     <div class="card psec"><h2>Typed answers <span class="tag">${ans.length}</span> <span class="tag">${marked} marked</span></h2>${ans.length?ans.slice(0,30).map(ansItem).join(''):'<p class="muted">No typed answers yet.</p>'}${ans.length>30?'<p class="muted" style="font-size:.85rem">Showing the newest 30.</p>':''}</div>
     <div class="card psec"><h2>Messages you've sent</h2>${notes.length?notes.map(([k,v])=>`<div class="note" style="border-left:3px solid var(--teal);padding:6px 10px;margin-top:6px"><p style="margin:0">${esc(v.fb)}</p><span class="muted" style="font-size:.8rem">${esc(String(v.at).slice(0,16).replace('T',' '))} · ${u.notes&&u.notes[k]?(u.notesRead&&u.notesRead[k]?'read':'delivered'):'not opened yet'}</span></div>`).join(''):'<p class="muted">None yet.</p>'}</div>
     ${actionsHTML()}`;
@@ -1332,6 +1342,9 @@ async function cloudSync(){const sid=ME.sid;
   if(R&&(R._t||0)>LOAD_T){U=Object.assign(blank(),R);U.n=Object.assign(blank().n,U.n);LS.set('u_'+sid,U);hud();route();toast('☁️','Progress loaded',U.xp+' XP from your account')}
   CLOUD.ready(sid,()=>ME&&ME.sid===sid?{sid,name:ME.name,U,row:rowOf(sid)}:null);CLOUD.flush();
   if(sid!==LECTURER)CLOUD.watchMine(sid,m=>{if(ME&&ME.sid===sid)applyMarks(m)})}
+/* integrity flags as the lecturer sees them */
+function flagText(f){f=f||{};return [f.paste?'paste blocked ×'+f.paste:'',f.bigKept?'large insert (kept) ×'+f.bigKept:'',f.big?'big insert removed ×'+f.big:'',f.fast?'too fast':''].filter(Boolean).join(' · ')}
+function flagEvHTML(f){const ev=(f&&f.ev)||[];return ev.length?`<ul class="sumlist" style="font-size:.82rem;margin:8px 0 0">${ev.map(x=>`<li><b>${x.k==='paste'?'Paste blocked':'Large insert (kept)'}</b> · ${esc(x.t)}${x.c?' · while composing':''} · ${esc(String(x.at).slice(0,16).replace('T',' '))}<div class="muted">“${esc(x.s)}${String(x.s).length>=120?'…':''}”</div></li>`).join('')}</ul>`:''}
 /* lecturer notes live in reviews/{SID}.m under note_ keys: messages only, never marks or XP */
 const isNote=k=>/^note_/.test(k);
 /* a new or changed mark: award its XP once (and adjust if the lecturer changes it later). Restart doesn't remove it. */
