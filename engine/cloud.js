@@ -69,7 +69,7 @@ const CLOUD=(()=>{
           const cur=boardX,nx=cur==null?Math.min(x,5000):x>cur?Math.min(x,cur+3000,cur+Math.max(0,Math.floor((Date.now()-boardT)/550))):x;
           try{await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,80),u:String(r.u||''),a:String(r.a||''),x:nx},base));boardX=nx;if(nx!==cur)boardT=Date.now()}
           catch(e){if(C.isNetwork(e))throw e;console.warn('Leaderboard not updated yet',e);boardT=Date.now()}
-          clearTimeout(lagT);if(boardX==null||boardX<x)lagT=setTimeout(()=>C.flush(),20000)}
+          clearTimeout(lagT);if(boardX==null||boardX<x)lagT=setTimeout(()=>C.flush(),boardX==null?20000:Math.max(1500,Math.min(20000,(x-boardX)*550-(Date.now()-boardT)+300)))}
         else{
         /* the rules cap a new row at 5,000 XP and each update at +3,000, so big jumps (restores) go up in steps */
         let cur=boardX;do{const nx=cur==null?Math.min(x,5000):x>cur?Math.min(x,cur+3000):x;

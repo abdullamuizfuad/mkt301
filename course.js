@@ -103,17 +103,14 @@ const TOUR=[['🧩','Plan with chips','Every question starts with a plan. Tap th
  ['✨','XP, missions and badges','Earn XP for reading, planning and writing. Three daily missions change every day and get tougher as you level up. <b>⏱️ Screen time</b> counts your active minutes: 20 a day meets your daily goal. In class, tap <b>Join</b> when your lecturer starts a live session.'],
  ['💾','Keep your progress safe','Your progress lives on this device. Tap <b>💾 Save</b> in the top bar to email a copy to your lecturer or download it.']];
 function home(){
-  rollDay();const L=level(U.xp),got=Object.keys(U.badges).length;
-  const GO={read:'#/cases',verdicts:'#/cases',verdictsRight:'#/cases',plans:'#/cases',timed:'#/cases',perfect:'#/short',bplans:'#/short',btimed:'#/short',catool:'#/essay',catimed:'#/essay',esstool:'#/essay',ecplan:'#/essay',essays:'#/essay',typed:'#/short',stgoal:'#/short'};
+  rollDay();
+  const GO=CRS.missionGo={read:'#/cases',verdicts:'#/cases',verdictsRight:'#/cases',plans:'#/cases',timed:'#/cases',perfect:'#/short',bplans:'#/short',btimed:'#/short',catool:'#/essay',catimed:'#/essay',esstool:'#/essay',ecplan:'#/essay',essays:'#/essay',typed:'#/short',stgoal:'#/short'};
   const ms=missions().map(m=>{const v=Math.min(U.day.c[m.k]||0,m.n);return `<div class="mission"><span class="tick ${v>=m.n?'on':''}">${v>=m.n?'✓':''}</span><div style="flex:1">${esc(m.x)}<div class="bar" style="margin-top:6px"><i style="width:${v/m.n*100}%"></i></div></div><span class="muted">${v}/${m.n}</span>${v<m.n?`<a class="btn ghost sm" href="${GO[m.k]||'#/cases'}" style="min-height:32px;padding:4px 10px">Go</a>`:''}</div>`}).join('');
   const caseCards=CASES.map(c=>{const read=c.sections.filter(s=>U.log['read:'+c.id+':'+s.id]).length;return `<a class="card zone" href="#/case/${c.id}/read"><div class="em">${c.icon}</div><h3>${esc(c.title)}</h3><p class="muted" style="font-size:.9rem">${esc(c.subtitle)}</p><div class="bar"><i style="width:${read/c.sections.length*100}%;background:var(--teal)"></i></div><p class="muted" style="font-size:.8rem;margin:6px 0 0">${read}/${c.sections.length} sections read</p></a>`}).join('');
-  shell('#/',`${inboxHTML()}
-  <div class="card hero"><div class="ring" style="--p:${L.pct}"><div><b>${L.i+1}</b><small>LEVEL</small></div></div>
-  <div><h1>Welcome back, ${esc(String(ME.name).split(' ')[0])}</h1><p class="muted" style="margin:0">${esc(L.name)} · ${L.to?(L.to-U.xp)+' XP to '+LEVELS[L.i+1][1]:'Top level reached'}</p>
-  <div class="stats"><div class="stat"><b>${U.xp}</b><span>XP</span></div><div class="stat"><b>🔥 ${streak(U)}</b><span>day streak</span></div><div class="stat"><b>${got}/${BADGES.length}</b><span>badges</span></div><div class="stat"><b>${U.n.timed}</b><span>timed answers</span></div></div></div></div>
+  shell('#/',`${inboxHTML()}${dashHTML()}
   <div class="grid g2" style="margin-top:16px">
    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Today's mission</h2><span class="tag">${TIERS[U.day.t]} · +${MBONUS[U.day.t]} XP</span></div><p class="muted" style="font-size:.9rem;margin-top:6px">${U.day.done?'✅ Done for today. New missions tomorrow.':'Complete all three for the bonus. New missions every day, and they get tougher as you level up.'}</p>${ms}</div>
-   <div class="card"><h2>Recent badges</h2>${got?`<div class="badges">${BADGES.filter(b=>U.badges[b.id]).slice(-4).map(b=>`<div class="badge got"><div class="ico">${b.ico}</div><b>${b.name}</b></div>`).join('')}</div>`:'<p class="muted">None yet. Start a case to earn your first.</p>'}<p style="margin:12px 0 0"><a href="#/badges">See all badges →</a></p></div>
+   <div class="card"><h2>Quick practice</h2><div class="grid g2" style="gap:10px"><a class="card zone" href="#/review" style="padding:14px"><div class="em">🧠</div><h3 style="margin:4px 0">Review</h3><p class="muted" style="font-size:.85rem;margin:0">${srsDue().length} due today</p></a><a class="card zone" href="#/cards" style="padding:14px"><div class="em">🃏</div><h3 style="margin:4px 0">Flashcards</h3><p class="muted" style="font-size:.85rem;margin:0">Key terms by week</p></a></div></div>
   </div>
   <div style="margin-top:16px">${stCardHTML()}</div>
   <h2 style="margin-top:26px">Section A · Case studies</h2>
@@ -556,3 +553,13 @@ const isB=o=>!!o.week,bArea=q=>'w'+q.week,bQLabel=q=>'Week '+q.week+': '+q.topic
 ROUTES.case=h=>caseView(h[1],h[2]||'read');
 ROUTES.short=()=>shortPage();
 ROUTES.essay=h=>h[1]==='ca'?caView(h[2]):h[1]==='coach'?coachView(h[2]):essayPage();
+
+/* ---------- dashboard hooks (engine/dash.js): readiness areas and flashcard decks ---------- */
+function readyAreas(u){const P=practised(u),W=((u.wk||{}).t)||{},acc=ks=>{let a=0,m=0;ks.forEach(k=>{const r=W[k];if(r){a+=r[0];m+=r[1]}});return a?Math.max(0,1-m/a):null};
+  const out=CASE_ALL.map(c=>({k:'c:'+c.id,label:caseName(c),href:'#/case/'+c.id+'/practice',cov:c.questions.filter(q=>P.has(q.id)).length/Math.max(1,c.questions.length),acc:acc(Object.keys(W).filter(k=>k.startsWith(c.id+'|')))}));
+  [...new Set(BANK_B.map(q=>q.week))].sort((a,b)=>a-b).forEach(w=>{const qs=BANK_B.filter(q=>q.week===w);out.push({k:'w'+w,label:'Week '+w+': '+[...new Set(qs.map(q=>q.topic))].slice(0,2).join(', '),href:'#/short',cov:qs.filter(q=>P.has(q.id)).length/qs.length,acc:acc(['w'+w])})});
+  return out}
+/* "Term: meaning" key ideas from the Section B plans, one deck per week */
+function flashDecks(){const D={};BANK_B.forEach(q=>q.chips.forEach(c=>{const m=c.g&&/^([^:]{2,40}): (.+)$/.exec(c.t);if(!m)return;const d=D[q.week]||(D[q.week]={k:'w'+q.week,label:'Week '+q.week,cards:[],seen:new Set()});
+  if(!d.seen.has(m[1].toLowerCase())){d.seen.add(m[1].toLowerCase());d.cards.push([m[1],m[2]])}}));
+  return Object.keys(D).sort((a,b)=>a-b).map(w=>({k:D[w].k,label:D[w].label+' · '+[...new Set(BANK_B.filter(q=>q.week===+w).map(q=>q.topic))].slice(0,2).join(', '),cards:D[w].cards})).filter(d=>d.cards.length>=3)}

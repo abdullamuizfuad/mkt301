@@ -37,7 +37,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Rules with a made-up class list (the real one is never committed)
         run: |
-          printf 'S000001\nS081441\nS085542\nS082110\n' > "$RUNNER_TEMP/ids.csv"
+          printf 'S000001\nS081441\nS082110\nS084517\nS085542\nS085651\n' > "$RUNNER_TEMP/ids.csv"
           python3 tools/build-rules.py "$RUNNER_TEMP/ids.csv" -o "$RUNNER_TEMP/firestore.rules"
       - name: Cloud tests (Firebase emulators)
         run: RULES="$RUNNER_TEMP/firestore.rules" FIREBASE_BIN="npx -y firebase-tools@13" node tools/tests/firebase-run.js

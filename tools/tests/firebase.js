@@ -44,7 +44,7 @@ async create(){const p=await page();await shot(p,'fb-gate');await toPin(p,A);awa
   ok(await p.evaluate(()=>ME.cloud&&CLOUD.user&&CLOUD.user.email==='s081441@student.mnu.edu.mv'),'not signed in to the account');
   await p.go('#/case/iceto/read');await p.click('[data-r]');await p.waitForTimeout(2600);await synced(p);
   const d=await fsDoc('users',A);ok(d&&int(d.xp)===15,'users doc not saved (xp '+(d&&int(d.xp))+')');
-  const b=await fsDoc('board',A);ok(b&&int(b.x)===15&&b.n.stringValue===(R2?'':'Test S.'),'board row not saved');
+  const b=await waitDoc('board',A,d=>int(d.x)===15);ok(b&&int(b.x)===15&&b.n.stringValue===(R2?'':'Test S.'),'board row not saved');
   await p.reload();await p.waitForTimeout(1500);ok(await p.evaluate(()=>ME&&ME.sid==='S081441'&&U.xp===15),'not signed in after reload');await p.done()},
 
 async secondDevice(){const p=await page({w:1280,h:800});await signIn(p,A,PIN);await p.waitForTimeout(400);
@@ -71,8 +71,8 @@ async liveBoard(){const a=await page({w:1280,h:800});await signIn(a,A,PIN);await
 
 async restartSync(){const p=await page();await signIn(p,A,PIN);await tourOff(p);await p.go('#/short');
   const q=p.locator('.qcard').first();await q.locator('.chip').nth(0).click();await q.locator('[data-a="check"]').click();await p.waitForTimeout(2600);await synced(p);
-  const x1=int((await fsDoc('board',A)).x);await q.locator('[data-a="restart"]').click();await p.waitForTimeout(2600);await synced(p);
-  const x2=int((await fsDoc('board',A)).x);ok(x2===x1-15,`restart not synced to the board (${x1} → ${x2})`);
+  const ux=await p.evaluate(()=>U.xp);const x1=int((await waitDoc('board',A,d=>int(d.x)===ux)).x);await q.locator('[data-a="restart"]').click();await p.waitForTimeout(2600);await synced(p);
+  const x2=int((await waitDoc('board',A,d=>int(d.x)===x1-15)||{x:{integerValue:-1}}).x);ok(x2===x1-15,`restart not synced to the board (${x1} → ${x2})`);
   await p.evaluate(()=>{U.xp=9000;save()});await p.waitForTimeout(2600);await synced(p,20000);ok(R2?int((await fsDoc('board',A)).x)<9000:int((await fsDoc('board',A)).x)===9000,R2?'board followed a 9,000 XP jump at once':'big XP jump did not reach the board in steps');
   await p.evaluate(()=>{U.xp-=8985;save()});await p.waitForTimeout(2600);await synced(p);await p.done()},
 
