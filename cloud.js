@@ -36,7 +36,7 @@ const CLOUD=(()=>{
   C.confirmReset=(code,pin)=>F.confirmPasswordReset(auth,code,pin);
   C.checkCode=code=>F.checkActionCode(auth,code);
   C.applyCode=code=>F.applyActionCode(auth,code);
-  C.signOut=async()=>{C.unwatch();C.unwatchMine();synced=null;clearTimeout(timer);set('off');if(C.ok&&auth)try{await F.signOut(auth)}catch(e){}};
+  C.signOut=async()=>{C.unwatch();if(C.unwatchLatestSession)C.unwatchLatestSession();C.unwatchMine();synced=null;clearTimeout(timer);set('off');if(C.ok&&auth)try{await F.signOut(auth)}catch(e){}};
   C.mine=sid=>!!(user&&user.email===C.email(sid));
 
   /* friendly text for Firebase error codes */
@@ -87,5 +87,20 @@ const CLOUD=(()=>{
     cb({id:sid,name:x.name,xp:x.xp,ts:x.ts&&x.ts.toDate?x.ts.toDate():null,u})},e=>err&&err(e)))};
   C.watchReview=(sid,cb,err)=>{unsubs.push(F.onSnapshot(F.doc(db,'reviews',sid),d=>cb(d.exists()?(d.data().m||{}):{}),e=>err&&err(e)))};
   C.saveReview=(sid,key,v)=>F.setDoc(F.doc(db,'reviews',sid),{m:{[key]:v}},{merge:true});
+  const ms=v=>v&&v.toDate?v.toDate().getTime():v instanceof Date?v.getTime():null;
+  const sessObj=d=>{const x=d.data();return {id:d.id,name:x.name||'',active:!!x.active,startedAt:ms(x.startedAt),endsAt:ms(x.endsAt),endedAt:ms(x.endedAt),rep:x.rep||null}};
+  const presObj=d=>{const x=d.data();return Object.assign({id:d.id},x,{joinedAt:ms(x.joinedAt),t:ms(x.t)})};
+  let latest=null;
+  C.watchLatestSession=(cb,err)=>{C.unwatchLatestSession();latest=F.onSnapshot(F.query(F.collection(db,'sessions'),F.orderBy('startedAt','desc'),F.limit(1)),
+    s=>{const d=s.docs[0];cb(d?sessObj(d):null)},e=>err&&err(e))};
+  C.unwatchLatestSession=()=>{if(latest){try{latest()}catch(e){}latest=null}};
+  C.watchSessions=(cb,err)=>{unsubs.push(F.onSnapshot(F.query(F.collection(db,'sessions'),F.orderBy('startedAt','desc'),F.limit(30)),s=>cb(s.docs.map(sessObj)),e=>err&&err(e)))};
+  C.watchSessionDoc=(id,cb,err)=>{unsubs.push(F.onSnapshot(F.doc(db,'sessions',id),d=>cb(d.exists()?sessObj(d):null),e=>err&&err(e)))};
+  C.getSession=async id=>{const d=await F.getDoc(F.doc(db,'sessions',id));return d.exists()?sessObj(d):null};
+  C.watchPresence=(id,cb,err)=>{unsubs.push(F.onSnapshot(F.collection(db,'sessions',id,'p'),s=>cb(s.docs.map(presObj)),e=>err&&err(e)))};
+  C.presenceOnce=id=>new Promise((res,rej)=>{let u=null,done=false;u=F.onSnapshot(F.collection(db,'sessions',id,'p'),s=>{if(done)return;done=true;res(s.docs.map(presObj));setTimeout(()=>u&&u(),0)},e=>{if(!done){done=true;rej(e)}})});
+  C.startSession=(name,hours)=>F.setDoc(F.doc(F.collection(db,'sessions')),{name:String(name).slice(0,80),startedAt:F.serverTimestamp(),endsAt:new Date(Date.now()+hours*3600e3),active:true});
+  C.endSession=(id,rep)=>F.setDoc(F.doc(db,'sessions',id),{active:false,endedAt:F.serverTimestamp(),rep},{merge:true});
+  C.putPresence=(id,sid,p)=>F.setDoc(F.doc(db,'sessions',id,'p',sid),Object.assign({},p,{t:F.serverTimestamp()}));
   return C})();
 CLOUD.init();

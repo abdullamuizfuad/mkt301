@@ -306,6 +306,7 @@ footer .row{justify-content:space-between}
 <script src="vendor/firebase.js"></script>
 <script src="cloud.js"></script>
 <script src="install.js"></script>
+<script src="presence.js"></script>
 <script>
 /* ---------- basics ---------- */
 const $=s=>document.querySelector(s), app=$('#app');
@@ -345,7 +346,8 @@ const BADGES=[
  {id:'essayist',ico:'🖋️',name:'Essayist',d:'Write a full 40-minute essay on paper',t:u=>u.n.essays>=1},
  {id:'wordsmith',ico:'⌨️',name:'Wordsmith',d:'Type 5 answers that hit key ideas',t:u=>(u.n.typed||0)>=5},
  {id:'marked',ico:'🧑‍🏫',name:'Marked by the Pro',d:'Get a typed answer marked by your lecturer',t:u=>(u.n.reviewed||0)>=1},
- {id:'regional',ico:'🌏',name:'Regional Director',d:'Reach Regional Director level',t:u=>u.xp>=1400}
+ {id:'regional',ico:'🌏',name:'Regional Director',d:'Reach Regional Director level',t:u=>u.xp>=1400},
+ ...PRES_BADGES
 ];
 /* daily missions: 3 a day from a pool, harder as the student levels up (tier 0: levels 1-2, tier 1: 3-4, tier 2: 5-6) */
 const MPOOL=[
@@ -361,7 +363,8 @@ const MPOOL=[
  {id:'right6',t:2,k:'verdictsRight',n:6,x:'Make 6 Boardroom calls that match our reading'},{id:'perfect2',t:2,k:'perfect',n:2,x:'Build 2 flawless plans'},
  {id:'timed3',t:2,k:'timed',n:3,x:'Finish 3 timed answers on paper'},{id:'btimed2',t:2,k:'btimed',n:2,x:'Write 2 Section B answers against the clock'},
  {id:'catimed1',t:2,k:'catimed',n:1,x:'Write 1 Section C part on paper, timed'},{id:'ecplan1',t:2,k:'ecplan',n:1,x:'Complete a full Essay Coach plan'},
- {id:'essay1',t:2,k:'essays',n:1,x:'Write a full 40-minute essay on paper'}];
+ {id:'essay1',t:2,k:'essays',n:1,x:'Write a full 40-minute essay on paper'},
+ ...PRES_MISSIONS];
 const MBONUS=[25,35,50],TIERS=['Starter','Pro','Elite'];
 function tier(xp){const i=level(xp).i;return i<=1?0:i<=3?1:2}
 function seeded(str){let h=2166136261;for(const c of str){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return ()=>{h=Math.imul(h^h>>>15,2246822507);h=Math.imul(h^h>>>13,3266489909);return ((h^=h>>>16)>>>0)/4294967296}}
@@ -485,7 +488,7 @@ function pinStep(sid,name,mt,mode){mode=mode||'in';const card=document.querySele
     $('#pgo').disabled=true;$('#pgo').textContent=mode==='in'?'Signing in…':'Creating…';
     try{await (mode==='in'?CLOUD.signIn(sid,p):CLOUD.create(sid,p));clearInterval(mt);LS.set('session',{sid,name,cloud:true});start()}
     catch(e){$('#pgo').disabled=false;$('#pgo').textContent=mode==='in'?'Sign in':'Create PIN and start';er(CLOUD.say(e));if(CLOUD.isNetwork(e))offline()}}}
-async function signOut(){if(ME&&ME.cloud){await CLOUD.flush();await CLOUD.signOut()}LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
+async function signOut(){if(ME&&U)presOff();if(ME&&ME.cloud){await CLOUD.flush();await CLOUD.signOut()}LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
 
 /* ---------- layout ---------- */
 const NAV=[['#/','Home'],['#/cases','Section A · Cases'],['#/short','Section B · Short answers'],['#/essay','Section C · Strategy & essay'],['#/badges','Badges'],['#/board','Leaderboard']];
@@ -529,10 +532,15 @@ async function downloadBackup(){const a=document.createElement('a');a.href=URL.c
 async function emailBackup(){const c=await backupCode();markSaved();
   location.href='mailto:'+SCORE_EMAIL+'?subject='+encodeURIComponent('MKT301 progress backup: '+ME.name+' ('+ME.sid+')')+'&body='+encodeURIComponent(`Hello,\n\nHere is my MKT301 Arena progress backup (${U.xp} XP, ${level(U.xp).name}, ${today()}).\n\n${c}\n\nThank you,\n${ME.name}\n`);
   return c.length}
+function presWhere(){const h=location.hash.replace(/^#\/?/,'').split('/'),m=((document.querySelector('main')||{}).textContent||'').match(/Question (\d+) of \d+/),q=m?' · Q'+m[1]:'';
+  if(h[0]==='case'){const c=CASES.find(x=>x.id===h[1]);return (c?c.title:'Case')+' · '+({read:'Read',board:'Boardroom',practice:'Practice',exhibits:'Exhibits'}[h[2]||'read']||'Read')+(h[2]==='practice'?q:'')}
+  if(h[0]==='short')return 'Section B · Short answers';
+  if(h[0]==='essay'){const B=typeof BANK_C!=='undefined'?BANK_C:{},L=h[1]==='ca'?B.structured:h[1]==='coach'?B.essays:null,x=L&&L.find(y=>y.id===h[2]);return 'Section C'+(h[1]==='ca'?' · Competitive advantage':h[1]==='coach'?' · Essay Coach':'')+(x?' · '+x.name:'')}
+  const lect=typeof ME!=='undefined'&&ME&&ME.sid===LECTURER;return ({'':'Home',cases:'Section A · Cases',badges:'Badges',board:'Leaderboard'}[h[0]])||(lect&&['lecturer','live','session','student'].includes(h[0])?'Lecturer':'Home')}
 /* first-time tour: 4 steps, re-openable from the footer */
 const TOUR=[['🧩','Plan with chips','Every question starts with a plan. Tap the ideas you would use, then check your plan. Some chips are decoys, and the feedback explains why.'],
  ['🏁','Finish your way','After planning, choose: <b>📝 Plan only</b> to move on, <b>✍️ Write on paper</b> against the clock, or <b>⌨️ Type my answer</b> (or speak it with 🎤) for an automatic check of the key ideas. Your lecturer may mark typed answers too.'],
- ['✨','XP, missions and badges','Earn XP for reading, planning and writing. Three daily missions change every day and get tougher as you level up. Unlock badges and climb the leaderboard.'],
+ ['✨','XP, missions and badges','Earn XP for reading, planning and writing. Three daily missions change every day and get tougher as you level up. <b>⏱️ Screen time</b> counts your active minutes: 20 a day meets your daily goal. In class, tap <b>Join</b> when your lecturer starts a live session.'],
  ['💾','Keep your progress safe','Your progress lives on this device. Tap <b>💾 Save</b> in the top bar to email a copy to your lecturer or download it.']];
 function tour(n){closeModal();const t=n===3&&cloudOn()?['☁️','Your progress follows you','You signed in with your PIN, so your progress saves to your account automatically. Carry on from any phone or laptop. Tap <b>💾 Save</b> any time for an extra backup copy.']:TOUR[n],m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','How it works');
   const done=()=>{U.tour=1;save();closeModal();setTimeout(()=>installPop(1),350)};
@@ -580,7 +588,7 @@ function inboxHTML(){const N=U.notes||{},R=U.notesRead||{},ks=Object.keys(N).fil
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-noteread]');if(!b||!U)return;U.notesRead=U.notesRead||{};U.notesRead[b.dataset.noteread]=1;save();route()});
 function home(){
   rollDay();const L=level(U.xp),got=Object.keys(U.badges).length;
-  const GO={read:'#/cases',verdicts:'#/cases',verdictsRight:'#/cases',plans:'#/cases',timed:'#/cases',perfect:'#/short',bplans:'#/short',btimed:'#/short',catool:'#/essay',catimed:'#/essay',esstool:'#/essay',ecplan:'#/essay',essays:'#/essay',typed:'#/short'};
+  const GO={read:'#/cases',verdicts:'#/cases',verdictsRight:'#/cases',plans:'#/cases',timed:'#/cases',perfect:'#/short',bplans:'#/short',btimed:'#/short',catool:'#/essay',catimed:'#/essay',esstool:'#/essay',ecplan:'#/essay',essays:'#/essay',typed:'#/short',stgoal:'#/short'};
   const ms=missions().map(m=>{const v=Math.min(U.day.c[m.k]||0,m.n);return `<div class="mission"><span class="tick ${v>=m.n?'on':''}">${v>=m.n?'✓':''}</span><div style="flex:1">${esc(m.x)}<div class="bar" style="margin-top:6px"><i style="width:${v/m.n*100}%"></i></div></div><span class="muted">${v}/${m.n}</span>${v<m.n?`<a class="btn ghost sm" href="${GO[m.k]||'#/cases'}" style="min-height:32px;padding:4px 10px">Go</a>`:''}</div>`}).join('');
   const caseCards=CASES.map(c=>{const read=c.sections.filter(s=>U.log['read:'+c.id+':'+s.id]).length;return `<a class="card zone" href="#/case/${c.id}/read"><div class="em">${c.icon}</div><h3>${esc(c.title)}</h3><p class="muted" style="font-size:.9rem">${esc(c.subtitle)}</p><div class="bar"><i style="width:${read/c.sections.length*100}%;background:var(--teal)"></i></div><p class="muted" style="font-size:.8rem;margin:6px 0 0">${read}/${c.sections.length} sections read</p></a>`}).join('');
   shell('#/',`${inboxHTML()}
@@ -591,6 +599,7 @@ function home(){
    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Today's mission</h2><span class="tag">${TIERS[U.day.t]} · +${MBONUS[U.day.t]} XP</span></div><p class="muted" style="font-size:.9rem;margin-top:6px">${U.day.done?'✅ Done for today. New missions tomorrow.':'Complete all three for the bonus. New missions every day, and they get tougher as you level up.'}</p>${ms}</div>
    <div class="card"><h2>Recent badges</h2>${got?`<div class="badges">${BADGES.filter(b=>U.badges[b.id]).slice(-4).map(b=>`<div class="badge got"><div class="ico">${b.ico}</div><b>${b.name}</b></div>`).join('')}</div>`:'<p class="muted">None yet. Start a case to earn your first.</p>'}<p style="margin:12px 0 0"><a href="#/badges">See all badges →</a></p></div>
   </div>
+  <div style="margin-top:16px">${stCardHTML()}</div>
   <h2 style="margin-top:26px">Section A · Case studies</h2>
   <div class="grid g3">${caseCards}
   </div>
@@ -1042,6 +1051,8 @@ function badgesPage(){shell('#/badges',`<h1>Badges</h1><p class="muted">${Object
  <tr><td>Build an answer plan</td><td>+15 (+10 bonus for a flawless plan). Choosing <b>Plan only</b> keeps this XP and moves on.</td></tr><tr><td>Type (or speak) an answer and check it</td><td>+10, plus +3 for each key idea and +2 for each structure point the automatic check finds, up to +32. Needs at least 40 words, at least one key idea, and your own typing or speech: pasting is turned off.</td></tr><tr><td>Answer marked by your lecturer</td><td>Up to +30, depending on the mark. It stays even if you restart the question.</td></tr><tr><td>Finish a timed answer on paper</td><td>+30 (write for at least 4 of the 10 minutes; any timed task needs 40% of its time on the clock)</td></tr><tr><td>Practise the same question again</td><td>XP and badge progress count once per question per day</td></tr><tr><td>Self-check</td><td>+3 per check met</td></tr>
  <tr><td>Section C: complete a part's tool</td><td>+15</td></tr><tr><td>Section C: write a part on paper</td><td>+30</td></tr><tr><td>Section C: finish a whole scenario</td><td>+40</td></tr>
  <tr><td>Essay Coach: check a planning tool</td><td>+5 each</td></tr><tr><td>Essay Coach: complete a plan</td><td>+40</td></tr><tr><td>Essay Coach: write the 40-minute essay</td><td>+60</td></tr><tr><td>Essay Coach: self-mark</td><td>+20</td></tr>
+ <tr><td>Screen time: daily goal (20 active minutes)</td><td>+15 once a day</td></tr><tr><td>Screen time: every 20 active minutes outside live sessions</td><td>+10, up to 6 times a day (+60). Only counts while the portal is on screen and you're active: it pauses after 2 minutes idle, except while a writing timer runs.</td></tr>
+ <tr><td>Live session: on screen 85%+ (at least 10 minutes joined)</td><td>+20 once per session</td></tr><tr><td>Hours logged</td><td>Badges at 5, 10 and 20 hours of active screen time</td></tr>
  <tr><td>Practise on a new day</td><td>+10</td></tr><tr><td>Complete the daily mission</td><td>+25 Starter · +35 Pro · +50 Elite (missions get tougher as you level up)</td></tr></table></div></div>`)}
 
 /* ---------- leaderboard (weekly, from score codes) ---------- */
@@ -1146,23 +1157,24 @@ function ago(d){if(!d)return '–';const m=Math.round((Date.now()-d)/60000);retu
 function classDash(){
   $('#cdash').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Class dashboard</h2><span class="live"><i></i>LIVE</span></div>
   <p class="muted" style="font-size:.88rem;margin:6px 0 8px">Tap a student to open their full profile.</p><input type="text" id="csq" placeholder="🔎 Search by name or ID" aria-label="Search students" style="max-width:340px"><div id="cdb"><p class="muted">Loading students…</p></div>`;
-  let LAST=null;$('#csq').oninput=()=>LAST&&drawDash(LAST);
+  let LAST=null,SORT={k:'xp',d:-1};$('#csq').oninput=()=>LAST&&drawDash(LAST);
   CLOUD.watchUsers(list=>{LAST=list;drawDash(list)},e=>{const el=$('#cdb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`});
-  function drawDash(list){const el=$('#cdb');if(!el)return;const I=qIndex(),q=($('#csq')&&$('#csq').value||'').trim().toLowerCase();
+  function drawDash(list){const el=$('#cdb');if(!el)return;const sh=([k,l])=>`<th data-sk="${k}" class="click" aria-sort="${SORT.k===k?(SORT.d>0?'ascending':'descending'):'none'}">${l}${SORT.k===k?(SORT.d>0?' ▲':' ▼'):''}</th>`;const I=qIndex(),q=($('#csq')&&$('#csq').value||'').trim().toLowerCase();
     const st=list.filter(x=>x.id!==LECTURER&&x.u).map(x=>{const u=x.u,n=u.n||{};return {id:x.id,name:x.name||'',xp:u.xp|0,lv:level(u.xp|0).name,str:streak(Object.assign({days:[]},u)),ts:x.ts,
-      plans:n.plans|0,timed:n.timed|0,typed:n.typed|0,flags:((u.integ||{}).paste|0)+((u.integ||{}).big|0)+((u.integ||{}).fast|0),badges:Object.keys(u.badges||{}).length,weak:weakOf(u),done:practised(u),u}}).sort((a,b)=>b.xp-a.xp);
+      plans:n.plans|0,timed:n.timed|0,typed:n.typed|0,flags:((u.integ||{}).paste|0)+((u.integ||{}).big|0)+((u.integ||{}).fast|0),badges:Object.keys(u.badges||{}).length,weak:weakOf(u),done:practised(u),wk:stWeek(u),u}}).sort((a,b)=>{const k=SORT.k,va=k==='ts'?(a.ts||0):a[k],vb=k==='ts'?(b.ts||0):b[k];return (k==='name'?String(va).localeCompare(vb):(va>vb?1:va<vb?-1:0))*SORT.d||b.xp-a.xp});
     const day=864e5,now=Date.now(),act=d=>st.filter(x=>x.ts&&now-x.ts<d).length,total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:st.length);
     const dec={};st.forEach(x=>Object.entries(x.u.plansSaved||{}).forEach(([id,p])=>{const e=I[id];if(!e||!p.checked)return;(p.sel||[]).forEach(j=>{const c=e.q.chips[j];if(c&&!c.g){const k=id+'|'+j;dec[k]=dec[k]||{t:c.t,why:c.why,where:e.label,n:0};dec[k].n++}})}));
     const topDec=Object.values(dec).sort((a,b)=>b.n-a.n).slice(0,8);
     const areas=[...new Set(Object.values(I).map(e=>e.area))].map(a=>({a,label:a[0]==='w'?tkLabel(a):CASES.find(c=>'c:'+c.id===a).title+' (case practice)',n:st.filter(x=>[...x.done].some(id=>I[id]&&I[id].area===a)).length})).sort((a,b)=>a.n-b.n).slice(0,6);
     el.innerHTML=`<div class="stats" style="margin:12px 0"><div class="stat"><b>${st.length}/${total}</b><span>signed up</span></div><div class="stat"><b>${act(day)}</b><span>active today</span></div><div class="stat"><b>${act(7*day)}</b><span>active this week</span></div><div class="stat"><b>${st.length?Math.round(st.reduce((t,x)=>t+x.xp,0)/st.length):0}</b><span>average XP</span></div></div>
-    <div class="tablewrap"><table class="wide"><tr><th>#</th><th>Name</th><th>ID</th><th>XP</th><th>Level</th><th>🔥</th><th>Last active</th><th>Plans</th><th>Timed</th><th>Typed</th><th title="Pastes blocked and too-fast answers. Large inserts kept (usually voice typing) are listed in each profile.">Flags</th><th>Badges</th><th>Weak topics</th></tr>
-    ${st.filter(x=>!q||x.name.toLowerCase().includes(q)||x.id.toLowerCase().includes(q)).map((x,i)=>`<tr class="click" data-sid="${esc(x.id)}" tabindex="0"><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.id)}</td><td><b>${x.xp}</b></td><td>${esc(x.lv)}</td><td>${x.str}</td><td>${ago(x.ts)}</td><td>${x.plans}</td><td>${x.timed}</td><td>${x.typed}</td><td>${x.flags?'<b style="color:var(--gold)">'+x.flags+'</b>':'0'}</td><td>${x.badges}</td><td style="font-size:.82rem">${esc(x.weak.join('; ')||'–')}</td></tr>`).join('')||'<tr><td colspan="13" class="muted">No students have signed in with a PIN yet.</td></tr>'}</table></div>
+    <div class="tablewrap"><table class="wide"><tr><th>#</th>${[['name','Name']].map(sh).join('')}<th>ID</th>${[['xp','XP']].map(sh).join('')}<th>Level</th><th>🔥</th>${[['ts','Last active'],['wk','This week']].map(sh).join('')}<th>Plans</th><th>Timed</th><th>Typed</th><th title="Pastes blocked and too-fast answers. Large inserts kept (usually voice typing) are listed in each profile.">Flags</th><th>Badges</th><th>Weak topics</th></tr>
+    ${st.filter(x=>!q||x.name.toLowerCase().includes(q)||x.id.toLowerCase().includes(q)).map((x,i)=>`<tr class="click" data-sid="${esc(x.id)}" tabindex="0"><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.id)}</td><td><b>${x.xp}</b></td><td>${esc(x.lv)}</td><td>${x.str}</td><td>${ago(x.ts)}</td><td>${stFmt(x.wk)}</td><td>${x.plans}</td><td>${x.timed}</td><td>${x.typed}</td><td>${x.flags?'<b style="color:var(--gold)">'+x.flags+'</b>':'0'}</td><td>${x.badges}</td><td style="font-size:.82rem">${esc(x.weak.join('; ')||'–')}</td></tr>`).join('')||'<tr><td colspan="14" class="muted">No students have signed in with a PIN yet.</td></tr>'}</table></div>
     <div class="grid g2" style="margin-top:16px"><div><h3>Decoys the class picks most</h3>${topDec.length?`<ol class="sumlist">${topDec.map(d=>`<li><b>${esc(d.t)}</b> <span class="tag">${d.n} student${d.n===1?'':'s'}</span><div class="muted" style="font-size:.82rem">${esc(d.where)}${d.why?' · '+esc(d.why):''}</div></li>`).join('')}</ol>`:'<p class="muted">No decoys picked yet.</p>'}</div>
     <div><h3>Practised by the fewest students</h3><ol class="sumlist">${areas.map(a=>`<li>${esc(a.label)} <span class="tag">${a.n}/${st.length||0}</span></li>`).join('')}</ol></div></div>
     <button class="btn ghost sm" id="csv" style="margin-top:12px">⬇ Download CSV</button>`;
-    $('#csv').onclick=()=>{const q=v=>'"'+String(v).replace(/"/g,'""')+'"',rows=[['Name','ID','XP','Level','Streak','Last active','Plans','Timed','Typed','Integrity flags','Badges','Weak topics']].concat(st.map(x=>[x.name,x.id,x.xp,x.lv,x.str,x.ts?x.ts.toISOString():'',x.plans,x.timed,x.typed,x.flags,x.badges,x.weak.join('; ')]));
+    $('#csv').onclick=()=>{const q=v=>'"'+String(v).replace(/"/g,'""')+'"',rows=[['Name','ID','XP','Level','Streak','Last active','Screen time this week (min)','Plans','Timed','Typed','Integrity flags','Badges','Weak topics']].concat(st.map(x=>[x.name,x.id,x.xp,x.lv,x.str,x.ts?x.ts.toISOString():'',Math.round(x.wk/60),x.plans,x.timed,x.typed,x.flags,x.badges,x.weak.join('; ')]));
       const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='mkt301-class-'+today()+'.csv';a.click()};
+    el.querySelectorAll('[data-sk]').forEach(h=>h.onclick=()=>{SORT=SORT.k===h.dataset.sk?{k:SORT.k,d:-SORT.d}:{k:h.dataset.sk,d:h.dataset.sk==='name'?1:-1};drawDash(list)});
     el.querySelectorAll('tr[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();openStudent(r.dataset.sid)}}})}}
 /* marking: typed answers waiting for a mark, and marks already given (by Claude marking or by the lecturer) */
 function markQueue(){let US=null,RV=null,tab='q',open=null;const drafts={},I=qIndex();
@@ -1259,6 +1271,7 @@ function studentPage(sid){
       <div>${BADGES.map(b=>u.badges[b.id]?`<span class="bsm got" title="${esc(b.d)}">${b.ico} ${esc(b.name)} <span class="muted">${esc(u.badges[b.id])}</span></span>`:'').join('')}</div>
       <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">Not yet earned (${BADGES.filter(b=>!u.badges[b.id]).length})</summary>${BADGES.filter(b=>!u.badges[b.id]).map(b=>`<span class="bsm no" title="${esc(b.d)}">${b.ico} ${esc(b.name)}</span>`).join('')}</details>
 </div></div>
+    ${presProfileHTML(u,sid)}
     <div class="card psec"><h2>Section B by week</h2><p class="muted" style="font-size:.82rem;margin-top:-4px">Bar: short-answer questions practised. ⚠️ weak-spot score.</p>${topicRows}</div>
     <div class="card psec"><h2>Section C</h2><h3>Competitive advantage</h3>${scRows}<h3 style="margin-top:12px">Essay Coach</h3>${esRows}</div>
     <div class="grid g2"><div class="card psec"><h2>Weak spots</h2>${(()=>{const w=((u.wk||{}).t)||{},ks=Object.keys(w).filter(k=>w[k][1]>0).sort((a,b)=>w[b][1]/Math.max(1,w[b][0])-w[a][1]/Math.max(1,w[a][0])).slice(0,6);
@@ -1292,19 +1305,19 @@ function studentPage(sid){
       try{await CLOUD.reset(sid);toast('🔑','Reset email sent',CLOUD.email(sid))}catch(e){$('#perr').textContent=CLOUD.say(e)}};
     $('#pdl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({sid,name:X&&X.name,lastActive:X&&X.ts,progress:X&&X.u,reviews:RV},null,1)],{type:'application/json'}));a.download='mkt301-'+sid+'-'+today()+'.json';a.click()}}
   const err=e=>{const el=$('#prof');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`};
-  CLOUD.watchStudent(sid,x=>{X=x;draw()},err);CLOUD.watchReview(sid,r=>{RV=r;draw()},err)}
+  CLOUD.watchStudent(sid,x=>{X=x;draw()},err);CLOUD.watchReview(sid,r=>{RV=r;draw()},err);presProfileWatch(()=>draw())}
 let PFROM='';const openStudent=sid=>{PFROM=location.hash||'#/lecturer';location.hash='#/student/'+sid};
 function lecturer(){
   if(ME.sid!==LECTURER)return home();
   shell('#/lecturer',`<h1>Lecturer</h1>
-  ${cloudOn()?'<div class="card" id="cdash" style="margin-bottom:22px"></div><div class="card" id="mq" style="margin-bottom:22px"></div>':'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
+  ${liveCardHTML()}${cloudOn()?'<div class="card" id="cdash" style="margin-bottom:22px"></div><div class="card" id="mq" style="margin-bottom:22px"></div>':'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
   <div class="card" id="demo" style="margin-bottom:22px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Show the class</h2><button class="btn ghost sm" id="fs">⛶ Full screen</button></div>
   <p class="muted" style="font-size:.9rem;margin:6px 0 12px">Example students only, made up to explain how scoring works. Real scores appear on the Leaderboard tab.</p>
   <div class="subnav"><button data-dm="board" class="on">🏆 Example leaderboard</button><button data-dm="vs">⚔️ Student 1 vs Student 2</button><button data-dm="tips">💡 How to climb</button></div><div id="dm"></div></div>
   <h2>Content review</h2><div class="card" id="rvw" style="margin-bottom:22px"></div>
   <details class="card"${cloudOn()?'':' open'}><summary class="lex" style="cursor:pointer;font-weight:700">Offline fallback: update the leaderboard from score codes</summary><p class="muted" style="font-size:.88rem">Only needed if the live leaderboard is unavailable.</p><ol style="padding-left:1.2em;margin-top:0"><li>Paste all the score emails or codes below (everything at once is fine).</li><li>Check the preview, then <b>Download leaderboard.js</b>.</li><li>On GitHub, open the <b>mkt301</b> repo → <b>Add file → Upload files</b> → drop in <code>leaderboard.js</code> → <b>Commit changes</b>.</li></ol>
   <textarea id="tx" placeholder="Paste score emails or codes here"></textarea><div class="row" style="margin-top:12px"><button class="btn" id="go">Read codes</button></div><div id="out" style="margin-top:16px"></div></details>`);
-  if(cloudOn()){classDash();markQueue()}
+  if(cloudOn()){liveCardInit();classDash();markQueue()}
   demo();$('#rvw').innerHTML=reviewHTML();$('#rvw').querySelectorAll('[data-rv]').forEach(b=>b.onchange=()=>{const r=LS.get('review',{});r[b.dataset.rv]=b.checked;LS.set('review',r)});
   $('#go').onclick=async()=>{const found=$('#tx').value.match(/MKT301-[A-Za-z0-9_-]+-[0-9a-f]{8}/g)||[];const best={};let bad=0,off=0;
     for(const code of found){const m=code.match(/^MKT301-(.+)-([0-9a-f]{8})$/);if((await sha('mkt301-score|'+m[1])).slice(0,8)!==m[2]){bad++;continue}
@@ -1325,6 +1338,8 @@ function route(){CLOUD.unwatch();if(!ME)return gate();const h=location.hash.repl
   if(h[0]==='essay'&&h[1]==='ca')return caView(h[2]);
   if(h[0]==='essay'&&h[1]==='coach')return coachView(h[2]);
   if(h[0]==='student')return studentPage(String(h[1]||'').toUpperCase());
+  if(h[0]==='live')return livePage();
+  if(h[0]==='session')return sessionReport(String(h[1]||''));
   ({'':home,cases:caseList,badges:badgesPage,board:boardPage,lecturer:lecturer,
     short:shortPage,essay:essayPage}[h[0]]||home)()}
 /* ---------- cloud sync ---------- */
@@ -1341,7 +1356,7 @@ async function cloudSync(){const sid=ME.sid;
   if(!ME||ME.sid!==sid)return;const R=r&&r.u;
   if(R&&(R._t||0)>LOAD_T){U=Object.assign(blank(),R);U.n=Object.assign(blank().n,U.n);LS.set('u_'+sid,U);hud();route();toast('☁️','Progress loaded',U.xp+' XP from your account')}
   CLOUD.ready(sid,()=>ME&&ME.sid===sid?{sid,name:ME.name,U,row:rowOf(sid)}:null);CLOUD.flush();
-  if(sid!==LECTURER)CLOUD.watchMine(sid,m=>{if(ME&&ME.sid===sid)applyMarks(m)})}
+  if(sid!==LECTURER)CLOUD.watchMine(sid,m=>{if(ME&&ME.sid===sid)applyMarks(m)});presCloud()}
 /* integrity flags as the lecturer sees them */
 function flagText(f){f=f||{};return [f.paste?'paste blocked ×'+f.paste:'',f.bigKept?'large insert (kept) ×'+f.bigKept:'',f.big?'big insert removed ×'+f.big:'',f.fast?'too fast':''].filter(Boolean).join(' · ')}
 function flagEvHTML(f){const ev=(f&&f.ev)||[];return ev.length?`<ul class="sumlist" style="font-size:.82rem;margin:8px 0 0">${ev.map(x=>`<li><b>${x.k==='paste'?'Paste blocked':'Large insert (kept)'}</b> · ${esc(x.t)}${x.c?' · while composing':''} · ${esc(String(x.at).slice(0,16).replace('T',' '))}<div class="muted">“${esc(x.s)}${String(x.s).length>=120?'…':''}”</div></li>`).join('')}</ul>`:''}
@@ -1389,7 +1404,7 @@ async function actionPage(a){
       box(`<div style="font-size:2.4rem">✅</div><h2>${a.mode==='verifyEmail'?'Email confirmed':'Email restored'}</h2><p class="muted">${a.mode==='verifyEmail'?'Thanks, your student email is confirmed.':'Your account email has been changed back'+(info&&info.data&&info.data.email?' to '+esc(info.data.email):'')+'. If you did not ask for a change, reset your PIN to be safe.'}</p><button class="btn" id="ab">Go to sign in</button>`);
       $('#ab').onclick=()=>signInWith('')}catch(e){fail(e)}return}
   box(`<h2>Unknown link</h2><p class="muted">This link isn't one the MKT301 Arena understands.</p><button class="btn" id="ab">Go to sign in</button>`);$('#ab').onclick=()=>signInWith('')}
-function start(){if(ACT&&!start.done){start.done=1;return actionPage(ACT)}ME=me();if(!ME)return gate();load();if(!U.badges.boarding){checkBadges();save()}hud();route();if(ME.cloud)cloudSync();if(!U.tour)setTimeout(()=>{if(ME&&!U.tour&&!document.querySelector('.modal'))tour(0)},700);else if(!U.inst)setTimeout(()=>{if(ME&&!document.querySelector('.modal'))installPop(1)},1200)}
+function start(){if(ACT&&!start.done){start.done=1;return actionPage(ACT)}ME=me();if(!ME)return gate();load();if(!U.badges.boarding){checkBadges();save()}hud();route();presOn();if(ME.cloud)cloudSync();if(!U.tour)setTimeout(()=>{if(ME&&!U.tour&&!document.querySelector('.modal'))tour(0)},700);else if(!U.inst)setTimeout(()=>{if(ME&&!document.querySelector('.modal'))installPop(1)},1200)}
 addEventListener('hashchange',route);start();
 if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 </script>
