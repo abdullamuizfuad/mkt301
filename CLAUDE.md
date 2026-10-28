@@ -50,6 +50,9 @@ The lecturer can also mark or change any mark by hand on the Lecturer tab (Marki
 ## Other conventions
 
 - No exam questions, exam scenarios or the word "exam" anywhere students can see.
+- **One shared engine.** `engine/` (core.js, boot.js, cloud.js, concepts.js, install.js, coverage.js, presence.js, engine.css) is byte-identical in MKT101 and MKT301. Build every feature once in the engine; course differences go in `course-config.js` (the `CRS` settings), `course.js` (course pages, data hooks and `ROUTES`) and `course.css`. After changing `engine/`, run `node tools/sync-engine.mjs` (copies it to the other repo and refreshes `engine/MANIFEST`); the `engine` test fails if the two drift. See `docs/NIGHT-BUILD.md` for the load order and hooks.
+- **The one exception to the no-exam-wording rule** (the lecturer's decision): home shows the date, time and a countdown to 14 Dec 2026, 9:00 am (GMT+5, both courses). Date, time and countdown only, nothing else about it. All dates and times on the site are GMT+5 (Maldives).
+- **Data changes are additive.** Never remove or rewrite existing progress fields; migrations must be idempotent. Back up Firestore (`node tools/backup/export.mjs`, written outside the repo) before every push to main.
 - XP always goes through `award()` / `countOnce()` with stable keys so Restart and anti-farming keep working.
-- Screen time, break reminders and live sessions live in `presence.js` (identical in MKT101; change both). Its XP keys are `stgoal:<day>`, `stblock:<day>:<n>` and `sessfocus:<sessionId>`. Never weaken the idle rule (2 minutes) or the 6-block daily cap. Live sessions need the `sessions` rules blocks from `tools/build-rules.py`.
+- Screen time, break reminders and live sessions live in `engine/presence.js`. Its XP keys are `stgoal:<day>`, `stblock:<day>:<n>` and `sessfocus:<sessionId>`. Never weaken the idle rule (2 minutes) or the 6-block daily cap. Live sessions need the `sessions` rules blocks from `tools/build-rules.py`.
 - Tests: `node tools/tests/run.js` (site) and `RULES=<path to firestore.rules> node tools/tests/firebase-run.js` (cloud, against the Firebase emulators).

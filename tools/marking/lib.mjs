@@ -12,7 +12,9 @@ export const PENDING=path.join(DIR,'pending.json'),MARKS=path.join(DIR,'marks.js
 export function useProxy(){if((process.env.HTTPS_PROXY||process.env.https_proxy)&&!process.env.NODE_USE_ENV_PROXY){
   const r=spawnSync(process.execPath,['--disable-warning=UNDICI-EHPA'].concat(process.argv.slice(1)),{stdio:'inherit',env:Object.assign({},process.env,{NODE_USE_ENV_PROXY:'1'})});process.exit(r.status==null?1:r.status)}}
 
-const EMU=process.env.MKT301_EMU==='1',API_KEY='AIzaSyAkUc8iwch9rogMVvIWlhuZ5CwJJimnBt8',PROJECT=EMU?'demo-mkt301':'mkt301-f8830';
+/* the public web config lives in cloud-config.js (the one place to paste it) */
+const CFG=(()=>{try{const ctx={};vm.createContext(ctx);return vm.runInContext(readFileSync(path.join(ROOT,'cloud-config.js'),'utf8')+';CLOUD_CONFIG',ctx)||{}}catch(e){return {}}})();
+const EMU=process.env.MKT301_EMU==='1',API_KEY=CFG.apiKey||'demo-key',PROJECT=EMU?'demo-mkt301':CFG.projectId;
 const AUTH=(EMU?'http://127.0.0.1:9099/identitytoolkit.googleapis.com':'https://identitytoolkit.googleapis.com')+'/v1';
 const FS=(EMU?'http://127.0.0.1:8085':'https://firestore.googleapis.com')+`/v1/projects/${PROJECT}/databases/(default)/documents`;
 export const LECTURER_EMAIL='s000001@student.mnu.edu.mv';

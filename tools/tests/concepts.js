@@ -4,7 +4,7 @@
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const ROOT=path.resolve(__dirname,'../..');
 const ctx={};vm.createContext(ctx);
-const D=vm.runInContext(['cases.js','case-cbtl.js','case-tuna.js','bank-b.js','concepts.js'].map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n')+';({CASES,BANK_B,CONCEPT})',ctx);
+const D=vm.runInContext(['course-config.js','cases.js','case-cbtl.js','case-tuna.js','bank-b.js','engine/concepts.js'].map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n')+';({CASES,BANK_B,CONCEPT})',ctx);
 const Q=Object.fromEntries(D.CASES.flatMap(c=>c.questions.map(q=>[q.id,Object.assign({names:[c.title].concat(c.title.split(' '))},q)])).concat(D.BANK_B.map(q=>[q.id,q])));
 
 const S=[

@@ -1,12 +1,12 @@
-/* MKT301 Arena: Firebase connection (accounts, progress sync, live leaderboard, lecturer dashboard).
+/* MKT Arena engine: Firebase connection (accounts, progress sync, live leaderboard, lecturer dashboard).
    Uses the bundled SDK in vendor/firebase.js (global FBSDK). If it is missing or fails, CLOUD.ok is false
    and the portal keeps working in device-only mode.
-   On localhost the cloud is off unless the URL has ?emu=1 (local emulators, for tests) or ?cloud=1 (the real project). */
+   The config and the on/off switch live in cloud-config.js (CLOUD_CONFIG, CLOUD_ON). With CLOUD_ON false the SDK is never loaded.
+   On localhost the cloud is off unless the URL has ?emu=1 (local emulators, for tests: forces it on) or ?cloud=1 (the real project). */
 const CLOUD=(()=>{
-  const CFG={apiKey:'AIzaSyAkUc8iwch9rogMVvIWlhuZ5CwJJimnBt8',authDomain:'mkt301-f8830.firebaseapp.com',projectId:'mkt301-f8830',
-    storageBucket:'mkt301-f8830.firebasestorage.app',messagingSenderId:'372346043261',appId:'1:372346043261:web:5e01df4385f46e5a50aa14'};
+  const CFG=(typeof CLOUD_CONFIG!=='undefined'&&CLOUD_CONFIG)||{},SWITCH=typeof CLOUD_ON!=='undefined'&&CLOUD_ON===true;
   const DOMAIN='student.mnu.edu.mv',local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname),q=location.search;
-  const emu=local&&/[?&]emu=1\b/.test(q),off=local&&!emu&&!/[?&]cloud=1\b/.test(q);
+  const emu=local&&/[?&]emu=1\b/.test(q),off=!emu&&(!SWITCH||!CFG.apiKey||(local&&!/[?&]cloud=1\b/.test(q)));
   let F,auth,db,user=null,authReady,state='off',synced=null,timer=null,busy=false,again=false,boardX,unsubs=[],getState=null,own=null;
   const subs=new Set(),set=s=>{state=s;subs.forEach(f=>{try{f(s)}catch(e){}})};
   const C={ok:false,emu,
@@ -15,7 +15,7 @@ const CLOUD=(()=>{
     get user(){return user}};
 
   C.init=()=>{if(off||typeof FBSDK==='undefined')return false;
-    try{F=FBSDK;const app=F.initializeApp(emu?Object.assign({},CFG,{projectId:'demo-mkt301'}):CFG);
+    try{F=FBSDK;const app=F.initializeApp(emu?Object.assign({apiKey:'demo-key',authDomain:'demo-'+CRS.id+'.firebaseapp.com'},CFG,{projectId:'demo-'+CRS.id}):CFG);
       auth=F.initializeAuth(app,{persistence:[F.indexedDBLocalPersistence,F.browserLocalPersistence]});
       if(emu)F.connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});
       db=F.initializeFirestore(app,{ignoreUndefinedProperties:true});
@@ -36,7 +36,7 @@ const CLOUD=(()=>{
   C.confirmReset=(code,pin)=>F.confirmPasswordReset(auth,code,pin);
   C.checkCode=code=>F.checkActionCode(auth,code);
   C.applyCode=code=>F.applyActionCode(auth,code);
-  C.signOut=async()=>{C.unwatch();if(C.unwatchLatestSession)C.unwatchLatestSession();C.unwatchMine();synced=null;clearTimeout(timer);set('off');if(C.ok&&auth)try{await F.signOut(auth)}catch(e){}};
+  C.signOut=async()=>{C.unwatch();C.unwatchMine();if(C.unwatchLatestSession)C.unwatchLatestSession();synced=null;clearTimeout(timer);set('off');if(C.ok&&auth)try{await F.signOut(auth)}catch(e){}};
   C.mine=sid=>!!(user&&user.email===C.email(sid));
 
   /* friendly text for Firebase error codes */
@@ -87,6 +87,9 @@ const CLOUD=(()=>{
     cb({id:sid,name:x.name,xp:x.xp,ts:x.ts&&x.ts.toDate?x.ts.toDate():null,u})},e=>err&&err(e)))};
   C.watchReview=(sid,cb,err)=>{unsubs.push(F.onSnapshot(F.doc(db,'reviews',sid),d=>cb(d.exists()?(d.data().m||{}):{}),e=>err&&err(e)))};
   C.saveReview=(sid,key,v)=>F.setDoc(F.doc(db,'reviews',sid),{m:{[key]:v}},{merge:true});
+
+  /* live tutorial sessions: sessions/{id} = {name,startedAt,endsAt,active,endedAt?,rep?} (lecturer writes);
+     sessions/{id}/p/{SID} = a joined student's presence (that student writes, only while the session is open) */
   const ms=v=>v&&v.toDate?v.toDate().getTime():v instanceof Date?v.getTime():null;
   const sessObj=d=>{const x=d.data();return {id:d.id,name:x.name||'',active:!!x.active,startedAt:ms(x.startedAt),endsAt:ms(x.endsAt),endedAt:ms(x.endedAt),rep:x.rep||null}};
   const presObj=d=>{const x=d.data();return Object.assign({id:d.id},x,{joinedAt:ms(x.joinedAt),t:ms(x.t)})};
@@ -102,5 +105,26 @@ const CLOUD=(()=>{
   C.startSession=(name,hours)=>F.setDoc(F.doc(F.collection(db,'sessions')),{name:String(name).slice(0,80),startedAt:F.serverTimestamp(),endsAt:new Date(Date.now()+hours*3600e3),active:true});
   C.endSession=(id,rep)=>F.setDoc(F.doc(db,'sessions',id),{active:false,endedAt:F.serverTimestamp(),rep},{merge:true});
   C.putPresence=(id,sid,p)=>F.setDoc(F.doc(db,'sessions',id,'p',sid),Object.assign({},p,{t:F.serverTimestamp()}));
+
+  /* generic helpers for engine modules. Paths are 'col' or 'col/id' (or deeper, alternating).
+     Every feature that needs new rules checks C.rules2 first and hides quietly while the old rules are published. */
+  const ref=p=>{const a=String(p).split('/');return a.length%2?F.collection(db,...a):F.doc(db,...a)};
+  const plain=d=>{const x=Object.assign({id:d.id},d.data());for(const k in x)if(x[k]&&x[k].toDate)x[k]=x[k].toDate().getTime();return x};
+  const qry=(col,o={})=>{const c=[];(o.where||[]).forEach(w=>c.push(F.where(...w)));if(o.order)c.push(F.orderBy(...[].concat(o.order)));if(o.limit)c.push(F.limit(o.limit));return c.length?F.query(ref(col),...c):ref(col)};
+  C.live=()=>C.ok&&!!user;
+  C.ts=()=>F.serverTimestamp();C.inc=n=>F.increment(n);C.when=ms=>new Date(ms);C.noField=()=>F.deleteField();
+  C.get=async p=>{const d=await F.getDoc(ref(p));return d.exists()?plain(d):null};
+  C.put=(p,data,merge)=>merge?F.setDoc(ref(p),data,{merge:true}):F.setDoc(ref(p),data);
+  C.add=(col,data)=>F.addDoc(ref(col),data).then(r=>r.id);
+  C.del=p=>F.deleteDoc(ref(p));
+  C.docs=async(col,o)=>(await F.getDocs(qry(col,o))).docs.map(plain);
+  /* live queries: page-scoped (stopped on the next page) unless keep is true; returns the stop function */
+  C.watch=(col,o,cb,err,keep)=>{const u=F.onSnapshot(qry(col,o),s=>cb(s.docs.map(plain)),e=>err&&err(e));if(!keep)unsubs.push(u);return u};
+  C.watchOne=(p,cb,err,keep)=>{const u=F.onSnapshot(ref(p),d=>cb(d.exists()?plain(d):null),e=>err&&err(e));if(!keep)unsubs.push(u);return u};
+  C.tx=fn=>F.runTransaction(db,t=>fn({get:async p=>{const d=await t.get(ref(p));return d.exists()?plain(d):null},
+    set:(p,d,m)=>m?t.set(ref(p),d,{merge:true}):t.set(ref(p),d),update:(p,d)=>t.update(ref(p),d)}));
+  /* which rules are published: the combined rules let every class member read meta/rules (the doc itself may not exist) */
+  C.rules2=false;
+  C.probe=async()=>{if(!C.live())return false;try{await F.getDoc(F.doc(db,'meta','rules'));C.rules2=true}catch(e){C.rules2=false}hook('rules',C.rules2);return C.rules2};
   return C})();
 CLOUD.init();

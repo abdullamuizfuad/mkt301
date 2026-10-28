@@ -1,7 +1,7 @@
 /* Install as an app: shows steps for the student's own device (iPhone/iPad, Android, computer).
    Opens once after the first-time tour (or on the next visit for students who already saw it),
    and from "📲 Install the app" in the footer. Skipped when already running as an installed app. */
-const APP_NAME='MKT301 Arena';
+const APP_NAME=CRS.name;
 let DEFER=null;
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFER=e});
 addEventListener('appinstalled',()=>{DEFER=null;try{U.inst=2;save()}catch(e){}closeModal();toast('📲','Installed',`Open ${APP_NAME} from your home screen`)});

@@ -3,4 +3,5 @@
 export {initializeApp} from 'firebase/app';
 export {initializeAuth,browserLocalPersistence,indexedDBLocalPersistence,signInWithEmailAndPassword,createUserWithEmailAndPassword,
   sendPasswordResetEmail,onAuthStateChanged,signOut,connectAuthEmulator,verifyPasswordResetCode,confirmPasswordReset,applyActionCode,checkActionCode} from 'firebase/auth';
-export {initializeFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,serverTimestamp,connectFirestoreEmulator} from 'firebase/firestore';
+export {initializeFirestore,doc,getDoc,setDoc,onSnapshot,collection,query,orderBy,limit,serverTimestamp,connectFirestoreEmulator,
+  addDoc,deleteDoc,updateDoc,getDocs,where,runTransaction,writeBatch,increment,deleteField,Timestamp} from 'firebase/firestore';

@@ -19,7 +19,7 @@ A gamified study and practice site for MKT301 International Marketing (MNU Busin
 
 ## Live tutorial sessions (lecturer)
 
-On the Lecturer tab, pick the week (**Week 11 to Week 14 tutorial**; the earliest week without a past session is preselected; the list is `SESS_WEEKS` in `presence.js`) and tap **▶ Start session**; it ends with **■ End session** or automatically after 3 hours. Students see a red banner and tap **Join**, after a note that explains exactly what is shared: whether the portal is on screen and which section they're on, nothing else, and only until the session ends. While joined, the portal reports 🟢 on screen / 🟡 idle (2+ minutes untouched) / 🔴 left the app (switched app or tab, locked screen), plus the current section; the lecturer's **live board** (`#/live`) adds ⚫ offline (no check-in for 5+ minutes), on-screen %, times left, longest time away and a "not joined" list, sortable. Ending saves a **report** (attendance, on-screen %, switches, what was practised) under **Past sessions** and in each student's profile, with a CSV download. Students on screen 85%+ of at least 10 joined minutes get **+20 XP**, claimed by their own portal.
+On the Lecturer tab, pick the week (**Week 11 to Week 14 tutorial**; the earliest week without a past session is preselected; the list is `SESS_WEEKS` in `engine/presence.js`) and tap **▶ Start session**; it ends with **■ End session** or automatically after 3 hours. Students see a red banner and tap **Join**, after a note that explains exactly what is shared: whether the portal is on screen and which section they're on, nothing else, and only until the session ends. While joined, the portal reports 🟢 on screen / 🟡 idle (2+ minutes untouched) / 🔴 left the app (switched app or tab, locked screen), plus the current section; the lecturer's **live board** (`#/live`) adds ⚫ offline (no check-in for 5+ minutes), on-screen %, times left, longest time away and a "not joined" list, sortable. Ending saves a **report** (attendance, on-screen %, switches, what was practised) under **Past sessions** and in each student's profile, with a CSV download. Students on screen 85%+ of at least 10 joined minutes get **+20 XP**, claimed by their own portal.
 
 Writes: only on a status change, a section change (at most every 30 s) and a heartbeat every 2 minutes: about 60–80 per student per 2-hour session, roughly 2,500 for a class of 32 (the free plan allows 20,000 a day). Data: `sessions/{id}` `{name,startedAt,endsAt,active,endedAt,rep}` (lecturer only) and `sessions/{id}/p/{SID}` `{st,sec,pr,on,idle,away,left,longest,ch,joinedAt,t}` (that student only, only while the session is open). Until the rules with these blocks are published, the session features stay hidden and everything else works.
 
@@ -39,21 +39,22 @@ Messages are stored in `reviews/{SID}.m` under keys starting `note_`. The site a
 
 | File | What it holds |
 |---|---|
-| `index.html` | The portal: sign-in, game engine, pages |
+| `index.html` | Page shell: loads the course files and the engine |
+| `engine/` | The shared engine, identical in MKT101 and MKT301 (`node tools/sync-engine.mjs` keeps them in step): `core.js` (sign-in, XP, missions, badges, backups, lecturer tools, cloud sync), `boot.js`, `cloud.js` (Firebase), `concepts.js` (automatic concept check), `presence.js` (screen time, breaks, live sessions), `coverage.js`, `install.js`, `engine.css` |
+| `course-config.js` | This course's settings for the engine (`CRS`: name, colours, storage prefix, course-only fields) |
+| `course.js`, `course.css` | This course's pages, content hooks and styles |
+| `cloud-config.js`, `vendor/firebase.js` | Firebase web config and switch (`CLOUD_ON`); the SDK |
 | `cases.js`, `case-cbtl.js`, `case-tuna.js` | One file per case: sections, exhibits, Boardroom arguments, practice questions |
 | `bank-b.js` | Section B short-answer questions |
 | `bank-c.js` | Section C strategy scenarios and essay scenarios |
-| `cloud.js` | Firebase connection: PIN accounts, progress sync, live leaderboard, lecturer dashboard |
 | `vendor/firebase.js` | The Firebase SDK, bundled so the site needs no CDN (rebuild: `sh tools/firebase/build.sh`) |
-| `concepts.js` | Automatic concept check for typed answers |
-| `presence.js` | Screen time, break reminders and live tutorial sessions (the same file as MKT101's) |
 | `CLAUDE.md`, `tools/marking/` | How Claude marks typed answers, and the fetch/apply scripts |
 | `roster.js` | Scrambled class list |
 | `leaderboard.js` | Leaderboard for device-only mode (the live board is in Firebase) |
 
 ## Firebase (accounts, sync, live leaderboard)
 
-Project `mkt301-f8830` (Authentication: Email/Password; Firestore in `asia-south1`). The web config in `cloud.js` is public by design; the data is protected by the security rules.
+Project `mkt301-f8830` (Authentication: Email/Password; Firestore in `asia-south1`). The web config in `cloud-config.js` is public by design; the data is protected by the security rules.
 
 - **Sign-in:** the account email is `<student id>@student.mnu.edu.mv`, the password is the student's PIN. **Forgot PIN?** sends a reset link to that inbox. The portal handles the link itself if Authentication → Templates → *Customize action URL* is set to `https://abdullamuizfuad.github.io/mkt301/`; otherwise Firebase's own page is used, which also works.
 - **Data:** `users/<ID>` holds each student's progress (readable by the student and the lecturer only); `board/<ID>` holds the leaderboard row (readable by the class); `sessions/<id>` and `sessions/<id>/p/<ID>` hold live tutorial sessions (see above).
@@ -68,7 +69,7 @@ Project `mkt301-f8830` (Authentication: Email/Password; Firestore in `asia-south
 
 ## Typed answers and marking
 
-- **Automatic check** (`concepts.js`): a typed or spoken answer is checked against the question's key ideas (stemmed keywords, synonyms and a few hand-tuned patterns) and four structure points: definition, example, evaluation and recommendation. It gives a band from 0 to 6 and the XP: 10, plus 3 per key idea and 2 per structure point, up to 32. XP needs 40+ words and at least one key idea. Unit tests: `node tools/tests/concepts.js`.
+- **Automatic check** (`engine/concepts.js`): a typed or spoken answer is checked against the question's key ideas (stemmed keywords, synonyms and a few hand-tuned patterns) and four structure points: definition, example, evaluation and recommendation. It gives a band from 0 to 6 and the XP: 10, plus 3 per key idea and 2 per structure point, up to 32. XP needs 40+ words and at least one key idea. Unit tests: `node tools/tests/concepts.js`.
 - **Integrity:** pasting and dropping are blocked. Any single insertion over 15 words that isn't from the 🎤 button is removed. Answers entered faster than about 2 words a second earn no XP. Flags are stored with each answer and shown in the Flags column of the dashboard.
 - **🎤 Speak:** uses the browser's speech-to-text (Chrome, Safari) where available.
 - **Marking:** submitted answers wait in the **Marking** card on the Lecturer tab. The lecturer can mark them there, or ask Claude Code to mark the queue (`CLAUDE.md` describes how: `tools/marking/fetch.mjs` → `marks.json` → `tools/marking/apply.mjs`, signed in as S000001 with the `MKT301_LECTURER_PIN` secret). Marks live in `reviews/{SID}`. Students see the band, feedback and XP live, and marked XP stays if they restart the question.
