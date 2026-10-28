@@ -196,6 +196,25 @@ async profile(){const c=await page();await signIn(c,C,PINC,'Shifa Test');await t
   await c.go('#/board');await c.waitForTimeout(800);ok(!await c.$('#lbl [data-sid]'),'student sees clickable rows');
   await c.go('#/student/'+A);await c.waitForTimeout(500);ok(!await c.$('#prof')&&await c.evaluate(()=>!location.hash.includes('student')||!!document.querySelector('.hero')),'student opened a profile');await c.done()},
 
+/* question coverage: seeded attempts show up with the right counts, the not-attempted filter and the CSV */
+async coverage(){const al=/400|Failed to load resource|identitytoolkit/;const c=await page({allow:al});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
+  const ids=await c.evaluate(()=>{const G=covCatalogue(),w=G.filter(g=>g.kind==='written').pop(),m=G.find(g=>g.kind==='mcq');
+    return {w:w.items[w.items.length-1].id,wg:w.k,m:m?m.items[m.items.length-1].id:null,mg:m?m.k:null,total:G.reduce((t,g)=>t+g.items.length,0)}});
+  await c.evaluate(i=>{U.log['plan:'+i.w+':2026-10-01']=1;U.log['typed:'+i.w+':2026-10-02']=1;U.ans=U.ans||{};U.ans[i.w+'_cov1']={q:i.w,t:'A seeded answer for the coverage test.',at:'2026-10-02T10:00:00.000Z',b:4};
+    if(i.m){U.cnt=U.cnt||{};U.cnt['mcq:'+i.m+':2026-10-01']={d:'2026-10-01',k:['mcq','mcqRight']};U.cnt['mcq:'+i.m+':2026-10-02']={d:'2026-10-02',k:['mcq']}}save()},ids);await synced(c);await c.waitForTimeout(2500);await c.done();
+  const l=await page({w:1280,h:900,allow:al});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);await l.go('#/lecturer');
+  await waitFor(l,()=>!!document.querySelector('#covb .covsum'));ok((await l.textContent('#covb')).includes(' of '+ids.total),'total questions missing');
+  const cells=async(g,id)=>{await waitFor(l,g=>!!document.querySelector('.covg[data-g="'+g+'"]'),g);const open=await l.$eval('.covg[data-g="'+g+'"]',d=>d.open);if(!open)await l.click('.covg[data-g="'+g+'"] summary');
+    await waitFor(l,([g,id])=>[...document.querySelectorAll('.covg[data-g="'+g+'"] tr')].some(r=>r.textContent.includes(id)),[g,id]);
+    return l.$$eval('.covg[data-g="'+g+'"] tr',(rs,id)=>{const r=rs.find(x=>x.cells[0]&&x.cells[0].textContent.startsWith(id+' '));return r?[...r.cells].slice(1).map(c=>c.textContent.trim()):null},id)};
+  const w=await cells(ids.wg,ids.w);ok(w&&JSON.stringify(w)===JSON.stringify(['1','2','1','0','1','0','4.0']),'written row wrong: '+JSON.stringify(w));
+  if(ids.m){const m=await cells(ids.mg,ids.m);ok(m&&JSON.stringify(m)===JSON.stringify(['1','2','50%']),'MCQ row wrong: '+JSON.stringify(m))}
+  await shot(l,'coverage',true);
+  await l.check('#covzero');await l.waitForTimeout(300);ok(await l.$$eval('#covb tr',rs=>rs.slice(1).every(r=>!r.cells[1]||r.cells[1].tagName==='TH'||r.classList.contains('cov0'))),'not-attempted filter shows attempted questions');
+  ok(!(await l.textContent('#covb')).includes(ids.w+' '),'attempted question still listed');
+  const [dl]=await Promise.all([l.waitForEvent('download'),l.click('#covcsv')]);const csv=require('fs').readFileSync(await dl.path(),'utf8');
+  ok(csv.split('\n').length===ids.total+1&&csv.includes(ids.w),'CSV should list every question');await l.done()},
+
 /* live tutorial sessions: start, join, on screen / left the app, section, report, focus XP, profile */
 async sessions(){if(process.env.OLDRULES)return;
   const l=await page({w:1280,h:900,theme:'light',allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
