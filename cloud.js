@@ -82,6 +82,10 @@ const CLOUD=(()=>{
   C.watchMine=(sid,cb)=>{C.unwatchMine();own=F.onSnapshot(F.doc(db,'reviews',sid),d=>cb(d.exists()?(d.data().m||{}):{}),e=>console.warn('Marks unavailable',e))};
   C.unwatchMine=()=>{if(own){try{own()}catch(e){}own=null}};
   C.watchReviews=(cb,err)=>{unsubs.push(F.onSnapshot(F.collection(db,'reviews'),s=>{const o={};s.docs.forEach(d=>o[d.id]=d.data().m||{});cb(o)},e=>err&&err(e)))};
+  /* lecturer: one student's progress and marks, live (page-scoped) */
+  C.watchStudent=(sid,cb,err)=>{unsubs.push(F.onSnapshot(F.doc(db,'users',sid),d=>{if(!d.exists())return cb(null);const x=d.data();let u=null;try{u=JSON.parse(x.u)}catch(e){}
+    cb({id:sid,name:x.name,xp:x.xp,ts:x.ts&&x.ts.toDate?x.ts.toDate():null,u})},e=>err&&err(e)))};
+  C.watchReview=(sid,cb,err)=>{unsubs.push(F.onSnapshot(F.doc(db,'reviews',sid),d=>cb(d.exists()?(d.data().m||{}):{}),e=>err&&err(e)))};
   C.saveReview=(sid,key,v)=>F.setDoc(F.doc(db,'reviews',sid),{m:{[key]:v}},{merge:true});
   return C})();
 CLOUD.init();

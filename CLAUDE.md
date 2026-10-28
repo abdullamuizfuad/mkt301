@@ -24,7 +24,7 @@ Students can type (or speak) answers to practice questions. Each submitted answe
    ```json
    [{"key":"b10_lx3k2a","sid":"S081441","q":"b10","band":5,"xp":22,"fb":"…"}]
    ```
-   Copy `key`, `sid` and `q` exactly from `pending.json`. Check with `node tools/marking/apply.mjs --dry`.
+   Copy `key`, `sid` and `q` exactly from `pending.json`. Never write keys starting `note_`: those are the lecturer's messages to students, not marks. Check with `node tools/marking/apply.mjs --dry`.
 
 5. **Apply**:
    ```bash

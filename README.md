@@ -14,6 +14,13 @@ A gamified study and practice site for MKT301 International Marketing (MNU Busin
 - **Install as an app:** students can add the portal to their home screen; it works offline (`manifest.webmanifest`, `sw.js`). When the list of files changes, bump `CACHE` in `sw.js`.
 - **Restart:** every question, Section C part and Essay Coach scenario has a ↺ Restart button that clears it and removes the XP it earned.
 
+
+## Student profiles (lecturer)
+
+Signed in as `S000001` with the cloud on, tap any student on the **Leaderboard** or in the **Class dashboard** table (there is a search box above it) to open their full profile at `#/student/<ID>`. It updates live and shows: level, XP and streak; badges with dates; an 8-week practice calendar and recent activity; Section B progress and weak spots by week (decoys picked, key ideas missed); case progress; Section C (strategy parts and Essay Coach self-marks); integrity flags; and every typed answer with its automatic check and mark. From the profile you can mark or re-mark an answer, **send a message** (it appears on the student's Home page; no XP), send a **PIN reset email**, or download the student's data as JSON.
+
+Messages are stored in `reviews/{SID}.m` under keys starting `note_`. The site and the marking tools never treat them as marks.
+
 ## Files
 
 | File | What it holds |

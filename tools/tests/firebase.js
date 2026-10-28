@@ -155,7 +155,39 @@ async marking(){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'mkt301-mark-'));
   /* restart keeps marked XP (it's for a submitted answer) */
   await c.go('#/short');const x2=await c.evaluate(()=>U.xp);await c.click('[data-a="restart"]');await c.waitForTimeout(200);
   u=await c.evaluate(k=>({xp:U.xp,has:!!U.log['review:'+k]}),it.key);ok(u.has&&u.xp>=x2-60&&u.xp<x2,'restart removed the mark XP: '+JSON.stringify(u));
-  await c.done();fs.rmSync(dir,{recursive:true,force:true})}
+  await c.done();fs.rmSync(dir,{recursive:true,force:true})},
+
+/* lecturer: a student's full profile (runs after marking: student C has a marked typed answer) */
+async profile(){const c=await page();await signIn(c,C,PINC,'Shifa Test');await tourOff(c);const xc=await c.evaluate(()=>U.xp);
+  const l=await page({w:1280,h:900,theme:'light'});await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+  await l.go('#/board');await l.waitForSelector('#lbl [data-sid="'+C+'"]');await l.click('#lbl [data-sid="'+C+'"]');await l.waitForTimeout(1200);
+  ok(await l.evaluate(()=>location.hash)==='#/student/'+C,'leaderboard row did not open the profile');
+  let t=await l.textContent('#prof');ok(t.includes('Shifa Test')&&t.includes(C)&&t.includes('s082110@student.mnu.edu.mv')&&t.includes(xc+' XP'),'profile header wrong: '+t.slice(0,160));
+  ok(t.includes('marked 6/6')&&t.includes('Typed answers'),'typed answer with its mark missing');ok(/Week \d/.test(t)&&/Section C/.test(t)&&/Essay Coach/.test(t)&&/Badges/.test(t)&&/Recent activity/.test(t),'profile sections missing');
+  await shot(l,'prof-desktop-light',true);
+  /* dashboard: search + clickable rows */
+  await l.go('#/lecturer');await l.waitForTimeout(1000);await l.fill('#csq','shifa');await l.waitForTimeout(200);
+  ok(await l.$$eval('#cdb tr[data-sid]',r=>r.length===1&&r[0].dataset.sid==='S082110'),'search did not filter the table');
+  await l.click('#cdb tr[data-sid="'+C+'"]');await l.waitForTimeout(1000);ok(await l.evaluate(()=>location.hash)==='#/student/'+C,'table row did not open the profile');
+  /* inline marking from the profile */
+  await l.click('#prof .mqi [data-open]');await l.selectOption('#prof [data-f="band"]','4');await l.fill('#prof [data-f="xp"]','16');await l.fill('#prof [data-f="fb"]','Good structure. Add an example.');await l.click('#prof [data-save]');await l.waitForTimeout(800);
+  const rv=await fsDoc('reviews',C),m=rv.m.mapValue.fields,k=Object.keys(m).find(x=>!/^note_/.test(x));ok(int(m[k].mapValue.fields.band)===4,'inline mark not saved');
+  const t1=Date.now();while(Date.now()-t1<10000&&(await c.evaluate(()=>U.xp))!==xc-10)await c.waitForTimeout(200);ok(await c.evaluate(()=>U.xp)===xc-10,'student XP not adjusted to the new mark');
+  /* a message: delivered as a note, never a mark */
+  const x1=await c.evaluate(()=>U.xp);await l.fill('#pnote','Great progress! Try the Topic 12 MCQs next.');await l.click('#psend');await l.waitForTimeout(600);
+  const t2=Date.now();while(Date.now()-t2<10000&&!(await c.evaluate(()=>Object.keys(U.notes||{}).length)))await c.waitForTimeout(200);
+  let u=await c.evaluate(()=>({n:Object.values(U.notes||{}),xp:U.xp,rev:Object.keys(U.rev||{}).filter(k=>/^note_/.test(k)).length,reviewed:U.n.reviewed}));
+  ok(u.n.length===1&&u.n[0].fb.includes('Topic 12')&&u.xp===x1&&!u.rev,'note handled as a mark or not delivered: '+JSON.stringify(u));
+  await c.go('#/');await c.waitForTimeout(300);ok((await c.textContent('.inbox')).includes('Topic 12'),'inbox card missing');await c.click('[data-noteread]');await c.waitForTimeout(300);ok(!await c.$('.inbox'),'inbox not dismissed');
+  await l.go('#/lecturer');await l.waitForTimeout(1000);ok((await l.textContent('#mqb')).includes('Marked (1)'),'note counted in marking: '+(await l.textContent('#mqb')).slice(0,80));
+  /* PIN reset email */
+  await l.go('#/student/'+C);await l.waitForTimeout(1000);await l.click('#preset');await l.waitForTimeout(1200);
+  const oob=await (await fetch(EMU+'/oobCodes')).json();ok((oob.oobCodes||[]).some(o=>o.email==='s082110@student.mnu.edu.mv'&&o.requestType==='PASSWORD_RESET'),'reset email not requested');await l.done();
+  /* phone, dark */
+  const ph=await page({theme:'dark'});await signIn(ph,L,PINL,'Abdulla Muiz Fuad');await tourOff(ph);await ph.go('#/student/'+C);await ph.waitForTimeout(1200);ok((await ph.textContent('#prof')).includes('Shifa Test'),'phone profile missing');await shot(ph,'prof-phone-dark',true);await ph.done();
+  /* students: no clickable rows, no profiles */
+  await c.go('#/board');await c.waitForTimeout(800);ok(!await c.$('#lbl [data-sid]'),'student sees clickable rows');
+  await c.go('#/student/'+A);await c.waitForTimeout(500);ok(!await c.$('#prof')&&await c.evaluate(()=>!location.hash.includes('student')||!!document.querySelector('.hero')),'student opened a profile');await c.done()}
 };
 
 (async()=>{const server=spawn('python3',['-m','http.server',String(PORT)],{cwd:ROOT,stdio:'ignore'});await new Promise(r=>setTimeout(r,800));

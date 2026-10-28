@@ -8,6 +8,7 @@ const dry=process.argv.includes('--dry'),marks=readJSON(MARKS,null),pending=read
 if(!Array.isArray(marks))die('No marks found. Write an array of marks to '+MARKS);
 const byKey=Object.fromEntries(pending.items.map(i=>[i.key,i])),errors=[],ok=[];
 for(const m of marks){const p=byKey[m.key],why=[];
+  if(/^note_/.test(String(m.key)))why.push('note_ keys are lecturer messages, not marks');
   if(!p)why.push('not in pending.json (run fetch.mjs again?)');else{if(p.sid!==m.sid)why.push('sid does not match');if(p.q!==m.q)why.push('question does not match')}
   if(!Number.isInteger(m.band)||m.band<0||m.band>6)why.push('band must be a whole number 0–6');
   if(!Number.isInteger(m.xp)||m.xp<0||m.xp>30)why.push('xp must be a whole number 0–30');

@@ -147,6 +147,10 @@ async layout(){const pages=['#/','#/cases','#/case/iceto/read','#/case/cbtl/boar
   for(const w of [320,390,1280])for(const theme of ['dark','light']){const p=await page({sid:STUDENT,w,theme});for(const h of pages){await p.go(h);const sw=await p.evaluate(()=>document.documentElement.scrollWidth);ok(sw<=w,`${h} at ${w}px ${theme}: scrollWidth ${sw}`)}
     ok(await p.evaluate(t=>document.documentElement.dataset.theme===t,theme),'theme not applied');await p.done()}},
 
+async profileLocal(){const p=await page({sid:'S000001'});await p.go('#/student/S081441');await p.waitForTimeout(300);
+  ok((await p.textContent('main')).includes('need the live connection'),'device-only profile note missing');
+  const s=await page({sid:STUDENT});await s.go('#/student/S081441');await s.waitForTimeout(300);ok(!(await s.textContent('main')).includes('live connection')&&!!await s.$('.hero'),'student reached a profile');await s.done();await p.done()},
+
 async install(){const p=await page({sid:STUDENT,tour:false});await p.waitForTimeout(1200);ok(await p.$('#tn'),'tour should open for a new student');
   for(let n=0;n<8&&await p.$('#tn');n++){await p.click('#tn');await p.waitForTimeout(120)}
   await p.waitForTimeout(700);ok(await p.$('[aria-label="Install the app"]'),'install popup should follow the tour');

@@ -7,7 +7,7 @@ const token=await signIn(),[users,reviews]=await Promise.all([list(token,'users'
 const items=[];let students=0,answers=0,flagged=0;
 for(const [sid,doc] of Object.entries(users)){if(sid==='S000001')continue;let u;try{u=JSON.parse(doc.u||'{}')}catch(e){continue}
   const ans=u.ans||{},done=(reviews[sid]&&reviews[sid].m)||{};const ks=Object.keys(ans);if(ks.length)students++;answers+=ks.length;
-  for(const key of ks){if(done[key])continue;const a=ans[key],e=Q[a.q];if(!e)continue;const good=e.q.chips.filter(c=>c.g),fl=a.fl||{};
+  for(const key of ks){if(done[key]||/^note_/.test(key))continue;const a=ans[key],e=Q[a.q];if(!e)continue;const good=e.q.chips.filter(c=>c.g),fl=a.fl||{};
     if(fl.paste||fl.big||fl.fast)flagged++;
     items.push({key,sid,q:a.q,area:e.area,context:e.context,question:e.q.q,keyIdeas:good.map(c=>c.t),
       commonMistakes:e.q.chips.filter(c=>!c.g).map(c=>c.t+(c.why?' ('+c.why+')':'')),rubric:BANDS,

@@ -51,6 +51,16 @@ textarea.answer{min-height:220px;font:16px/1.6 Inter,sans-serif}
 .mark{border:1px solid var(--gold);border-radius:14px;padding:12px 14px;margin:12px 0;background:linear-gradient(180deg,#ffc94d18,transparent)}.mark b.big{font:800 1.3rem Lexend;color:var(--gold)}
 .flagnote{font-size:.85rem;color:var(--gold);margin-top:6px}
 .mqi{border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:10px;background:var(--sunk)}.answerprev{white-space:normal;font-size:.92rem;line-height:1.55;max-height:260px;overflow:auto;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);margin-top:8px}
+/* lecturer: student profile */
+.inbox .note{border-left:3px solid var(--teal);background:var(--sunk);border-radius:0 12px 12px 0;padding:10px 12px;margin-top:8px}
+.lb .r.click,tr.click{cursor:pointer}.lb .r.click:hover,tr.click:hover td{background:var(--w08)}.lb .r.click:focus-visible,tr.click:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+.prof-h{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}@media (max-width:560px){.prof-h{grid-template-columns:1fr}}
+.prof-h .av{width:72px;height:72px;border-radius:20px;display:grid;place-items:center;font:800 1.6rem Lexend;background:linear-gradient(135deg,var(--teal),var(--violet));color:var(--on)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:12px}.kv div{background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font-size:.85rem}.kv b{display:block;font:700 .95rem Lexend;word-break:break-all}
+.heat{display:grid;grid-template-rows:repeat(7,14px);grid-auto-flow:column;grid-auto-columns:14px;gap:3px;margin:8px 0}.heat i{border-radius:3px;background:var(--w10)}.heat i.on{background:var(--teal)}.heat i.today{outline:2px solid var(--gold)}
+.pb{display:grid;grid-template-columns:minmax(120px,1.2fr) 2fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);font-size:.88rem}.pb:last-child{border:0}
+@media (max-width:560px){.pb{grid-template-columns:1fr auto}.pb .bar{grid-column:1/-1}}
+.psec{margin-bottom:16px}.psec>h2{margin-bottom:8px}.bsm{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);font-size:.8rem;margin:3px;background:var(--sunk)}.bsm.got{border-color:var(--gold)}.bsm.no{opacity:.45}
 label.inl{display:inline-flex;gap:6px;align-items:center;margin:0}label.inl select,label.inl input{font:16px Inter;padding:6px 8px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink)}label.inl input{width:76px}
 .bands{display:grid;gap:6px;margin-bottom:12px}.band{display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--sunk);font:400 .9rem Inter;color:var(--ink);margin:0;cursor:pointer}
 .band.on{border-color:var(--teal);background:var(--w0d)}.band input{accent-color:var(--teal)}.band b{font:800 1.05rem Lexend;min-width:16px}
@@ -564,12 +574,16 @@ function backupCard(){
   $('#bkgo').onclick=async()=>{$('#bke').textContent=await restore($('#bkt').value)}}
 
 /* ---------- home ---------- */
+/* messages from the lecturer (sent from a student profile), newest first; dismissed ones are hidden */
+function inboxHTML(){const N=U.notes||{},R=U.notesRead||{},ks=Object.keys(N).filter(k=>!R[k]).sort((a,b)=>String(N[a].at)<String(N[b].at)?1:-1);if(!ks.length)return '';
+  return `<div class="card inbox" style="margin-bottom:16px"><h2 style="margin:0 0 6px">✉️ Message${ks.length>1?'s':''} from your lecturer</h2>${ks.slice(0,5).map(k=>`<div class="note"><p style="margin:0">${esc(N[k].fb).replace(/\n/g,'<br>')}</p><div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" style="font-size:.8rem">${esc(String(N[k].at).slice(0,10))}</span><button class="btn ghost sm" data-noteread="${esc(k)}">Got it</button></div></div>`).join('')}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-noteread]');if(!b||!U)return;U.notesRead=U.notesRead||{};U.notesRead[b.dataset.noteread]=1;save();route()});
 function home(){
   rollDay();const L=level(U.xp),got=Object.keys(U.badges).length;
   const GO={read:'#/cases',verdicts:'#/cases',verdictsRight:'#/cases',plans:'#/cases',timed:'#/cases',perfect:'#/short',bplans:'#/short',btimed:'#/short',catool:'#/essay',catimed:'#/essay',esstool:'#/essay',ecplan:'#/essay',essays:'#/essay',typed:'#/short'};
   const ms=missions().map(m=>{const v=Math.min(U.day.c[m.k]||0,m.n);return `<div class="mission"><span class="tick ${v>=m.n?'on':''}">${v>=m.n?'✓':''}</span><div style="flex:1">${esc(m.x)}<div class="bar" style="margin-top:6px"><i style="width:${v/m.n*100}%"></i></div></div><span class="muted">${v}/${m.n}</span>${v<m.n?`<a class="btn ghost sm" href="${GO[m.k]||'#/cases'}" style="min-height:32px;padding:4px 10px">Go</a>`:''}</div>`}).join('');
   const caseCards=CASES.map(c=>{const read=c.sections.filter(s=>U.log['read:'+c.id+':'+s.id]).length;return `<a class="card zone" href="#/case/${c.id}/read"><div class="em">${c.icon}</div><h3>${esc(c.title)}</h3><p class="muted" style="font-size:.9rem">${esc(c.subtitle)}</p><div class="bar"><i style="width:${read/c.sections.length*100}%;background:var(--teal)"></i></div><p class="muted" style="font-size:.8rem;margin:6px 0 0">${read}/${c.sections.length} sections read</p></a>`}).join('');
-  shell('#/',`
+  shell('#/',`${inboxHTML()}
   <div class="card hero"><div class="ring" style="--p:${L.pct}"><div><b>${L.i+1}</b><small>LEVEL</small></div></div>
   <div><h1>Welcome back, ${esc(String(ME.name).split(' ')[0])}</h1><p class="muted" style="margin:0">${esc(L.name)} · ${L.to?(L.to-U.xp)+' XP to '+LEVELS[L.i+1][1]:'Top level reached'}</p>
   <div class="stats"><div class="stat"><b>${U.xp}</b><span>XP</span></div><div class="stat"><b>🔥 ${streak(U)}</b><span>day streak</span></div><div class="stat"><b>${got}/${BADGES.length}</b><span>badges</span></div><div class="stat"><b>${U.n.timed}</b><span>timed answers</span></div></div></div></div>
@@ -1028,7 +1042,7 @@ async function rowKey(sid){return (await sha(ROSTER.salt+'|'+sid)).slice(0,12)}
 /* live leaderboard (cloud): updates as soon as anyone earns XP */
 function liveBoard(){
   shell('#/board',`<div class="row" style="justify-content:space-between"><h1 style="margin:0">Leaderboard</h1><span class="live"><i></i>LIVE</span></div>
-  <p class="muted">Scores update the moment anyone earns XP. Student IDs are never shown.</p>
+  <p class="muted">Scores update the moment anyone earns XP. Student IDs are never shown.${ME.sid===LECTURER?' <b>Lecturer: tap a student to open their profile.</b>':''}</p>
   <div class="grid g2"><div class="card lb" id="lbl"><p class="muted">Loading the class…</p></div>
   <div class="card"><h2>You on the board</h2><p style="margin:0 0 6px">Your score: <b>${U.xp} XP</b> · ${esc(level(U.xp).name)} · ${Object.keys(U.badges).length} badges</p>
    ${ME.sid===LECTURER?'<p class="muted" style="font-size:.9rem">The lecturer account is not shown on the board.</p>':`
@@ -1038,7 +1052,8 @@ function liveBoard(){
   const upd=()=>{U.nick=$('#nk').value.trim().slice(0,24)||defaultNick(ME.name);U.hide=$('#hd').checked;save();toast('🏷️','Saved','The board will update in a moment')};
   $('#nk')&&($('#nk').onchange=upd);$('#hd')&&($('#hd').onchange=upd);
   CLOUD.watchBoard(rows=>{const el=$('#lbl');if(!el)return;rows=rows.filter(r=>r.id!==LECTURER);
-    el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r ${r.id===ME.sid?'me':''}"><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><div><b>${esc(r.n||'Hidden player')}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Earn some XP and you will appear here.</p>'},
+    const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(r.n||'Hidden player')}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span><div><b>${esc(r.n||'Hidden player')}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Earn some XP and you will appear here.</p>';
+    if(lec)el.querySelectorAll('[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStudent(r.dataset.sid)}}})},
     e=>{const el=$('#lbl');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
 async function boardPage(){if(cloudOn())return liveBoard();
   const rows=(LEADERBOARD.rows||[]).slice().sort((a,b)=>b.x-a.x),mine=await rowKey(ME.sid);
@@ -1119,8 +1134,11 @@ const practised=u=>new Set(Object.keys((u&&u.log)||{}).map(k=>(k.match(/^(?:plan
 function weakOf(u){const t=((u&&u.wk)||{}).t||{};return Object.keys(t).filter(k=>t[k][1]>0).sort((a,b)=>t[b][1]/Math.max(1,t[b][0])-t[a][1]/Math.max(1,t[a][0])).slice(0,2).map(tkLabel)}
 function ago(d){if(!d)return '–';const m=Math.round((Date.now()-d)/60000);return m<2?'just now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago'}
 function classDash(){
-  $('#cdash').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Class dashboard</h2><span class="live"><i></i>LIVE</span></div><div id="cdb"><p class="muted">Loading students…</p></div>`;
-  CLOUD.watchUsers(list=>{const el=$('#cdb');if(!el)return;const I=qIndex();
+  $('#cdash').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Class dashboard</h2><span class="live"><i></i>LIVE</span></div>
+  <p class="muted" style="font-size:.88rem;margin:6px 0 8px">Tap a student to open their full profile.</p><input type="text" id="csq" placeholder="🔎 Search by name or ID" aria-label="Search students" style="max-width:340px"><div id="cdb"><p class="muted">Loading students…</p></div>`;
+  let LAST=null;$('#csq').oninput=()=>LAST&&drawDash(LAST);
+  CLOUD.watchUsers(list=>{LAST=list;drawDash(list)},e=>{const el=$('#cdb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`});
+  function drawDash(list){const el=$('#cdb');if(!el)return;const I=qIndex(),q=($('#csq')&&$('#csq').value||'').trim().toLowerCase();
     const st=list.filter(x=>x.id!==LECTURER&&x.u).map(x=>{const u=x.u,n=u.n||{};return {id:x.id,name:x.name||'',xp:u.xp|0,lv:level(u.xp|0).name,str:streak(Object.assign({days:[]},u)),ts:x.ts,
       plans:n.plans|0,timed:n.timed|0,typed:n.typed|0,flags:Object.values(u.integ||{}).reduce((t,v)=>t+(v|0),0),badges:Object.keys(u.badges||{}).length,weak:weakOf(u),done:practised(u),u}}).sort((a,b)=>b.xp-a.xp);
     const day=864e5,now=Date.now(),act=d=>st.filter(x=>x.ts&&now-x.ts<d).length,total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:st.length);
@@ -1129,13 +1147,13 @@ function classDash(){
     const areas=[...new Set(Object.values(I).map(e=>e.area))].map(a=>({a,label:a[0]==='w'?tkLabel(a):CASES.find(c=>'c:'+c.id===a).title+' (case practice)',n:st.filter(x=>[...x.done].some(id=>I[id]&&I[id].area===a)).length})).sort((a,b)=>a.n-b.n).slice(0,6);
     el.innerHTML=`<div class="stats" style="margin:12px 0"><div class="stat"><b>${st.length}/${total}</b><span>signed up</span></div><div class="stat"><b>${act(day)}</b><span>active today</span></div><div class="stat"><b>${act(7*day)}</b><span>active this week</span></div><div class="stat"><b>${st.length?Math.round(st.reduce((t,x)=>t+x.xp,0)/st.length):0}</b><span>average XP</span></div></div>
     <div class="tablewrap"><table class="wide"><tr><th>#</th><th>Name</th><th>ID</th><th>XP</th><th>Level</th><th>🔥</th><th>Last active</th><th>Plans</th><th>Timed</th><th>Typed</th><th title="Pastes blocked, big insertions removed, too-fast answers">Flags</th><th>Badges</th><th>Weak topics</th></tr>
-    ${st.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.id)}</td><td><b>${x.xp}</b></td><td>${esc(x.lv)}</td><td>${x.str}</td><td>${ago(x.ts)}</td><td>${x.plans}</td><td>${x.timed}</td><td>${x.typed}</td><td>${x.flags?'<b style="color:var(--gold)">'+x.flags+'</b>':'0'}</td><td>${x.badges}</td><td style="font-size:.82rem">${esc(x.weak.join('; ')||'–')}</td></tr>`).join('')||'<tr><td colspan="13" class="muted">No students have signed in with a PIN yet.</td></tr>'}</table></div>
+    ${st.filter(x=>!q||x.name.toLowerCase().includes(q)||x.id.toLowerCase().includes(q)).map((x,i)=>`<tr class="click" data-sid="${esc(x.id)}" tabindex="0"><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.id)}</td><td><b>${x.xp}</b></td><td>${esc(x.lv)}</td><td>${x.str}</td><td>${ago(x.ts)}</td><td>${x.plans}</td><td>${x.timed}</td><td>${x.typed}</td><td>${x.flags?'<b style="color:var(--gold)">'+x.flags+'</b>':'0'}</td><td>${x.badges}</td><td style="font-size:.82rem">${esc(x.weak.join('; ')||'–')}</td></tr>`).join('')||'<tr><td colspan="13" class="muted">No students have signed in with a PIN yet.</td></tr>'}</table></div>
     <div class="grid g2" style="margin-top:16px"><div><h3>Decoys the class picks most</h3>${topDec.length?`<ol class="sumlist">${topDec.map(d=>`<li><b>${esc(d.t)}</b> <span class="tag">${d.n} student${d.n===1?'':'s'}</span><div class="muted" style="font-size:.82rem">${esc(d.where)}${d.why?' · '+esc(d.why):''}</div></li>`).join('')}</ol>`:'<p class="muted">No decoys picked yet.</p>'}</div>
     <div><h3>Practised by the fewest students</h3><ol class="sumlist">${areas.map(a=>`<li>${esc(a.label)} <span class="tag">${a.n}/${st.length||0}</span></li>`).join('')}</ol></div></div>
     <button class="btn ghost sm" id="csv" style="margin-top:12px">⬇ Download CSV</button>`;
     $('#csv').onclick=()=>{const q=v=>'"'+String(v).replace(/"/g,'""')+'"',rows=[['Name','ID','XP','Level','Streak','Last active','Plans','Timed','Typed','Integrity flags','Badges','Weak topics']].concat(st.map(x=>[x.name,x.id,x.xp,x.lv,x.str,x.ts?x.ts.toISOString():'',x.plans,x.timed,x.typed,x.flags,x.badges,x.weak.join('; ')]));
-      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='mkt301-class-'+today()+'.csv';a.click()}},
-  e=>{const el=$('#cdb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
+      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='mkt301-class-'+today()+'.csv';a.click()};
+    el.querySelectorAll('tr[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();openStudent(r.dataset.sid)}}})}}
 /* marking: typed answers waiting for a mark, and marks already given (by Claude marking or by the lecturer) */
 function markQueue(){let US=null,RV=null,tab='q',open=null;const drafts={},I=qIndex();
   $('#mq').innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">Marking</h2><span class="live"><i></i>LIVE</span></div>
@@ -1168,6 +1186,104 @@ function markQueue(){let US=null,RV=null,tab='q',open=null;const drafts={},I=qIn
         catch(e){b.disabled=false;b.textContent='Save mark';box.querySelector('[data-er]').textContent=CLOUD.say(e)}})})};
   const err=e=>{const el=$('#mqb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`};
   CLOUD.watchUsers(l=>{US=l;draw()},err);CLOUD.watchReviews(r=>{RV=r;draw()},err)}
+/* ---------- lecturer: one student's full profile (#/student/S0xxxxx), live from users/{SID} and reviews/{SID} ---------- */
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const LOGW={plan:'answer plan',typed:'typed answer',timed:'timed answer',check:'self-check',ca:'strategy tool',catimed:'strategy part written',cacheck:'strategy self-check',ess:'Essay Coach tool',essay:'essay written',emark:'essay self-marked'};
+function heatHTML(days){const on=new Set(days||[]),end=new Date();end.setHours(0,0,0,0);const st=new Date(end);st.setDate(end.getDate()-7*7-((end.getDay()+6)%7));const cells=[];
+  for(const d=new Date(st);d<=end;d.setDate(d.getDate()+1)){const k=ymd(d);cells.push(`<i class="${on.has(k)?'on':''} ${k===ymd(end)?'today':''}" title="${k}${on.has(k)?' · practised':''}"></i>`)}
+  return `<div class="heat" aria-label="Practice days, last 8 weeks">${cells.join('')}</div><p class="muted" style="font-size:.8rem;margin:0">Each square is a day (weeks run top to bottom, Monday first). Green = practised. Gold outline = today.</p>`}
+function recentHTML(u){const by={};Object.keys(u.log||{}).forEach(k=>{const m=k.match(/^([a-z]+):.*:(\d{4}-\d{2}-\d{2})$/);if(m&&LOGW[m[1]]){const d=by[m[2]]||(by[m[2]]={});d[m[1]]=(d[m[1]]||0)+1}});
+  const ds=Object.keys(by).sort().reverse().slice(0,10);if(!ds.length)return '<p class="muted">No dated activity yet.</p>';
+  return `<ul class="sumlist">${ds.map(d=>`<li><b>${d}</b>: ${Object.entries(by[d]).map(([k,n])=>k==='_sets'?n+' MCQ set'+(n>1?'s':''):n+' '+LOGW[k]+(n>1?'s':'')).join(', ')}</li>`).join('')}</ul>
+  <p class="muted" style="font-size:.8rem">From the dated records the portal keeps (plans, typed and timed answers, strategy tools and essays). Reading and Boardroom calls are counted below but aren't dated.</p>`}
+function decoyStats(u){const I=qIndex(),dec={},miss={};Object.entries(u.plansSaved||{}).forEach(([id,p])=>{const e=I[id];if(!e||!p.checked)return;const sel=p.sel||[];
+  e.q.chips.forEach((c,j)=>{const k=id+'|'+j;if(!c.g&&sel.includes(j))dec[k]={t:c.t,why:c.why,where:e.label};if(c.g&&!sel.includes(j))miss[k]={t:c.t,where:e.label}})});
+  return {dec:Object.values(dec),miss:Object.values(miss)}}
+function studentPage(sid){
+  if(ME.sid!==LECTURER)return home();
+  if(!cloudOn())return shell('#/lecturer',`<p><a href="#/lecturer">← Lecturer</a></p><div class="callout">Student profiles need the live connection. Sign in with your PIN while online to open them.</div>`);
+  if(!/^S0\d{5}$/.test(sid||''))return lecturer();
+  shell('#/lecturer',`<p><a href="${esc(PFROM||'#/lecturer')}" id="pback">← Back</a></p><div id="prof"><p class="muted">Loading ${esc(sid)}…</p></div>`);
+  let X,RV,open=null,tab='ans';const drafts={};
+  const draw=force=>{const el=$('#prof');if(!el||X===undefined||RV===undefined)return;const ae=document.activeElement;if(!force&&ae&&el.contains(ae)&&/TEXTAREA|INPUT|SELECT/.test(ae.tagName))return;
+    if(!X||!X.u){el.innerHTML=`<div class="card"><h2>${esc(sid)}</h2><p class="muted">This student hasn't signed in with a PIN yet, so there is no saved progress. (Email: ${esc(CLOUD.email(sid))})</p></div>${actionsHTML()}`;bindActions();return}
+    const u=Object.assign({log:{},days:[],badges:{},n:{}},X.u),n=u.n||{},L=level(u.xp|0),I=qIndex(),done=practised(u);
+    const ans=Object.entries(u.ans||{}).sort((a,b)=>String(a[1].at)<String(b[1].at)?1:-1),notes=Object.entries(RV).filter(([k])=>isNote(k)).sort((a,b)=>String(a[1].at)<String(b[1].at)?1:-1);
+    const marked=ans.filter(([k])=>RV[k]).length,first=[...(u.days||[])].sort()[0],ig=u.integ||{},{dec,miss}=decoyStats(u);
+    const weeks=[...new Set(BANK_B.map(q=>q.week))].sort((a,b)=>a-b),W=((u.wk||{}).t)||{};
+    const topicRows=weeks.map(w=>{const qs=BANK_B.filter(q=>q.week===w),d=qs.filter(q=>done.has(q.id)).length,wk=W['w'+w];
+      return `<div class="pb"><span><b>Week ${w}</b><br><span class="muted" style="font-size:.8rem">${esc([...new Set(qs.map(q=>q.topic))].slice(0,3).join(', '))}</span></span>
+      <div class="bar"><i style="width:${(d/qs.length*100)|0}%;background:var(--teal)"></i></div><span style="text-align:right;font-size:.82rem">${d}/${qs.length} practised${wk&&wk[1]?'<br>⚠️ weak-spot '+wk[1]:''}</span></div>`}).join('');
+    const scRows=BANK_C.structured.map(sc=>{const ps=['a','b','c'].map(p=>[p,(u.cw||{})[sc.id+':'+p]||{}]);
+      return `<div class="pb"><span>${sc.icon||'🏰'} <b>${esc(sc.name)}</b></span><div class="bar"><i style="width:${(ps.filter(x=>x[1].final).length/3*100)|0}%"></i></div>
+      <span style="text-align:right;font-size:.82rem">${ps.map(([p,st])=>'('+p+') '+(st.final?'✓ '+((st.ticks||[]).length)+' checks':st.step>=1?'writing':st.checked?'tool done':'–')).join(' · ')}</span></div>`}).join('');
+    const esRows=BANK_C.essays.map(e=>{const E=(u.ess||{})[e.id]||{},tot=RUBRIC.reduce((a,r,i)=>a+(+((E.marks||{})[i]||0)),0);
+      return `<div class="pb"><span>${e.icon||'✍️'} <b>${esc(e.name)}</b></span><div class="bar"><i style="width:${Math.min(100,((E.step|0)/4)*100)}%"></i></div>
+      <span style="text-align:right;font-size:.82rem">${E.final?'self-marked <b>'+tot+'/20</b>':E.written?'written, not marked':E.planDone?'plan done':E.step?'step '+((E.step|0)+1)+' of 5':'not started'}</span></div>`}).join('');
+    const caseRows=CASES.map(c=>{const rd=c.sections.filter(s=>u.log['read:'+c.id+':'+s.id]).length,vs=c.boardroom.map((a,i)=>[a,(u.verd||{})[c.id+':'+i]]).filter(x=>x[1]),ok=vs.filter(x=>x[1]===x[0].v).length,
+      qd=c.questions.filter(q=>done.has(q.id)).length;
+      return `<div class="pb"><span>${c.icon} <b>${esc(c.title)}</b></span><div class="bar"><i style="width:${(rd/c.sections.length*100)|0}%"></i></div>
+      <span style="text-align:right;font-size:.82rem">read ${rd}/${c.sections.length} · Boardroom ${vs.length}/${c.boardroom.length}${vs.length?' ('+Math.round(ok/vs.length*100)+'% match)':''}<br>practice ${qd}/${c.questions.length}</span></div>`}).join('');
+    const ansItem=([k,a])=>{const e=I[a.q],r=RV[k],good=e?e.q.chips.filter(c=>c.g).length:0,fl=a.fl||{},flt=[fl.paste?'paste blocked ×'+fl.paste:'',fl.big?'big insert ×'+fl.big:'',fl.fast?'too fast':''].filter(Boolean).join(' · ');
+      const d=drafts[k]||{band:r?r.band:a.b|0,xp:r?r.xp:Math.min(30,(a.b|0)*4),fb:r?r.fb:''};
+      return `<div class="mqi" data-k="${esc(k)}"><div class="row" style="justify-content:space-between"><b style="font-size:.9rem">${esc(e?e.label:a.q)}</b><span class="muted" style="font-size:.8rem">${esc(String(a.at||'').slice(0,16).replace('T',' '))}</span></div>
+      <div class="muted" style="font-size:.85rem">${esc(e?e.q.q.slice(0,140):'')}${e&&e.q.q.length>140?'…':''}</div>
+      <div style="font-size:.85rem;margin:4px 0">${a.w|0} words · automatic ${a.b|0}/6 · key ideas ${(a.f||[]).length}/${good}${flt?` · <span style="color:var(--gold)">⚠️ ${esc(flt)}</span>`:''}${r?` · <b>marked ${r.band}/6, +${r.xp} XP</b> <span class="muted">(${r.by==='lecturer'?'you':'Claude'})</span>`:' · <span class="tag">not marked</span>'}</div>
+      ${r&&r.fb&&open!==k?`<p class="muted" style="font-size:.85rem;margin:4px 0">“${esc(r.fb)}”</p>`:''}
+      ${open===k?`<div class="answerprev">${esc(a.t||'').replace(/\n/g,'<br>')}</div>
+      <div class="row" style="margin-top:8px"><label class="inl">Band <select data-f="band">${[0,1,2,3,4,5,6].map(b=>`<option value="${b}" ${b===d.band?'selected':''}>${b}</option>`).join('')}</select></label><label class="inl">XP <input type="number" min="0" max="30" data-f="xp" value="${d.xp}"></label></div>
+      <textarea data-f="fb" maxlength="600" style="min-height:80px;margin-top:8px" placeholder="Feedback: one strength, the most important missing point, one tip">${esc(d.fb||'')}</textarea>
+      <div class="row" style="margin-top:8px"><button class="btn sm" data-save>Save mark</button><button class="btn ghost sm" data-close>Close</button></div><div class="err" data-er></div>`
+      :`<button class="btn ghost sm" data-open style="margin-top:4px">${r?'Read · edit mark':'Read and mark'}</button>`}</div>`};
+    el.innerHTML=`<div class="card psec"><div class="prof-h"><div class="av">${esc((X.name||sid).trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase())}</div>
+      <div><h1 style="margin:0">${esc(X.name||sid)}</h1><p class="muted" style="margin:2px 0 0">🎓 ${esc(L.name)} · <b>${u.xp|0} XP</b>${L.to?' · '+(L.to-(u.xp|0))+' XP to '+esc(LEVELS[L.i+1][1]):' · top level'}</p>
+      <div class="bar" style="margin-top:8px"><i style="width:${L.pct}%;background:var(--teal)"></i></div></div></div>
+      <div class="kv"><div>ID<b>${esc(sid)}</b></div><div>Student email<b>${esc(CLOUD.email(sid))}</b></div><div>On the leaderboard<b>${u.hide?'Hidden player':esc(u.nick||defaultNick(X.name))}</b></div>
+      <div>Streak<b>🔥 ${streak(u)} day${streak(u)===1?'':'s'}</b></div><div>Last active<b>${ago(X.ts)}</b></div><div>First practised<b>${esc(first||'–')}</b></div></div></div>
+    <div class="grid g2"><div class="card psec"><h2>Activity</h2>${heatHTML(u.days)}
+      <div class="stats" style="grid-template-columns:repeat(3,1fr)"><div class="stat"><b>${n.plans|0}</b><span>plans</span></div><div class="stat"><b>${n.verdicts|0}</b><span>Boardroom calls</span></div><div class="stat"><b>${n.catool|0}</b><span>strategy tools</span></div>
+      <div class="stat"><b>${n.timed|0}</b><span>timed</span></div><div class="stat"><b>${n.typed|0}</b><span>typed</span></div><div class="stat"><b>${marked}</b><span>marked</span></div>
+      <div class="stat"><b>${n.strat|0}</b><span>strategy scenarios</span></div><div class="stat"><b>${n.essays|0}</b><span>essays</span></div><div class="stat"><b>${n.missions|0}</b><span>missions</span></div></div>
+      <h3 style="margin-top:14px">Recent activity</h3>${recentHTML(u)}</div>
+    <div class="card psec"><h2>Badges <span class="tag">${Object.keys(u.badges).length}/${BADGES.length}</span></h2>
+      <div>${BADGES.map(b=>u.badges[b.id]?`<span class="bsm got" title="${esc(b.d)}">${b.ico} ${esc(b.name)} <span class="muted">${esc(u.badges[b.id])}</span></span>`:'').join('')}</div>
+      <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">Not yet earned (${BADGES.filter(b=>!u.badges[b.id]).length})</summary>${BADGES.filter(b=>!u.badges[b.id]).map(b=>`<span class="bsm no" title="${esc(b.d)}">${b.ico} ${esc(b.name)}</span>`).join('')}</details>
+</div></div>
+    <div class="card psec"><h2>Section B by week</h2><p class="muted" style="font-size:.82rem;margin-top:-4px">Bar: short-answer questions practised. ⚠️ weak-spot score.</p>${topicRows}</div>
+    <div class="card psec"><h2>Section C</h2><h3>Competitive advantage</h3>${scRows}<h3 style="margin-top:12px">Essay Coach</h3>${esRows}</div>
+    <div class="grid g2"><div class="card psec"><h2>Weak spots</h2>${(()=>{const w=((u.wk||{}).t)||{},ks=Object.keys(w).filter(k=>w[k][1]>0).sort((a,b)=>w[b][1]/Math.max(1,w[b][0])-w[a][1]/Math.max(1,w[a][0])).slice(0,6);
+      return (ks.length?`<ol class="sumlist">${ks.map(k=>`<li>${esc(tkLabel(k))} <span class="tag">${w[k][1]} pts over ${w[k][0]} tries</span></li>`).join('')}</ol>`:'<p class="muted">None recorded yet.</p>')
+      +`<h3>Decoys picked (${dec.length})</h3>${dec.length?`<ul class="sumlist">${dec.slice(0,8).map(d=>`<li><b>${esc(d.t)}</b><div class="muted" style="font-size:.8rem">${esc(d.where)}${d.why?' · '+esc(d.why):''}</div></li>`).join('')}</ul>`:'<p class="muted">None.</p>'}
+      <h3>Key ideas missed in plans (${miss.length})</h3>${miss.length?`<ul class="sumlist">${miss.slice(0,8).map(d=>`<li>${esc(d.t)}<div class="muted" style="font-size:.8rem">${esc(d.where)}</div></li>`).join('')}</ul>`:'<p class="muted">None.</p>'}`})()}</div>
+    <div class="card psec"><h2>Cases</h2>${caseRows}<h3 style="margin-top:14px">Integrity</h3><p style="font-size:.9rem;margin:0">${Object.keys(ig).length?Object.entries(ig).map(([k,v])=>`${esc({paste:'Pastes blocked',big:'Big insertions removed',fast:'Answers typed too fast'}[k]||k)}: <b>${v|0}</b>`).join(' · '):'No integrity flags.'}</p>
+      <p class="muted" style="font-size:.8rem">Flags are signals, not proof: speech-to-text and fast typists can trigger them.</p></div></div>
+    <div class="card psec"><h2>Typed answers <span class="tag">${ans.length}</span> <span class="tag">${marked} marked</span></h2>${ans.length?ans.slice(0,30).map(ansItem).join(''):'<p class="muted">No typed answers yet.</p>'}${ans.length>30?'<p class="muted" style="font-size:.85rem">Showing the newest 30.</p>':''}</div>
+    <div class="card psec"><h2>Messages you've sent</h2>${notes.length?notes.map(([k,v])=>`<div class="note" style="border-left:3px solid var(--teal);padding:6px 10px;margin-top:6px"><p style="margin:0">${esc(v.fb)}</p><span class="muted" style="font-size:.8rem">${esc(String(v.at).slice(0,16).replace('T',' '))} · ${u.notes&&u.notes[k]?(u.notesRead&&u.notesRead[k]?'read':'delivered'):'not opened yet'}</span></div>`).join(''):'<p class="muted">None yet.</p>'}</div>
+    ${actionsHTML()}`;
+    bindActions();
+    el.querySelectorAll('.mqi').forEach(box=>{const k=box.dataset.k,a=(u.ans||{})[k],r=RV[k];
+      box.querySelector('[data-open]')&&(box.querySelector('[data-open]').onclick=()=>{open=k;draw(1)});
+      box.querySelector('[data-close]')&&(box.querySelector('[data-close]').onclick=()=>{open=null;delete drafts[k];draw(1)});
+      box.querySelectorAll('[data-f]').forEach(f=>f.oninput=f.onchange=()=>{const d=drafts[k]||(drafts[k]={band:r?r.band:a.b|0,xp:r?r.xp:Math.min(30,(a.b|0)*4),fb:r?r.fb:''});
+        d[f.dataset.f]=f.dataset.f==='fb'?f.value:+f.value;if(f.dataset.f==='band'&&!r&&!d.xpSet){d.xp=Math.min(30,d.band*4);box.querySelector('[data-f="xp"]').value=d.xp}if(f.dataset.f==='xp')d.xpSet=1});
+      box.querySelector('[data-save]')&&(box.querySelector('[data-save]').onclick=async()=>{const g=x=>box.querySelector(`[data-f="${x}"]`);
+        const v={q:a.q,band:Math.max(0,Math.min(6,+g('band').value|0)),xp:Math.max(0,Math.min(30,+g('xp').value|0)),fb:g('fb').value.trim().slice(0,600),at:new Date().toISOString(),by:'lecturer'};
+        const b=box.querySelector('[data-save]');b.disabled=true;b.textContent='Saving…';
+        try{await CLOUD.saveReview(sid,k,v);delete drafts[k];open=null;toast('✅','Mark saved',v.band+'/6, +'+v.xp+' XP');draw(1)}catch(e){b.disabled=false;b.textContent='Save mark';box.querySelector('[data-er]').textContent=CLOUD.say(e)}})})};
+  function actionsHTML(){return `<div class="card psec"><h2>Actions</h2>
+    <label for="pnote">Send a message</label><textarea id="pnote" maxlength="600" style="min-height:80px" placeholder="E.g. Great progress this week! Try the Essay Coach next."></textarea>
+    <div class="row" style="margin-top:8px"><button class="btn sm" id="psend">✉️ Send message</button><span class="muted" style="font-size:.82rem">They see it on their Home page next time they open the portal. No XP.</span></div>
+    <div class="row" style="margin-top:14px"><button class="btn ghost sm" id="preset">🔑 Send PIN reset email</button><button class="btn ghost sm" id="pdl">⬇ Download data (JSON)</button></div><div class="err" id="perr"></div></div>`}
+  function bindActions(){
+    $('#psend').onclick=async()=>{const t=$('#pnote').value.trim().slice(0,600);if(!t){$('#perr').textContent='Write a message first.';return}const b=$('#psend');b.disabled=true;
+      try{await CLOUD.saveReview(sid,'note_'+Date.now().toString(36),{q:'note',band:0,xp:0,fb:t,at:new Date().toISOString(),by:'lecturer'});$('#pnote').value='';$('#perr').textContent='';toast('✉️','Message sent',(X&&X.name)||sid);draw(1)}
+      catch(e){$('#perr').textContent=CLOUD.say(e)}b.disabled=false};
+    $('#preset').onclick=async()=>{if(!confirm(`Send a PIN reset email to ${CLOUD.email(sid)}?\n\nThe student chooses a new PIN from the link. Their progress is kept.`))return;
+      try{await CLOUD.reset(sid);toast('🔑','Reset email sent',CLOUD.email(sid))}catch(e){$('#perr').textContent=CLOUD.say(e)}};
+    $('#pdl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({sid,name:X&&X.name,lastActive:X&&X.ts,progress:X&&X.u,reviews:RV},null,1)],{type:'application/json'}));a.download='mkt301-'+sid+'-'+today()+'.json';a.click()}}
+  const err=e=>{const el=$('#prof');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`};
+  CLOUD.watchStudent(sid,x=>{X=x;draw()},err);CLOUD.watchReview(sid,r=>{RV=r;draw()},err)}
+let PFROM='';const openStudent=sid=>{PFROM=location.hash||'#/lecturer';location.hash='#/student/'+sid};
 function lecturer(){
   if(ME.sid!==LECTURER)return home();
   shell('#/lecturer',`<h1>Lecturer</h1>
@@ -1198,6 +1314,7 @@ function route(){CLOUD.unwatch();if(!ME)return gate();const h=location.hash.repl
   if(h[0]==='case')return caseView(h[1],h[2]||'read');
   if(h[0]==='essay'&&h[1]==='ca')return caView(h[2]);
   if(h[0]==='essay'&&h[1]==='coach')return coachView(h[2]);
+  if(h[0]==='student')return studentPage(String(h[1]||'').toUpperCase());
   ({'':home,cases:caseList,badges:badgesPage,board:boardPage,lecturer:lecturer,
     short:shortPage,essay:essayPage}[h[0]]||home)()}
 /* ---------- cloud sync ---------- */
@@ -1215,14 +1332,19 @@ async function cloudSync(){const sid=ME.sid;
   if(R&&(R._t||0)>LOAD_T){U=Object.assign(blank(),R);U.n=Object.assign(blank().n,U.n);LS.set('u_'+sid,U);hud();route();toast('☁️','Progress loaded',U.xp+' XP from your account')}
   CLOUD.ready(sid,()=>ME&&ME.sid===sid?{sid,name:ME.name,U,row:rowOf(sid)}:null);CLOUD.flush();
   if(sid!==LECTURER)CLOUD.watchMine(sid,m=>{if(ME&&ME.sid===sid)applyMarks(m)})}
+/* lecturer notes live in reviews/{SID}.m under note_ keys: messages only, never marks or XP */
+const isNote=k=>/^note_/.test(k);
 /* a new or changed mark: award its XP once (and adjust if the lecturer changes it later). Restart doesn't remove it. */
 function applyMarks(m){U.rev=U.rev||{};U.gain=U.gain||{};let n=0,ch=0;
+  let nn=0,first='';U.notes=U.notes||{};
   for(const [key,v] of Object.entries(m||{})){if(!v||typeof v!=='object')continue;
+    if(isNote(key)){if(!U.notes[key]){U.notes[key]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};nn++;first=first||U.notes[key].fb}continue}
     const r={q:String(v.q||''),band:Math.max(0,Math.min(6,v.band|0)),xp:Math.max(0,Math.min(30,v.xp|0)),fb:String(v.fb||'').slice(0,600),at:String(v.at||''),by:v.by==='lecturer'?'lecturer':'claude'},k='review:'+key;
     const old=U.rev[key];U.rev[key]=r;
     if(!U.log[k]){countOnce(k,'reviewed');award(k,r.xp,'Marked by your lecturer');n++}
     else if((U.gain[k]|0)!==r.xp){U.xp=Math.max(0,U.xp+r.xp-(U.gain[k]|0));U.gain[k]=r.xp;ch++}
     else if(old&&(old.band!==r.band||old.fb!==r.fb))ch++}
+  if(nn){save();toast('✉️','Message from your lecturer',first.length>90?first.slice(0,90)+'…':first);if(!n&&!ch&&!location.hash.replace(/^#\/?/,''))route()}
   if(n||ch){save();hud();if(n)toast('🧑‍🏫',n===1?'An answer was marked':n+' answers were marked','Open the question to read the feedback');else toast('🧑‍🏫','A mark was updated','Open the question to see it');
     const ae=document.activeElement;if(!(ae&&ae.tagName==='TEXTAREA'))route()}}
 /* email links: Firebase sends students here (Templates → Customize action URL) */
