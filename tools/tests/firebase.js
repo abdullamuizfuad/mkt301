@@ -28,7 +28,7 @@ async function signIn(p,sid,pin,name){await toPin(p,sid,name);await p.fill('#pin
 async function synced(p,t=12000){const t0=Date.now();await p.waitForTimeout(300);
   while(Date.now()-t0<t){if(await p.evaluate(()=>typeof ME!=='undefined'&&ME&&ME.cloud&&CLOUD.state==='synced'))return;await p.waitForTimeout(200)}
   throw new Error('not synced (state '+await p.evaluate(()=>CLOUD.state)+')')}
-const tourOff=p=>p.evaluate(()=>{if(U&&!U.tour){U.tour=1;save()}document.querySelector('.modal')?.remove()});
+const tourOff=p=>p.evaluate(()=>{if(U&&(!U.tour||!U.inst)){U.tour=1;U.inst=U.inst||1;save()}document.querySelector('.modal')?.remove()});
 const fsDoc=async(col,id)=>{const r=await fetch(`${FS}/${col}/${id}`,{headers:{Authorization:'Bearer owner'}});return r.ok?(await r.json()).fields:null};
 const int=f=>f?+(f.integerValue??f.doubleValue):null;
 

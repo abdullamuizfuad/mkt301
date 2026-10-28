@@ -21,7 +21,7 @@ async function page(opts={}){
   if(opts.clock)await p.clock.install();if(opts.init)await p.addInitScript(opts.init);
   await p.goto(URL0);
   if(opts.sid){await p.evaluate(([sid,theme,tour])=>{localStorage.setItem('mkt301_session',JSON.stringify({sid,name:'Test Student'}));
-      if(tour)localStorage.setItem('mkt301_u_'+sid,JSON.stringify({tour:1}));if(theme)localStorage.setItem('mkt301_theme',JSON.stringify(theme))},[opts.sid,opts.theme,opts.tour!==false]);
+      if(tour)localStorage.setItem('mkt301_u_'+sid,JSON.stringify({tour:1,inst:1}));if(theme)localStorage.setItem('mkt301_theme',JSON.stringify(theme))},[opts.sid,opts.theme,opts.tour!==false]);
     await p.reload();await p.waitForTimeout(300)}
   p.go=async h=>{await p.goto(URL0+h);await p.waitForTimeout(250)};
   p.U=()=>p.evaluate(()=>({xp:U.xp,n:U.n,day:U.day,badges:Object.keys(U.badges)}));
@@ -146,6 +146,13 @@ async lecturer(){const p=await page({sid:LECT});await p.go('#/lecturer');ok(awai
 async layout(){const pages=['#/','#/cases','#/case/iceto/read','#/case/cbtl/board','#/case/tuna/practice','#/case/tuna/exhibits','#/short','#/essay','#/essay/ca/manta','#/essay/coach/coco','#/badges','#/board'];
   for(const w of [320,390,1280])for(const theme of ['dark','light']){const p=await page({sid:STUDENT,w,theme});for(const h of pages){await p.go(h);const sw=await p.evaluate(()=>document.documentElement.scrollWidth);ok(sw<=w,`${h} at ${w}px ${theme}: scrollWidth ${sw}`)}
     ok(await p.evaluate(t=>document.documentElement.dataset.theme===t,theme),'theme not applied');await p.done()}},
+
+async install(){const p=await page({sid:STUDENT,tour:false});await p.waitForTimeout(1200);ok(await p.$('#tn'),'tour should open for a new student');
+  for(let n=0;n<8&&await p.$('#tn');n++){await p.click('#tn');await p.waitForTimeout(120)}
+  await p.waitForTimeout(700);ok(await p.$('[aria-label="Install the app"]'),'install popup should follow the tour');
+  ok(/COMPUTER|THIS BROWSER/.test(await p.textContent('.modal .card')),'desktop steps expected');
+  await p.click('#idone');await p.reload();await p.waitForTimeout(1600);ok(!await p.$('[aria-label="Install the app"]'),'install popup should show only once');
+  await p.click('#inst');await p.waitForTimeout(200);ok(await p.$('[aria-label="Install the app"]'),'footer link should reopen it');await p.done()},
 
 async offline(){const p=await page({sid:STUDENT});const active=await p.evaluate(async()=>!!(await navigator.serviceWorker.ready).active);ok(active,'service worker not active');await p.done()}
 };
