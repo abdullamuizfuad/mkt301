@@ -7,7 +7,7 @@ const CLOUD=(()=>{
   const CFG=(typeof CLOUD_CONFIG!=='undefined'&&CLOUD_CONFIG)||{},SWITCH=typeof CLOUD_ON!=='undefined'&&CLOUD_ON===true;
   const DOMAIN='student.mnu.edu.mv',local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname),q=location.search;
   const emu=local&&/[?&]emu=1\b/.test(q),off=!emu&&(!SWITCH||!CFG.apiKey||(local&&!/[?&]cloud=1\b/.test(q)));
-  let F,auth,db,user=null,authReady,state='off',synced=null,timer=null,busy=false,again=false,boardX,boardT=0,lagT=null,unsubs=[],getState=null,own=null;
+  let F,auth,db,user=null,authReady,state='off',synced=null,timer=null,busy=false,again=false,boardX,boardT=0,lagT=null,lagN=0,unsubs=[],getState=null,own=null;
   const subs=new Set(),set=s=>{state=s;subs.forEach(f=>{try{f(s)}catch(e){}})};
   const C={ok:false,emu,
     email:sid=>String(sid).toLowerCase()+'@'+DOMAIN,
@@ -36,7 +36,7 @@ const CLOUD=(()=>{
   C.confirmReset=(code,pin)=>F.confirmPasswordReset(auth,code,pin);
   C.checkCode=code=>F.checkActionCode(auth,code);
   C.applyCode=code=>F.applyActionCode(auth,code);
-  C.signOut=async()=>{C.unwatch();C.unwatchMine();if(C.unwatchLatestSession)C.unwatchLatestSession();synced=null;clearTimeout(timer);set('off');if(C.ok&&auth)try{await F.signOut(auth)}catch(e){}};
+  C.signOut=async()=>{C.unwatch();C.unwatchMine();if(C.unwatchLatestSession)C.unwatchLatestSession();synced=null;C.probed=false;probeP=null;clearTimeout(timer);set('off');if(C.ok&&auth)try{await F.signOut(auth)}catch(e){}};
   C.mine=sid=>!!(user&&user.email===C.email(sid));
 
   /* friendly text for Firebase error codes */
@@ -63,13 +63,18 @@ const CLOUD=(()=>{
   C.flush=async()=>{if(!synced||!getState)return;clearTimeout(timer);if(busy){again=true;return}busy=true;
     try{const s=getState();if(!s||s.sid!==synced)return;set(navigator.onLine?'saving':'offline');
       await F.setDoc(F.doc(db,'users',s.sid),{name:String(s.name||'').slice(0,80),u:JSON.stringify(s.U),xp:Math.round(s.U.xp)|0,ts:F.serverTimestamp()});
+      if(s.row&&!C.probed)await rulesP();
       if(s.row){const r=s.row,x=Math.max(0,Math.round(r.x)|0),base={l:r.l|0,b:r.b|0,s:r.s|0,t:F.serverTimestamp()};
         if(C.rules2){
           /* combined rules: official name, @username and avatar; XP may only climb ~2 XP a second since the last save, so the board catches up in steps */
           const cur=boardX,nx=cur==null?Math.min(x,5000):x>cur?Math.min(x,cur+3000,cur+Math.max(0,Math.floor((Date.now()-boardT)/550))):x;
-          try{await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,80),u:String(r.u||''),a:String(r.a||''),x:nx},base));boardX=nx;if(nx!==cur)boardT=Date.now()}
-          catch(e){if(C.isNetwork(e))throw e;console.warn('Leaderboard not updated yet',e);boardT=Date.now()}
-          clearTimeout(lagT);if(boardX==null||boardX<x)lagT=setTimeout(()=>C.flush(),20000)}
+          try{await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,80),u:String(r.u||''),a:String(r.a||''),x:nx},base));boardX=nx;lagN=0;if(nx!==cur)boardT=Date.now()}
+          catch(e){lagN++;if(C.isNetwork(e))throw e;console.warn('Leaderboard not updated yet',e);
+            /* another device (or tab) may have written the row: read it again so the next step starts from the real value */
+            try{const b=await F.getDoc(F.doc(db,'board',s.sid));boardX=b.exists()?b.data().x:null;boardT=b.exists()&&b.data().t&&b.data().t.toMillis?Math.min(Date.now(),b.data().t.toMillis()):Date.now()}catch(e2){boardT=Date.now()}
+            }
+          /* not there yet: try again when the XP allowance covers the gap (gives up after 5 refusals in a row until the next save) */
+          clearTimeout(lagT);if((boardX==null||boardX!==x)&&lagN<5)lagT=setTimeout(()=>C.flush(),Math.max(3000,Math.min(20000,(x-(boardX|0))*550)))}
         else{
         /* the rules cap a new row at 5,000 XP and each update at +3,000, so big jumps (restores) go up in steps */
         let cur=boardX;do{const nx=cur==null?Math.min(x,5000):x>cur?Math.min(x,cur+3000):x;
@@ -131,7 +136,9 @@ const CLOUD=(()=>{
   C.tx=fn=>F.runTransaction(db,t=>fn({get:async p=>{const d=await t.get(ref(p));return d.exists()?plain(d):null},
     set:(p,d,m)=>m?t.set(ref(p),d,{merge:true}):t.set(ref(p),d),update:(p,d)=>t.update(ref(p),d)}));
   /* which rules are published: the combined rules let every class member read meta/rules (the doc itself may not exist) */
-  C.rules2=false;
-  C.probe=async()=>{if(!C.live())return false;try{await F.getDoc(F.doc(db,'meta','rules'));C.rules2=true}catch(e){C.rules2=false}hook('rules',C.rules2);return C.rules2};
+  C.rules2=false;C.probed=false;let probeP=null;
+  /* the board write depends on which rules are published, so the first save after sign-in waits for the probe */
+  const rulesP=()=>probeP||(probeP=C.probe());
+  C.probe=async()=>{if(!C.live())return false;try{await F.getDoc(F.doc(db,'meta','rules'));C.rules2=true}catch(e){if(C.isNetwork(e)){probeP=null;throw e}C.rules2=false}C.probed=true;hook('rules',C.rules2);return C.rules2};
   return C})();
 CLOUD.init();

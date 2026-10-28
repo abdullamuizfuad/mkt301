@@ -15,7 +15,7 @@ async function page(o={}){const ctx=await browser.newContext({viewport:{width:o.
   if(o.theme)await ctx.addInitScript(t=>localStorage.setItem('mkt301_theme',JSON.stringify(t)),o.theme);
   await ctx.addInitScript(()=>{window.__presNoBreak=1});
   const p=await ctx.newPage();p.errs=[];p.allow=o.allow||null;
-  p.on('pageerror',e=>p.errs.push('pageerror: '+e.message));
+  p.on('pageerror',e=>{if(!(p.allow&&p.allow.test(e.message)))p.errs.push('pageerror: '+e.message)});
   p.on('console',m=>{const t=m.text();if(m.type()==='error'&&!/mailto|favicon|fonts\.g/.test(t)&&!(p.allow&&p.allow.test(t)))p.errs.push('console: '+t)});
   p.on('dialog',d=>d.accept());if(o.block)await p.route('**/vendor/firebase.js',r=>r.abort());
   await p.goto(URL0);await p.waitForTimeout(300);
@@ -44,7 +44,7 @@ async create(){const p=await page();await shot(p,'fb-gate');await toPin(p,A);awa
   ok(await p.evaluate(()=>ME.cloud&&CLOUD.user&&CLOUD.user.email==='s081441@student.mnu.edu.mv'),'not signed in to the account');
   await p.go('#/case/iceto/read');await p.click('[data-r]');await p.waitForTimeout(2600);await synced(p);
   const d=await fsDoc('users',A);ok(d&&int(d.xp)===15,'users doc not saved (xp '+(d&&int(d.xp))+')');
-  const b=await fsDoc('board',A);ok(b&&int(b.x)===15&&b.n.stringValue===(R2?'':'Test S.'),'board row not saved');
+  const b=R2?await waitDoc('board',A,b=>int(b.x)===15,20000):await fsDoc('board',A);ok(b&&int(b.x)===15&&b.n.stringValue===(R2?'':'Test S.'),'board row not saved');
   await p.reload();await p.waitForTimeout(1500);ok(await p.evaluate(()=>ME&&ME.sid==='S081441'&&U.xp===15),'not signed in after reload');await p.done()},
 
 async secondDevice(){const p=await page({w:1280,h:800});await signIn(p,A,PIN);await p.waitForTimeout(400);
@@ -71,8 +71,9 @@ async liveBoard(){const a=await page({w:1280,h:800});await signIn(a,A,PIN);await
 
 async restartSync(){const p=await page();await signIn(p,A,PIN);await tourOff(p);await p.go('#/short');
   const q=p.locator('.qcard').first();await q.locator('.chip').nth(0).click();await q.locator('[data-a="check"]').click();await p.waitForTimeout(2600);await synced(p);
-  const x1=int((await fsDoc('board',A)).x);await q.locator('[data-a="restart"]').click();await p.waitForTimeout(2600);await synced(p);
-  const x2=int((await fsDoc('board',A)).x);ok(x2===x1-15,`restart not synced to the board (${x1} → ${x2})`);
+  const xp=async()=>int((await fsDoc('users',A)).xp),bx=async want=>int((await waitDoc('board',A,b=>want==null||int(b.x)===want,want==null?1:25000)||await fsDoc('board',A)).x);
+  const x1=await bx(R2?await xp():null);await q.locator('[data-a="restart"]').click();await p.waitForTimeout(2600);await synced(p);
+  const x2=await bx(R2?x1-15:null);ok(x2===x1-15,`restart not synced to the board (${x1} → ${x2})`);
   await p.evaluate(()=>{U.xp=9000;save()});await p.waitForTimeout(2600);await synced(p,20000);ok(R2?int((await fsDoc('board',A)).x)<9000:int((await fsDoc('board',A)).x)===9000,R2?'board followed a 9,000 XP jump at once':'big XP jump did not reach the board in steps');
   await p.evaluate(()=>{U.xp-=8985;save()});await p.waitForTimeout(2600);await synced(p);await p.done()},
 
