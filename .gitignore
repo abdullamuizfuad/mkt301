@@ -14,3 +14,6 @@ firestore.rules
 tools/marking/pending.json
 tools/marking/marks.json
 tools/marking/marked-log.json
+
+# Python cache from the tools scripts
+__pycache__/
