@@ -46,34 +46,40 @@ function home(){if(!U)return;rollDay();if(ME.sid===LECTURER)return lectHome();
   shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}${inboxHTML()}${inviteHTML()}${tilesHTML()}`);
   const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)}}
 
-/* ---------- the lecturer's home ---------- */
-let LH=null;/* {at, active, mark, reports, risk}: one read of users, reviews and reports, kept for 5 minutes */
+/* ---------- the lecturer's home: lecturer essentials only (the lecturer is never a player) ---------- */
+let LH=null;/* one read of users, reviews and reports, kept for 5 minutes: counts, the at-risk list and who was active recently */
 async function lectNums(){if(LH&&Date.now()-LH.at<5*60e3)return LH;const [us,rv]=await Promise.all([CLOUD.docs('users'),CLOUD.docs('reviews')]);
-  const t0=Date.parse(mvDay()+'T00:00:00+05:00'),R={};rv.forEach(d=>R[d.id]=d.m||{});let active=0,mark=0,risk=0;
-  us.filter(x=>x.id!==LECTURER).forEach(x=>{let u={};try{u=JSON.parse(x.u)}catch(e){}if((x.ts|0)>=t0)active++;
-    mark+=Object.keys(u.ans||{}).filter(k=>!(R[x.id]||{})[k]).length;if(riskOf({u,ts:x.ts}).length)risk++});
+  const t0=Date.parse(mvDay()+'T00:00:00+05:00'),R={};rv.forEach(d=>R[d.id]=d.m||{});let active=0,mark=0;const riskL=[],recent=[];
+  us.filter(x=>x.id!==LECTURER).forEach(x=>{let u={};try{u=JSON.parse(x.u)}catch(e){}const n=u.dn||x.name||x.id;if((x.ts|0)>=t0)active++;
+    mark+=Object.keys(u.ans||{}).filter(k=>!(R[x.id]||{})[k]).length;const r=riskOf({u,ts:x.ts});if(r.length)riskL.push({id:x.id,n,why:r.join(' · ')});if(x.ts)recent.push({id:x.id,n,ts:x.ts})});
   let reports=null;try{if(await rulesOK())reports=(await CLOUD.docs('reports',{where:[['st','==','open']]})).length}catch(e){}
-  return LH={at:Date.now(),active,mark,reports,risk}}
+  recent.sort((a,b)=>b.ts-a.ts);return LH={at:Date.now(),active,mark,reports,risk:riskL.length,riskL,recent:recent.slice(0,30)}}
+let LF_FOCUS='';/* a Lecturer-tab block to open and scroll to (from the lecturer home) */
+const lgo=id=>`href="#/lecturer" data-lgo="${id}"`;
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-lgo]');if(a)LF_FOCUS=a.dataset.lgo});
 function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
-  shell('#/',`<div class="card thead lhead"><div><h1 style="margin:0">Welcome back, ${first}</h1><p class="muted" style="margin:4px 0 0">${esc(mvDay())} · your class at a glance.</p></div></div>
-  ${c?`<div class="card trow" id="lday"><h2 style="margin:0 0 8px;font-size:1.05rem">Class today</h2><div class="tchips lchips"><a class="tchip" href="#/lecturer"><span class="tico">🟢</span><span><b data-ln="active">…</b><small>active today</small></span></a>
-   <a class="tchip" href="#/lecturer"><span class="tico">✍️</span><span><b data-ln="mark">…</b><small>to mark</small></span></a>
-   <a class="tchip" href="#/lecturer"><span class="tico">🚩</span><span><b data-ln="reports">…</b><small>open reports</small></span></a>
-   <a class="tchip" href="#/lecturer"><span class="tico">⚠️</span><span><b data-ln="risk">…</b><small>at risk</small></span></a></div><p class="err" id="lderr"></p></div>`
+  shell('#/',`<div data-lect id="lhome"><div class="card thead"><a class="tav" href="#/avatar" aria-label="My profile">${avatarSVG(lectAv(),56,'')}</a><div class="tmain"><div class="tnm"><h1 style="margin:0;font-size:1.3rem">Welcome back, ${first}</h1><a class="tag tedit" href="#/avatar">✏️ Edit profile</a></div><p class="muted" style="margin:4px 0 0">${esc(mvDay())} · your class at a glance.</p></div></div>
+  ${c?`<div class="card trow" id="lday"><h2 style="margin:0 0 8px;font-size:1.05rem">Class today</h2><div class="tchips lchips"><a class="tchip" ${lgo('cdash')}><span class="tico">🟢</span><span><b data-ln="active">…</b><small>active today</small></span></a>
+   <a class="tchip" ${lgo('mq')}><span class="tico">✍️</span><span><b data-ln="mark">…</b><small>to mark</small></span></a>
+   <a class="tchip" ${lgo('rptc')}><span class="tico">🚩</span><span><b data-ln="reports">…</b><small>open reports</small></span></a>
+   <a class="tchip" ${lgo('riskc')}><span class="tico">⚠️</span><span><b data-ln="risk">…</b><small>at risk</small></span></a></div><p class="err" id="lderr"></p></div>`
    :'<div class="callout">Sign in with your PIN while online to see the class.</div>'}
-  <div class="lbtns"><button type="button" class="btn" id="lhva"${c?'':' disabled'}>👁 View as student</button><a class="btn ghost" href="#/lecturer">🧑‍🏫 Lecturer tools</a><a class="btn ghost" href="#/board">🏆 Leaderboard</a><a class="btn ghost" href="#/paper" id="lhpaper">📝 Practice paper</a><button type="button" class="btn ghost" id="lhann"${c?'':' disabled'}>📣 Post announcement</button></div>
+  <div class="lbtns"><button type="button" class="btn" id="lhva"${c?'':' disabled'}>👁 View as student</button><a class="btn ghost" ${lgo('mq')}>✍️ Marking</a><a class="btn ghost" ${lgo('annc')}>📣 Post announcement</a><a class="btn ghost" ${lgo('lsess')}>🎓 Start live session</a><a class="btn ghost" href="#/board">🏆 Leaderboard</a><a class="btn ghost" href="#/lecturer">🧑‍🏫 Lecturer tools</a></div>
   <div id="lhvap"></div>
-  <h2 style="margin-top:22px">Practice</h2><p class="muted" style="margin-top:-4px;font-size:.9rem">Try any question yourself. Your answers are never on the leaderboard.</p>${tilesHTML()}`);
-  $('#lhva').onclick=()=>{const p=$('#lhvap');if(p.innerHTML)return;p.innerHTML=vaCardHTML();vaCardInit()};
-  $('#lhann').onclick=()=>{location.hash='#/lecturer';let n=0;const go=()=>{const e=$('#annc');if(e&&!e.hidden){e.scrollIntoView({block:'start'});const t=e.querySelector('input,textarea');if(t)t.focus({preventScroll:true})}else if(n++<20)setTimeout(go,250)};setTimeout(go,250)};
-  if(c)lectNums().then(N=>{const el=$('#lday');if(!el)return;['active','mark','reports','risk'].forEach(k=>{const b=el.querySelector(`[data-ln="${k}"]`);if(b)b.textContent=N[k]==null?'–':N[k]})})
+  ${c?`<div class="grid g2" style="margin-top:12px"><div class="card"><h2 style="margin:0 0 6px;font-size:1.05rem">⚠️ At risk</h2><div id="lhrisk"><p class="muted">Loading…</p></div></div><div class="card"><h2 style="margin:0 0 6px;font-size:1.05rem">🟢 Recently active</h2><div id="lhrecent"><p class="muted">Loading…</p></div></div></div>`:''}
+  <h2 style="margin-top:22px">Previews</h2><p class="muted" style="margin-top:-4px;font-size:.9rem">Try the practice paper and any question yourself. Nothing you do here earns XP or reaches the class.</p></div>${tilesHTML()}`);
+  $('#lhva').onclick=()=>{const p=$('#lhvap');if(p.innerHTML)return;p.innerHTML=vaCardHTML();vaCardInit();setTimeout(()=>{const i=$('#vaq');if(i)i.focus()},50)};
+  if(!c)return;lectNums().then(N=>{const el=$('#lday');if(!el)return;['active','mark','reports','risk'].forEach(k=>{const b=el.querySelector(`[data-ln="${k}"]`);if(b)b.textContent=N[k]==null?'–':N[k]});
+    const list=(rows,sub)=>rows.length?`<ol class="sumlist">${rows.map(r=>`<li><a href="#/student/${esc(r.id)}" data-sid="${esc(r.id)}">${esc(r.n)}</a> <span class="muted" style="font-size:.82rem">${esc(sub(r))}</span></li>`).join('')}</ol>`:'<p class="muted" style="margin:0">None.</p>';
+    $('#lhrisk').innerHTML=list(N.riskL,r=>r.why);$('#lhrecent').innerHTML=list(N.recent,r=>ago(r.ts));
+    ['#lhrisk','#lhrecent'].forEach(q=>{const b=$(q);lfTrim(b,q);b.querySelectorAll('[data-sid]').forEach(a=>a.onclick=e=>{e.preventDefault();openStudent(a.dataset.sid)})})})
     .catch(e=>{const er=$('#lderr');if(er)er.textContent=CLOUD.say(e)})}
 
 /* ---------- Practice, backup ---------- */
 ROUTES.practice=()=>{
-  shell('#/practice',`<h1>Practice</h1>${tilesHTML()}
-  <h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><b class="lex">Flashcards</b><small class="muted">Key terms</small></a></div>
-  ${typeof socialCardHTML==='function'?socialCardHTML():''}`)};
+  const L=ME.sid===LECTURER;shell('#/practice',`<h1>Practice</h1>${L?'<p class="muted" data-lect>Try any question yourself. Nothing you do here earns XP or reaches the class.</p>':''}${tilesHTML()}
+  ${L?'':`<h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><b class="lex">Flashcards</b><small class="muted">Key terms</small></a></div>
+  ${typeof socialCardHTML==='function'?socialCardHTML():''}`}`)};
 ROUTES.backup=()=>{shell('#/backup',`<p><a href="#/">← Home</a></p><div class="card" id="bk"><div class="row" style="justify-content:space-between"><h1 style="margin:0;font-size:1.4rem">💾 Save my progress</h1><span class="tag" id="bkl"></span></div>
   <p class="muted" style="font-size:.9rem;margin:8px 0 12px">${cloudOn()?'Your progress saves to your account. A backup copy is an extra safety net.':'Your progress lives on this device only. Save a backup to move it to another phone or laptop, or to keep it safe before clearing your browser.'}</p>
   <div class="row"><button class="btn" id="bkd">⬇ Download backup</button><button class="btn ghost" id="bkc">📧 Email or copy…</button><button class="btn ghost" id="bkr">Restore</button></div>
@@ -122,7 +128,7 @@ ROUTES.progress=h=>{if(ME.sid===LECTURER){shell('#/progress',`<h1>My progress</h
 
 /* ---------- More menu, and the phone tab bar (remove with CRS.tabbar=false) ---------- */
 function moreMenu(){const st=ME&&ME.sid!==LECTURER,N=NAV.map(n=>n[0]);
-  const items=[st&&['#/avatar','🧑‍🎨','My profile'],st&&['#/progress','📈','My progress'],['#/badges','🏅','Badges'],N.includes('#/notes')&&['#/notes','📖','Study notes'],['#/cards','🃏','Flashcards'],['#/review','🧠','Review'],
+  const items=[['#/avatar','🧑‍🎨','My profile'],st&&['#/progress','📈','My progress'],st&&['#/badges','🏅','Badges'],N.includes('#/notes')&&['#/notes','📖','Study notes'],st&&['#/cards','🃏','Flashcards'],st&&['#/review','🧠','Review'],
     typeof ppLine==='function'&&['#/paper','📝','Practice paper'],st&&['#/backup','💾','Save my progress'],['help','❔','How it works'],['#/whatsnew','✨',"What's new"],['inst','📲','Install the app'],['#/privacy','🔒','Privacy'],['so','🚪','Sign out']].filter(Boolean);
   const m=modal('More',`<h2 style="margin:0 0 10px">More</h2><div class="morelist">${items.map(x=>x[0][0]==='#'?`<a href="${x[0]}" data-mi="1"><span>${x[1]}</span>${x[2]}</a>`:`<button type="button" data-mi="${x[0]}"><span>${x[1]}</span>${x[2]}</button>`).join('')}</div>`);
   m.querySelectorAll('[data-mi]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.mi;closeModal();if(k==='help')tour(0);else if(k==='inst')installPop(0);else if(k==='so')signOut()}))}
@@ -130,17 +136,19 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 function tabbarHTML(active){const on=CRS.tabbar!==false&&!!ME;document.body.classList.toggle('tb',on);if(!on)return '';const L=ME.sid===LECTURER,a=active||'#/';
   const prac=!['#/','#/progress','#/board','#/badges','#/lecturer','#/privacy','#/backup'].includes(a);
   const it=[['#/','🏠','Home',a==='#/'],['#/practice','🎯','Practice',prac],L?['#/lecturer','🧑‍🏫','Lecturer',a==='#/lecturer']:['#/progress','📈','Progress',a==='#/progress'],['#/board','🏆','Leaderboard',a==='#/board']];
-  return `<nav class="tabbar" aria-label="Main">${it.map(x=>`<a href="${x[0]}"${x[3]?' class="on" aria-current="page"':''}><span>${x[1]}</span>${x[2]}</a>`).join('')}<button type="button" data-more="1" aria-haspopup="dialog"><span>☰</span>More</button></nav>`}
+  return `<nav class="tabbar" aria-label="Main">${it.map(x=>`<a href="${x[0]}"${x[3]?' class="on" aria-current="page"':''}${x[0]==='#/lecturer'?' data-lect':''}><span>${x[1]}</span>${x[2]}</a>`).join('')}<button type="button" data-more="1" aria-haspopup="dialog"><span>☰</span>More</button></nav>`}
 
 /* ---------- lecturer: View as student (read-only) ---------- */
-const vaInner=()=>`<h2 style="margin:0 0 6px">👁 View as student</h2><p class="muted" style="font-size:.88rem;margin:0 0 8px">See the portal exactly as a student sees it: their home, progress and practice pages. Read-only: nothing is saved, and questions can't be answered.</p>
-  <div class="row"><select id="vasel" aria-label="Student"><option value="">Loading the class…</option></select><button type="button" class="btn" id="vago" disabled>👁 View</button></div><div class="err" id="vaer"></div>`;
-const vaCardHTML=()=>cloudOn()&&ME&&ME.sid===LECTURER?`<div class="card" id="vac" style="margin-top:16px">${vaInner()}</div>`:'';
-async function vaCardInit(){if(!$('#vasel'))return;let list;try{list=await CLOUD.docs('users')}catch(e){const er=$('#vaer');if(er)er.textContent=CLOUD.say(e);return}
-  const s=$('#vasel');if(!s)return;list=list.filter(x=>x.id!==LECTURER).map(x=>{let u={};try{u=JSON.parse(x.u)}catch(e){}return {id:x.id,n:u.dn||x.name||x.id}}).sort((a,b)=>a.n.toLowerCase()<b.n.toLowerCase()?-1:1);
-  s.innerHTML=`<option value="">${list.length?'Choose a student…':'No students have signed in yet'}</option>`+list.map(x=>`<option value="${esc(x.id)}">${esc(x.n)} · ${esc(x.id)}</option>`).join('');
-  const b=$('#vago');b.disabled=false;b.onclick=()=>{if(s.value)vaOpen(s.value)}}
-LCARDS.unshift({id:'vaclc',init:el=>{el.hidden=false;el.innerHTML=vaInner();vaCardInit()}});
+const vaInner=()=>`<h2 style="margin:0 0 6px">👁 View as student</h2><p class="muted" style="font-size:.88rem;margin:0 0 8px">See the portal exactly as a student sees it: their home, progress, practice pages, paper, challenges and badges. Read-only: nothing is saved, and questions can't be answered.</p>
+  <input type="search" id="vaq" placeholder="🔎 Name, ID or @username" aria-label="Find a student" autocomplete="off"><div id="vares" class="vares"><p class="muted">Loading the class…</p></div><div class="err" id="vaer"></div>`;
+const vaCardHTML=()=>cloudOn()&&ME&&ME.sid===LECTURER?`<div class="card" id="vac" style="margin-top:12px" data-lect>${vaInner()}</div>`:'';
+let VA_LIST=null;
+async function vaCardInit(){if(!$('#vaq'))return;if(!VA_LIST){let list;try{list=await CLOUD.docs('users')}catch(e){const er=$('#vaer');if(er)er.textContent=CLOUD.say(e);return}
+    VA_LIST=list.filter(x=>x.id!==LECTURER).map(x=>{let u={};try{u=JSON.parse(x.u)}catch(e){}return {id:x.id,n:u.dn||x.name||x.id,un:u.un||''}}).sort((a,b)=>a.n.toLowerCase()<b.n.toLowerCase()?-1:1)}
+  const q=$('#vaq'),draw=()=>{const r=$('#vares');if(!r)return;const t=q.value.trim().toLowerCase(),L=VA_LIST.filter(x=>!t||x.n.toLowerCase().includes(t)||x.id.toLowerCase().includes(t)||x.un.toLowerCase().includes(t.replace(/^@?/,'@')));
+    r.innerHTML=L.length?L.slice(0,8).map(x=>`<button type="button" class="vapick" data-va="${esc(x.id)}"><b>${esc(x.n)}</b> <span class="muted">${esc(x.id)}${x.un?' · '+esc(x.un):''}</span></button>`).join('')+(L.length>8?`<p class="muted" style="font-size:.82rem;margin:4px 0 0">${L.length-8} more: keep typing.</p>`:''):'<p class="muted">No student matches.</p>'};
+  q.oninput=draw;draw()}
+LCARDS.unshift({id:'vaclc',init:el=>{el.hidden=false;el.dataset.lect='';el.innerHTML=vaInner();vaCardInit()}});
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-va]');if(b&&!VIEWAS)vaOpen(b.dataset.va)});
 async function vaOpen(sid){if(!ME||ME.sid!==LECTURER||VIEWAS||!cloudOn())return;let x;
   try{x=await CLOUD.get('users/'+sid)}catch(e){toast('⚠️','Could not open '+sid,CLOUD.say(e));return}

@@ -38,11 +38,12 @@ const MINPCT=.4,minMins=t=>Math.ceil(t*MINPCT/60);
 function checkBadges(){BADGES.forEach(b=>{if(!U.badges[b.id]&&b.t(U)){U.badges[b.id]=today();toast(b.ico,'Badge unlocked: '+b.name,b.d)}})}
 function toast(em,t,s){const el=document.createElement('div');el.className='toast';el.innerHTML=`<span class="em">${em}</span><div><b class="lex">${esc(t)}</b><div class="muted" style="font-size:.85rem">${esc(s)}</div></div>`;const box=$('#toasts');box.append(el);while(box.children.length>3)box.firstChild.remove();setTimeout(()=>el.remove(),2800)}
 function hud(){if(!ME){$('#hud').innerHTML='';return}const L=level(U.xp);
+  if(ME.sid===LECTURER){$('#hud').innerHTML=`<a class="avpill" href="#/avatar" title="My profile" aria-label="My profile" data-lect>${typeof avatarSVG==='function'?avatarSVG(lectAv(),30,''):''}</a><span class="pill lvl" data-lect>Lecturer</span>`;return}
   $('#hud').innerHTML=`${typeof avatarSVG==='function'&&ME.sid!==LECTURER?`<a class="avpill" href="#/avatar" title="My avatar" aria-label="My avatar">${avatarSVG(myAv(),30,'')}</a>`:''}${typeof bellHTML==='function'?bellHTML():''}<button class="pill save" id="svb" title="Save my progress" aria-label="Save my progress">💾<span class="lbl">&nbsp;Save</span></button><span class="pill fire" title="Day streak">🔥 ${streak(U)}</span><span class="pill gold" title="XP">✨ ${U.xp}</span><span class="pill lvl">${esc(L.name)}</span><span class="xpmini" title="${L.pct}% to next level"><i style="width:${L.pct}%"></i></span>`}
 async function signOut(){if(VIEWAS)vaExit();if(ME&&U)presOff();hook('signout');if(ME&&ME.cloud){await CLOUD.flush();await CLOUD.signOut()}LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
 function shell(active,body){
-  const N=NAV.slice();if(ME.sid!==LECTURER)N.splice(1,0,['#/progress','My progress']);
-  const nav=N.concat(ME.sid===LECTURER?[['#/lecturer','Lecturer']]:[]).map(n=>`<a href="${n[0]}" class="${n[0]===active?'on':''}">${n[1]}</a>`).join('')+'<button type="button" class="tabmore" data-more="1" aria-haspopup="dialog">More ▾</button>';
+  const L=ME.sid===LECTURER,N=NAV.filter(n=>!L||n[0]!=='#/badges');if(!L)N.splice(1,0,['#/progress','My progress']);
+  const nav=N.concat(L?[['#/lecturer','Lecturer']]:[]).map(n=>`<a href="${n[0]}" class="${n[0]===active?'on':''}"${n[0]==='#/lecturer'?' data-lect':''}>${n[1]}</a>`).join('')+'<button type="button" class="tabmore" data-more="1" aria-haspopup="dialog">More ▾</button>';
   app.innerHTML=`<div class="wrap"><nav class="tabs" aria-label="Sections">${nav}</nav><main id="main" tabindex="-1">${body}</main>
   <footer><div class="row"><span>Signed in as <b>${esc(ME.name)}</b> · ${esc(ME.sid)}</span><button class="btn ghost sm" id="so">Sign out</button></div>
   <p style="margin-top:10px">Practice material only. Write your full answers on paper. · <a href="javascript:void 0" id="help">? How it works</a> · <a href="#/whatsnew">✨ What's new</a> · <a href="javascript:void 0" id="inst">📲 Install the app</a> · <a href="#/privacy">Privacy</a></p></footer></div>${typeof tabbarHTML==='function'?tabbarHTML(active):''}`;
@@ -103,7 +104,7 @@ function backupCard(){
   $('#bkgo').onclick=async()=>{$('#bke').textContent=await restore($('#bkt').value)}}
 function inboxHTML(){return annHTML()+frzHTML()+notesHTML()}
 function notesHTML(){const N=U.notes||{},R=U.notesRead||{},ks=Object.keys(N).filter(k=>!R[k]).sort((a,b)=>String(N[a].at)<String(N[b].at)?1:-1);if(!ks.length)return '';
-  return `<div class="card inbox" style="margin-bottom:16px"><h2 style="margin:0 0 6px">✉️ Message${ks.length>1?'s':''} from your lecturer</h2>${ks.slice(0,5).map(k=>`<div class="note"><p style="margin:0">${esc(N[k].fb).replace(/\n/g,'<br>')}</p><div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" style="font-size:.8rem">${esc(String(N[k].at).slice(0,10))}</span><button class="btn ghost sm" data-noteread="${esc(k)}">Got it</button></div></div>`).join('')}</div>`}
+  return `<div class="card inbox" style="margin-bottom:16px"><h2 style="margin:0 0 6px" class="lhd">${typeof lectAvHTML==='function'?lectAvHTML(30):''} Message${ks.length>1?'s':''} from your lecturer</h2>${ks.slice(0,5).map(k=>`<div class="note"><p style="margin:0">${esc(N[k].fb).replace(/\n/g,'<br>')}</p><div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" style="font-size:.8rem">${esc(String(N[k].at).slice(0,10))}</span><button class="btn ghost sm" data-noteread="${esc(k)}">Got it</button></div></div>`).join('')}</div>`}
 function argCard(c,a,i,col){const k=c.id+':'+i,mine=U.verd[k],L={strong:'Strong',mixed:'Partly right',weak:'Weak'};
   return `<div class="card arg" style="margin-bottom:12px"><div class="avatar" style="background:${col}">${esc(a.who[0])}</div><div>
   <b class="lex">${esc(a.who)}</b> <span class="muted" style="font-size:.85rem">· ${esc(a.role)}</span><q>${esc(a.say)}</q>
@@ -202,7 +203,7 @@ function typingBox(q,st,ta,el){let prev=ta.value,last=0,tmo,comp=0,cst=0;st.fl=s
     rec.onend=()=>{if(MIC&&MIC.rec===rec){MIC=null;st.act=(st.act||0)+(Date.now()-t0);mb.classList.remove('on');mb.textContent='🎤 Speak';if(im)im.textContent='';save()}};
     try{rec.start();mb.classList.add('on');mb.textContent='⏹ Stop';mb.setAttribute('aria-pressed','true')}catch(e){MIC=null}}}
 function reviewHTML_(key){const r=key&&U.rev&&U.rev[key];if(!r)return '';
-  return `<div class="mark"><div class="row" style="justify-content:space-between"><span><b class="big">✓ Marked ${r.band}/6</b></span><span class="tag">+${r.xp} XP</span></div>${r.fb?`<p style="margin:8px 0 0">${esc(r.fb)}</p>`:''}<p class="muted" style="font-size:.8rem;margin:6px 0 0">${r.by==='claude'?'Marked with AI assistance for your lecturer':'Marked by your lecturer'} · ${esc(String(r.at||'').slice(0,10))}</p></div>`}
+  return `<div class="mark"><div class="row" style="justify-content:space-between"><span><b class="big">✓ Marked ${r.band}/6</b></span><span class="tag">+${r.xp} XP</span></div>${r.fb?`<p style="margin:8px 0 0">${esc(r.fb)}</p>`:''}<p class="muted lhd" style="font-size:.8rem;margin:6px 0 0">${typeof lectAvHTML==='function'?lectAvHTML(22):''} ${r.by==='claude'?'Marked with AI assistance for your lecturer':'Marked by your lecturer'} · ${esc(String(r.at||'').slice(0,10))}</p></div>`}
 function timer(id,total,el,done,tick){
   const key='tm_'+id,T=LS.get(key,{left:total,end:null}),disp=el.querySelector('#t-'+id),go=el.querySelector('[data-a="tgo"]');
   const left=()=>T.end?Math.round((T.end-Date.now())/1000):T.left;
@@ -221,10 +222,10 @@ async function scoreCode(){const p={v:1,s:ME.sid,n:String(U.dn||defaultNick(ME.n
 async function rowKey(sid){return (await sha(ROSTER.salt+'|'+sid)).slice(0,12)}
 function liveBoard(){
   shell('#/board',`<div class="row" style="justify-content:space-between"><h1 style="margin:0">Leaderboard</h1><span class="live"><i></i>LIVE</span></div>
-  <p class="muted">Scores update as classmates earn XP. Everyone appears under their name from the class list.${ME.sid===LECTURER?' <b>Lecturer: tap a student to open their profile.</b>':''}</p>
+  <p class="muted">Scores update as classmates earn XP. Everyone appears under their name from the class list.${ME.sid===LECTURER?' <b data-lect>Lecturer: tap a student to open their profile.</b>':''}</p>
   <div class="grid g2"><div class="card lb" id="lbl"><p class="muted">Loading the class…</p></div>
-  <div class="card"><h2>You on the board</h2><p style="margin:0 0 6px">Your score: <b>${U.xp} XP</b> · ${esc(level(U.xp).name)} · ${Object.keys(U.badges).length} badges</p>
-   ${ME.sid===LECTURER?'<p class="muted" style="font-size:.9rem">The lecturer account is not shown on the board.</p>':`
+  <div class="card">${ME.sid===LECTURER?'<h2>About the board</h2>':`<h2>You on the board</h2><p style="margin:0 0 6px">Your score: <b>${U.xp} XP</b> · ${esc(level(U.xp).name)} · ${Object.keys(U.badges).length} badges</p>`}
+   ${ME.sid===LECTURER?'<p class="muted" style="font-size:.9rem" data-lect>The lecturer account is not shown on the board.</p>':`
    <p style="margin:6px 0">You appear as <b>${CLOUD.rules2?nameLine(U.dn,U.un,ME.sid):esc(defaultNick(ME.name))}</b></p>
    ${CLOUD.rules2&&U.dn?`<button class="btn ghost sm" id="nkun">🪪 ${U.un?'Change my @username':'Pick my @username'}</button>`:''}
    <p class="muted" style="font-size:.85rem;margin-top:12px">No need to send anything: your score updates automatically. ${syncChip()}</p>`}</div></div>`);
@@ -355,7 +356,7 @@ function theme(t){if(t)LS.set('theme',t);const cur=LS.get('theme','dark');docume
 function tier(xp){const i=level(xp).i;return i<=CRS.tierCut[0]?0:i<=CRS.tierCut[1]?1:2}
 function blank(){return Object.assign({xp:0,log:{},days:[],badges:{},n:Object.assign({verdicts:0,verdictsRight:0,weakSpotted:0,plans:0,perfect:0,timed:0,missions:0},CRS.blankN),day:{d:'',c:{},m:[],t:0,done:0},nick:'',hide:false,sets:{},focus:{},verd:{},plansSaved:{}},JSON.parse(JSON.stringify(CRS.blankX)))}
 function award(key,xp,label,quiet){
-  if(VIEWAS||key&&U.log[key])return false;
+  if(VIEWAS||ME.sid===LECTURER||key&&U.log[key])return false;/* the lecturer is never a player: no XP */
   if(key){U.log[key]=1;U.gain=U.gain||{};U.gain[key]=xp}
   rollDay();
   if(!U.days.includes(today())){U.days.push(today());U.days=U.days.slice(-60);U.xp+=10;toast('📅','Daily check-in','+10 XP · streak '+streak(U))}

@@ -115,7 +115,7 @@ function presBar(){let b=document.getElementById('livebar');const show=typeof ME
   if(!show){if(b)b.remove();return}
   if(!b){b=document.createElement('div');b.id='livebar';b.setAttribute('role','status');const app=document.getElementById('app');app.parentNode.insertBefore(b,app)}
   const S=PR.sess,lect=ME.sid===LECTURER,dot={on:'🟢 On screen',idle:'🟡 Idle',away:'🔴 Away'}[PR.st]||'🟢 On screen';
-  b.innerHTML=`<div class="wrap lbin"><span class="live"><i></i>LIVE</span><b>${esc(S.name)}</b>${lect?`<a class="btn sm" href="#/live">Open live board</a>`:PR.joined?`<span class="muted">You're joined · ${dot}</span><button class="btn ghost sm" id="lbinfo" aria-label="What is shared">ⓘ</button>`:`<button class="btn sm" id="lbjoin">Join</button>`}</div>`;
+  b.innerHTML=`<div class="wrap lbin"><span class="live"><i></i>LIVE</span>${!lect&&typeof lectAvHTML==='function'?lectAvHTML(26):''}<b>${esc(S.name)}</b>${lect?`<a class="btn sm" href="#/live">Open live board</a>`:PR.joined?`<span class="muted">You're joined · ${dot}</span><button class="btn ghost sm" id="lbinfo" aria-label="What is shared">ⓘ</button>`:`<button class="btn sm" id="lbjoin">Join</button>`}</div>`;
   const j=$('#lbjoin');if(j)j.onclick=presJoinAsk;const i=$('#lbinfo');if(i)i.onclick=()=>presNote(false)}
 function presNote(join){closeModal();const m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','Live session');
   m.innerHTML=`<div class="card"><button class="x" aria-label="Close">✕</button><div style="font-size:2.4rem;text-align:center">🔴</div><h2 style="text-align:center;margin:4px 0 8px">${esc(PR.sess?PR.sess.name:'Live session')}</h2>

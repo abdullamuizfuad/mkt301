@@ -280,6 +280,84 @@ async breaks(){const p=await page({sid:STUDENT,clock:true,breaks:true});const br
   await p.evaluate(()=>{PR.sess=null;PR.sessOn=false;PR.fc=0;presBar()});
   await p.done()},
 
+/* simple home: a short Today screen; everything else is on My progress */
+async simplehome(){const p=await page({sid:STUDENT,clock:true});await p.clock.setSystemTime(new Date('2026-11-01T10:00:00+05:00'));await p.go('#/');
+  for(const s of ['#thead','.tstreak','#tcd','#nextact','#trow','#ttiles','#tedit','#tpaper'])ok(await p.$(s),'home part missing: '+s);
+  for(const s of ['#stcard','#cdcard','#rdcard','.mission:not(#tml .mission)','#bk','.badges','[data-lect]','#lday'])ok(!await p.$('main '+s),'home should not have '+s);
+  ok(await p.getAttribute('#tedit','href')==='#/avatar','Edit profile link');
+  ok(await p.isHidden('#tml'),'missions should start folded');await p.click('#tmb');ok(await p.isVisible('#tml')&&await p.$$eval('#tml .mission',e=>e.length)===3,'missions do not open');
+  const pt=await p.textContent('#tpaper');ok(pt.includes('Opens Sun 22 Nov')&&!!await p.$('#tpaper.locked'),'paper tile not locked before 22 Nov: '+pt);
+  await p.click('#tmb');const h=await p.evaluate(()=>document.documentElement.scrollHeight);ok(h<=844*1.6,'home too tall on a phone: '+h);console.log('    home height, new student, 390 x 844:',h);
+  await p.click('#tedit');await p.waitForTimeout(100);ok((await p.textContent('main h1'))==='My profile'&&!!await p.$('#pfname')&&!!await p.$('#avsave'),'My profile page');await p.done()},
+
+async progress(){const p=await page({sid:STUDENT});await p.go('#/progress');
+  const ids=await p.$$eval('details.sec',d=>d.map(x=>x.dataset.sec+(x.open?'*':'')));
+  for(const id of ['cd','ready','weak','act','screen','badges','cases'])ok(ids.includes(id),'progress section missing: '+id+' in '+ids);
+  ok(!ids.some(x=>x.endsWith('*')),'sections should start folded: '+ids);ok(await p.$('#psum'),'summary row missing');
+  ok(!ids.some(x=>/^(integ|ans|msgs)$/.test(x))&&!await p.$('main [data-lect]'),'lecturer-only parts on My progress');
+  await p.click('#sec-badges summary');ok(await p.$('#sec-badges[open] .bsm'),'badges section does not open');
+  await p.go('#/progress/screen');ok(await p.$('#sec-screen[open] #stcard'),'a deep link does not open its section');await p.done()},
+
+async tabbar(){const p=await page({sid:STUDENT});await p.go('#/');ok(await p.isVisible('.tabbar')&&await p.isHidden('nav.tabs'),'phone: tab bar instead of the top tabs');
+  const items=await p.$$eval('.tabbar a,.tabbar button',e=>e.map(x=>x.textContent.trim()).join('|'));ok(items==='🏠Home|🎯Practice|📈Progress|🏆Leaderboard|☰More','tab bar items: '+items);
+  ok((await p.textContent('footer')).includes('Sign out'),'the footer Sign out must stay');
+  await p.click('.tabbar [data-more]');for(const h of ['#/avatar','#/progress','#/badges','#/backup','#/privacy','#/whatsnew','#/paper'])ok(await p.$(`.morelist a[href="${h}"]`),'More is missing '+h);
+  ok((await p.textContent('.morelist')).includes('My profile')&&(await p.textContent('.morelist')).includes('Sign out'),'More labels');
+  await p.click('.morelist a[href="#/avatar"]');await p.waitForTimeout(100);ok((await p.evaluate(()=>location.hash))==='#/avatar'&&!await p.$('.modal'),'My profile from More');
+  await p.click('.tabbar a[href="#/practice"]');await p.waitForTimeout(100);ok(await p.$('main #ttiles')&&await p.$('.tabbar a.on[href="#/practice"]'),'Practice page');
+  const pad=await p.evaluate(()=>parseFloat(getComputedStyle(document.body).paddingBottom));ok(pad>=60,'no room for the tab bar: '+pad);
+  await p.evaluate(()=>{CRS.tabbar=false;route()});ok(!await p.$('.tabbar')&&await p.isVisible('nav.tabs'),'CRS.tabbar=false should remove it');await p.done();
+  const d=await page({sid:STUDENT,w:1280,h:900});await d.go('#/');ok(await d.isHidden('.tabbar')&&await d.isVisible('nav.tabs'),'desktop: top tabs only');
+  ok(await d.$('nav.tabs a[href="#/progress"]')&&await d.$('nav.tabs [data-more]'),'desktop: My progress tab and More');await d.done()},
+
+/* the lecturer is never a player: lecturer essentials only, no XP, no board row, no challenges */
+async lecthome(){const p=await page({sid:LECT});await p.go('#/');
+  ok(await p.$('#lhome')&&await p.$('.lbtns')&&await p.$('#lhva')&&await p.$('#tpaper'),'lecturer home parts missing');
+  for(const s of ['.tstreak','#tcd','#nextact','#trow','#tmb','#stcard','.mission','#tinv','#psum'])ok(!await p.$('main '+s),'lecturer home has a student card: '+s);
+  const btn=await p.$$eval('.lbtns .btn',e=>e.map(x=>x.textContent.trim()).join('|'));for(const b of ['View as student','Marking','Post announcement','Start live session','Leaderboard','Lecturer tools'])ok(btn.includes(b),'lecturer button missing: '+b);
+  ok((await p.textContent('#tpaper')).includes('Preview'),'paper preview tile');
+  ok(!await p.$('#hud .pill.gold')&&!await p.$('#hud .fire')&&(await p.textContent('#hud')).includes('Lecturer')&&await p.$('#hud .avpill svg'),'lecturer top bar');
+  await p.click('#tpaper');await p.waitForTimeout(150);ok((await p.evaluate(()=>location.hash))==='#/paper'&&/practice paper/i.test(await p.textContent('main')),'paper preview link');
+  const x=await p.evaluate(()=>{const a=award('t:lect',50,'x');return [a,U.xp,rowOf(ME.sid)]});ok(x[0]===false&&x[1]===0&&x[2]===null,'the lecturer earned XP or has a board row: '+JSON.stringify(x));
+  for(const r of ['#/challenges','#/weekend','#/notifs']){await p.go(r);ok(await p.$('main [data-lect]')&&!await p.$('#chq')&&!await p.$('#wkgo'),'the lecturer reached '+r)}
+  await p.go('#/avatar');ok((await p.textContent('main h1'))==='My profile','lecturer profile page');await p.click('[data-k="g"][data-v="m"]');await p.click('#avsave');
+  ok(await p.evaluate(()=>/^m/.test(U.av)&&U.xp===0&&lectAv()===U.av),'lecturer avatar not saved');ok(await p.$('#hud .avpill svg'),'lecturer avatar in the top bar');await p.done()},
+
+/* nothing lecturer-only on any student page; the lecturer is never in a classmate picker */
+async lectonly(){const p=await page({sid:STUDENT});const routes=await p.evaluate(()=>Object.keys(ROUTES).concat(['','cases','badges','board','lecturer','student/S081441','live','session/x','progress/badges']));
+  for(const r of routes){await p.evaluate(h=>{location.hash=h},'#/'+r);await p.waitForTimeout(250);const n=await p.evaluate(()=>document.querySelectorAll('[data-lect]').length);ok(!n,'lecturer-only element on #/'+r)}
+  await p.evaluate(()=>{SDIR={S000001:{n:'The Lecturer'},S085542:{n:'Other Student'}};chNew()});ok(!await p.$('[data-s="S000001"]')&&await p.$('[data-s="S085542"]'),'the lecturer is in the challenge picker');await p.done()},
+
+/* View as student: the student's pages, read-only, and the lecturer's own state untouched */
+async viewas(){const p=await page({sid:LECT});await p.go('#/');const snap=()=>p.evaluate(()=>JSON.stringify(Object.keys(localStorage).sort().map(k=>[k,localStorage.getItem(k)])));const before=await snap();
+  await p.evaluate(()=>vaEnter({id:'S081441',name:'Aminath Test',u:{xp:420,days:[today()],log:{'read:x:1':1},badges:{boarding:today()},n:{plans:3},dn:'Aminath Test',un:'@Aminath441',tour:1,inst:1}}));await p.waitForTimeout(150);
+  ok((await p.textContent('#vabar')).includes('Viewing as Aminath Test (S081441)')&&(await p.textContent('#vabar')).includes('read-only'),'view-as banner');
+  for(const s of ['#thead','#tcd','#nextact','#trow','#ttiles'])ok(await p.$(s),'view-as home part missing: '+s);ok(!await p.$('main [data-lect]')&&!await p.$('#lhome'),'lecturer parts while viewing');
+  ok((await p.textContent('#thead')).includes('Aminath Test'),'not the student\'s home');
+  const st=()=>p.evaluate(()=>JSON.stringify([U.xp,U.log,U.n,U.badges,U.plansSaved||null]));const u0=await st();
+  await p.evaluate(()=>{location.hash='#/short'});await p.waitForTimeout(250);await p.locator('.qcard .chip').first().click();await p.waitForSelector('.toast:has-text("Read-only")');
+  ok(await p.evaluate(()=>award('t:va',50,'x')===false),'award while viewing');await p.evaluate(()=>{save();countOnce('t:va','plans');LS.set('x',1)});
+  for(const h of ['#/progress','#/badges','#/avatar','#/practice','#/paper','#/challenges']){await p.evaluate(h=>{location.hash=h},h);await p.waitForTimeout(200);ok(!await p.$('main [data-lect]'),'lecturer-only part while viewing '+h)}
+  ok(await st()===u0,'the student\'s progress changed while viewing');
+  await p.click('#vax');await p.waitForTimeout(200);ok(!await p.$('#vabar')&&await p.evaluate(()=>ME.sid)==='S000001'&&!!await p.$('#lhome'),'Exit does not restore the lecturer');
+  ok(await snap()===before,'the lecturer\'s localStorage changed while viewing');await p.done()},
+
+/* the Lecturer tab: folded blocks, remembered, top 3 rows with Show all, Expand and Collapse all */
+async lfold(){const p=await page({sid:LECT});await p.go('#/lecturer');const n=await p.$$eval('.lfold',e=>e.length);ok(n>=2,'no lecturer blocks');
+  ok(await p.$$eval('.lfold .lfb',e=>e.every(x=>x.hidden)),'blocks should start folded');ok(!(await p.textContent('#rvw')).trim(),'a folded block loaded its data');
+  await p.click('.lfold[data-f="demo"] .lfh');ok(await p.isVisible('#demo'),'a block does not open');
+  await p.reload();await p.waitForTimeout(300);ok(await p.isVisible('#demo')&&await p.$$eval('.lfold:not(.open)',e=>e.length)===n-1,'the open block is not remembered');
+  await p.evaluate(()=>document.getElementById('demo').insertAdjacentHTML('beforeend','<table id="t6"><tr><th>h</th></tr>'+[1,2,3,4,5,6].map(i=>'<tr><td>'+i+'</td></tr>').join('')+'</table>'));await p.waitForTimeout(50);
+  ok(await p.$$eval('#t6 tr:not([hidden])',e=>e.length)===4,'should show the top 3 rows');const b=p.locator('#t6 + .t3');ok((await b.textContent()).includes('Show all 6'),'Show all label');
+  await b.click();ok(await p.$$eval('#t6 tr:not([hidden])',e=>e.length)===7&&(await b.textContent()).includes('Show fewer'),'Show all does not show every row');
+  await p.click('[data-lfall="1"]');ok(await p.$$eval('.lfold .lfb',e=>e.every(x=>!x.hidden)),'Expand all');await p.click('[data-lfall="0"]');ok(await p.$$eval('.lfold .lfb',e=>e.every(x=>x.hidden)),'Collapse all');await p.done()},
+
+/* sections: "MKT301_H01 course" shows as H01; with no sections everyone is one class team */
+async sections(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>[secLabel('MKT301_H01 course'),secLabel('MKT101_H02'),secLabel(''),
+    wkTeams([{g:'MKT301_H01 course',s:8,n:10},{g:'MKT301_H02 course',s:5,n:10},{g:'MKT301_H01 course',s:6,n:10}]).map(t=>t.label+':'+t.n).join(),
+    wkTeams([{g:'',s:8,n:10},{g:'',s:5,n:10}]).map(t=>t.label+':'+t.n).join()]);
+  ok(r[0]==='H01'&&r[1]==='H02'&&r[2]==='','secLabel: '+r.slice(0,3));ok(r[3]==='H01:2,H02:1','section teams: '+r[3]);ok(r[4]==='Whole class:2','one class team: '+r[4]);await p.done()},
+
 async engine(){const r=require('child_process').spawnSync(process.execPath,[path.join(ROOT,'tools','sync-engine.mjs'),'--check'],{encoding:'utf8'});ok(r.status===0,'shared engine out of sync:\n'+r.stdout+r.stderr)
   /* every script shares one global scope: a function or const declared twice silently replaces the first */
   const fs=require('fs'),files=fs.readdirSync(path.join(ROOT,'engine')).filter(f=>f.endsWith('.js')).map(f=>'engine/'+f).concat(['course.js']),seen={},dup=[];

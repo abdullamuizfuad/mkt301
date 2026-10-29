@@ -52,13 +52,20 @@ function avatarSVG(code,size,title){const a=avParse(code),sk=AV.skin[a.sk],hc=AV
   ${eyes}${lash}${[`<path d="M44 58q6 5 12 0" stroke="#7a2e2e" stroke-width="2.2" fill="none" stroke-linecap="round"/>`,`<path d="M42 57q8 9 16 0z" fill="#7a2e2e"/><path d="M44 57.6h12" stroke="#fff" stroke-width="1.6"/>`,`<path d="M45 59h10" stroke="#7a2e2e" stroke-width="2.2" stroke-linecap="round"/>`,`<ellipse cx="50" cy="59.5" rx="3" ry="3.6" fill="#7a2e2e"/>`][a.ex]}<circle cx="38" cy="56" r="3" fill="#ff7a7a" opacity=".25"/><circle cx="62" cy="56" r="3" fill="#ff7a7a" opacity=".25"/>
   ${front}${veilFront}${hg}${phones}</g></svg>`}
 const myAv=()=>U&&U.av?U.av:avFor(ME?ME.sid:'');
+/* the lecturer's avatar: saved in their progress and published to meta/lecturer {a, n, t}, so students see it where they meet the lecturer */
+const LECT_AV_DEFAULT='m231034000';let LECT_META=null;
+const lectAv=()=>ME&&ME.sid===LECTURER&&U&&U.av?U.av:(LECT_META&&LECT_META.a)||LECT_AV_DEFAULT;
+const lectName=()=>(LECT_META&&LECT_META.n)||'Your lecturer';
+const lectAvHTML=z=>typeof avatarSVG==='function'?`<span class="lav" title="${esc(lectName())}">${avatarSVG(lectAv(),z||28,'')}</span>`:'';
+onHook('cloud',async()=>{if(LECT_META||!cloudOn())return;try{LECT_META=(await CLOUD.get('meta/lecturer'))||{}}catch(e){LECT_META={}}if(document.querySelector('.lav'))route()});
+onHook('signout',()=>{LECT_META=null});
 
 /* My profile (#/avatar): name, @username and the avatar builder */
 ROUTES.avatar=()=>{const a=avParse(myAv());const opt=(k,names,label,vis)=>`<div class="avrow"><b class="lex">${label}</b><div class="avopts" role="group" aria-label="${label}">${names.map((n,i)=>`<button type="button" class="avo ${a[k]===i?'on':''}" data-k="${k}" data-v="${i}" aria-pressed="${a[k]===i}">${vis?vis(i):''}<span>${esc(n)}</span></button>`).join('')}</div></div>`;
   const sw=c=>`<i class="sw" style="background:${c}"></i>`;
-  const nm=U.dn||ME.name;
+  const nm=U.dn||ME.name,L=ME.sid===LECTURER;
   shell('#/',`<p><a href="#/">← Home</a></p><h1>My profile</h1><div class="card" id="pfname" style="margin-bottom:16px"><h2 style="margin:0">${esc(nm)}</h2><p class="muted" style="margin:2px 0 10px">${U.un?esc(U.un)+' · ':''}${esc(ME.sid)}${U.dg?' · '+esc(secLabel(U.dg)):''}</p>
-  ${typeof CLOUD!=='undefined'&&CLOUD.rules2&&U.dn?`<button type="button" class="btn ghost sm" id="pfun">🪪 ${U.un?'Change my @username':'Pick my @username'}</button>`:'<p class="muted" style="font-size:.85rem;margin:0">Your official name and @username appear here once your lecturer adds the class list.</p>'}</div>
+  ${L?'<p class="muted" style="font-size:.85rem;margin:0" data-lect>Students see your avatar on your announcements, messages, marked answers, live sessions and quiz battles.</p>':typeof CLOUD!=='undefined'&&CLOUD.rules2&&U.dn?`<button type="button" class="btn ghost sm" id="pfun">🪪 ${U.un?'Change my @username':'Pick my @username'}</button>`:'<p class="muted" style="font-size:.85rem;margin:0">Your official name and @username appear here once your lecturer adds the class list.</p>'}</div>
   <h2>Your avatar</h2><div class="grid g2 avb"><div class="card" style="text-align:center"><div id="avp">${avatarSVG(avCode(a),180,'Your avatar')}</div><p class="muted" style="font-size:.85rem">Shown on your home page, the leaderboard and in challenges.</p><button class="btn" id="avsave">Save avatar</button> <button class="btn ghost" id="avrand">🎲 Surprise me</button></div>
   <div class="card">${`<div class="avrow"><b class="lex">Character</b><div class="avopts" role="group" aria-label="Character"><button type="button" class="avo ${a.g==='f'?'on':''}" data-k="g" data-v="f" aria-pressed="${a.g==='f'}"><span>👧 Girl</span></button><button type="button" class="avo ${a.g==='m'?'on':''}" data-k="g" data-v="m" aria-pressed="${a.g==='m'}"><span>👦 Boy</span></button></div></div>`}
   ${opt('sk',AV.skinN,'Skin',i=>sw(AV.skin[i]))}${opt('hs',AV.hairN,'Hair style')}${opt('hc',AV.hairCN,'Hair colour',i=>sw(AV.hairC[i]))}${opt('ey',AV.eyesN,'Eyes')}${opt('ex',AV.exN,'Expression')}${opt('of',AV.outfitN,'Outfit')}
@@ -69,4 +76,5 @@ ROUTES.avatar=()=>{const a=avParse(myAv());const opt=(k,names,label,vis)=>`<div 
   document.querySelectorAll('.avo').forEach(b=>b.onclick=()=>{const k=b.dataset.k,v=b.dataset.v;if(k==='g')a.g=v;else if(v==='t')a[k]=a[k]?0:1;else a[k]=+v;draw()});
   $('#pfun')&&($('#pfun').onclick=()=>namePrompt(true));
   $('#avrand').onclick=()=>{const r=n=>Math.floor(Math.random()*n);Object.assign(a,{sk:r(6),hs:r(8),hc:r(8),ey:r(4),ex:r(4),of:r(6),oc:r(6),hg:r(3)});draw()};
-  $('#avsave').onclick=()=>{const first=!U.av;U.av=avCode(a);save();if(first&&award('avatar:made',10,'Avatar created'))countOnce('avatar:made');hud();toast('🧑‍🎨','Avatar saved','');location.hash='#/'}};
+  $('#avsave').onclick=()=>{const first=!U.av;U.av=avCode(a);save();
+    if(L&&cloudOn()){LECT_META={a:U.av,n:String(ME.name).slice(0,80)};CLOUD.put('meta/lecturer',{a:U.av,n:LECT_META.n,t:CLOUD.ts()}).catch(e=>toast('⚠️','Avatar not published',CLOUD.say(e)))}if(first&&award('avatar:made',10,'Avatar created'))countOnce('avatar:made');hud();toast('🧑‍🎨','Avatar saved','');location.hash='#/'}};

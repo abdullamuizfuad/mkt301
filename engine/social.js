@@ -14,6 +14,8 @@ const CH_MAX=6,CH_N=10,CH_SECS=300,CH_DAY=5,CH_LIVE_MS=10*60e3,WK_N=15,BT_SECS=2
 let BTT=null;onHook('leave',()=>clearInterval(BTT));
 let SDIR=null,NOTE=[],STUDY=[],noteStop=null,studyStop=null,lastStudy=0;
 const sidOK=s=>/^S0\d{5}$/.test(s);
+/* the lecturer is never a player: no challenges, weekend entries or notifications of their own (View as student shows them) */
+const notPlayer=t=>{if(!ME||ME.sid!==LECTURER)return false;shell('#/',`<p><a href="#/">← Home</a></p><h1>${esc(t)}</h1><div class="card" data-lect><p style="margin:0">This is for students. Use <b>👁 View as student</b> on your home page to see it as a student does.</p></div>`);return true};
 async function socDir(){if(SDIR)return SDIR;try{const d=await CLOUD.docs('directory');SDIR={};d.forEach(x=>SDIR[x.id]={n:x.n||'',g:x.g||'',u:x.u||''})}catch(e){SDIR={}}return SDIR}
 const nameOf=sid=>sid===(ME&&ME.sid)?'You':(SDIR&&SDIR[sid]&&SDIR[sid].n)||sid;
 const mvNow=()=>mvDay(),dowNow=()=>dowOf(mvNow());
@@ -48,7 +50,7 @@ onHook('signout',()=>{if(noteStop)noteStop();if(studyStop)studyStop();noteStop=s
 onHook('award',()=>{if(!U||!U.shSt||!ME||ME.sid===LECTURER||!document.body.classList.contains('rules2')||Date.now()-lastStudy<20*60e3)return;lastStudy=Date.now();
   CLOUD.put('studying/'+ME.sid,{n:String(U.dn||'').slice(0,80),at:CLOUD.ts()}).catch(e=>console.warn('Studying now not shared',e))});
 const notify=(to,k,ref,tx)=>CLOUD.add('notifs',{to,fr:ME.sid,k,ref:String(ref||'').slice(0,40),tx:String(tx||'').slice(0,200),t:CLOUD.ts(),seen:false});
-ROUTES.notifs=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Notifications</h1><p class="muted">Notifications switch on soon.</p>`);await socDir();
+ROUTES.notifs=async()=>{if(notPlayer('Notifications'))return;if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Notifications</h1><p class="muted">Notifications switch on soon.</p>`);await socDir();
   U.stSeen=U.stSeen||{};const row=(ic,tx,href,when,unseen)=>`<a class="rdrow note${unseen?' new':''}" href="${href}"><span class="em" style="font-size:1.3rem">${ic}</span><span class="rdl">${esc(tx)}</span><span class="muted" style="font-size:.78rem">${when?ago(when):''}</span></a>`;
   shell('#/',`<p><a href="#/">← Home</a></p><div class="row" style="justify-content:space-between"><h1 style="margin:0">🔔 Notifications</h1>${NOTE.some(x=>!x.seen)?'<button class="btn ghost sm" id="nall">Mark all as read</button>':''}</div>
   <div class="card" style="margin-top:12px">${STUDY.map(x=>row('📚',`${x.n||nameOf(x.id)} is studying now. Challenge them?`,'#/challenges/new/'+x.id,x.at,!U.stSeen[x.id+':'+x.at])).join('')}
@@ -72,7 +74,7 @@ const chOver=(c,R)=>c.p.every(s=>R[s])||Date.now()>c.exp||(c.mode==='live'&&c.go
 function chClaim(c,R){if(!chOver(c,R)||U.log['ch:'+c.id])return;const xp=chXP(c,R,ME.sid);if(!xp)return;U.chd=U.chd||{};const d=today(),n=U.chd[d]|0;
   if(n>=CH_DAY){if(!U.log['chcap:'+c.id]){U.log['chcap:'+c.id]=1;toast('⚔️','Challenge finished','No XP: you have had '+CH_DAY+' challenge rewards today');save()}return}
   if(award('ch:'+c.id,xp,'Challenge'))U.chd={[d]:n+1}}
-ROUTES.challenges=async h=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Challenges</h1><p class="muted">Challenges switch on soon.</p>`);await socDir();
+ROUTES.challenges=async h=>{if(notPlayer('Challenges'))return;if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Challenges</h1><p class="muted">Challenges switch on soon.</p>`);await socDir();
   if(h[1]==='new')return chNew(h[2]);
   shell('#/',`<p><a href="#/">← Home</a></p><div class="row" style="justify-content:space-between"><h1 style="margin:0">⚔️ Challenges</h1><a class="btn" href="#/challenges/new">New challenge</a></div>
   <p class="muted">Challenge up to ${CH_MAX-1} classmates to ${CH_N} quick questions. <b>Live</b>: everyone plays together when you start. <b>Open</b>: everyone has 24 hours.</p>
@@ -94,7 +96,7 @@ function chNew(pre){const all=Object.entries(SDIR).filter(([s])=>s!==ME.sid&&s!=
       await Promise.all([...sel].map(s=>notify(s,'invite',id,`${U.dn||ME.name} challenged you (${mode==='live'?'live':'24 hours'})`)));
       toast('⚔️','Challenge sent',sel.size+' classmate'+(sel.size===1?'':'s'));location.hash='#/challenge/'+id}
     catch(e){$('#chgo').disabled=false;toast('⚠️','Not sent',CLOUD.say(e))}}}
-ROUTES.challenge=async h=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Challenge</h1><p class="muted">Challenges switch on soon.</p>`);await socDir();const id=String(h[1]||'');let C=null,R={},playing=false;
+ROUTES.challenge=async h=>{if(notPlayer('Challenge'))return;if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Challenge</h1><p class="muted">Challenges switch on soon.</p>`);await socDir();const id=String(h[1]||'');let C=null,R={},playing=false;
   shell('#/',`<p><a href="#/challenges">← Challenges</a></p><div id="chv"><p class="muted">Loading…</p></div>`);
   const draw=()=>{const el=$('#chv');if(!el||playing)return;if(!C){el.innerHTML='<p class="muted">This challenge was not found.</p>';return}
     const over=chOver(C,R),mine=R[ME.sid],isBy=C.by===ME.sid,o=chOutcome(C,R),canPlay=!mine&&!over&&(C.mode==='open'||C.st==='live');
@@ -118,7 +120,7 @@ const wkOpen=()=>[5,6].includes(dowNow());
 /* teams are class sections (directory g); with no sections at all, everyone plays as one class team */
 function wkTeams(rows){const T={},any=rows.some(r=>r.g);rows.forEach(r=>{const g=r.g||'',t=T[g]||(T[g]={g,label:any?secLabel(g)||'No section':'Whole class',n:0,s:0});t.n++;t.s+=r.n?r.s/r.n:0});
   return Object.values(T).map(t=>Object.assign(t,{avg:Math.round(t.s/t.n*100)})).sort((a,b)=>b.avg-a.avg||b.n-a.n)}
-ROUTES.weekend=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Weekend challenge</h1><p class="muted">The weekend challenge switches on soon.</p>`);await socDir();
+ROUTES.weekend=async()=>{if(notPlayer('Weekend challenge'))return;if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Weekend challenge</h1><p class="muted">The weekend challenge switches on soon.</p>`);await socDir();
   const w=wkFri(mvNow()),open=wkOpen(),myG=(SDIR[ME.sid]||{}).g||'';let rows=[],played=false;
   shell('#/',`<p><a href="#/">← Home</a></p><h1>🏝️ Weekend challenge</h1><p class="muted">${open?`Open now until Saturday midnight. ${WK_N} questions, one try. ${myG?`Your team is your class section (${esc(secLabel(myG))}).`:'Everyone plays for one class team.'}`:'Opens on Friday at 00:00 and closes on Saturday at midnight (Maldives time).'}</p>
   <div id="wkp"></div><div class="grid g2" style="margin-top:12px"><div class="card"><h2 style="margin:0 0 6px">Teams</h2><div id="wkt"><p class="muted">Loading…</p></div></div><div class="card"><h2 style="margin:0 0 6px">Top players</h2><div id="wki"></div></div></div>`);
@@ -137,7 +139,7 @@ ROUTES.weekend=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/
 function btScore(B,A){return A.map(a=>{let sc=0;Object.entries(a.a||{}).forEach(([i,v])=>{if(v&&v[0]===0)sc+=500+Math.max(0,Math.round(500*(1-(v[1]|0)/(BT_SECS*1000))))});return {sid:a.id,n:a.n,sc}}).sort((x,y)=>y.sc-x.sc)}
 ROUTES.battle=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Quiz battle</h1><p class="muted">Quiz battles switch on soon.</p>`);await socDir();
   const lect=ME.sid===LECTURER;let B=null,A=[];
-  shell('#/',`<p><a href="#/">← Home</a></p><h1>🎮 Quiz battle</h1><div id="btv"><p class="muted">Looking for a battle…</p></div>`);
+  shell('#/',`<p><a href="#/">← Home</a></p><h1>🎮 Quiz battle</h1>${lect?'':`<p class="muted lhd" id="bthost">${lectAvHTML(28)} Hosted by ${esc(lectName())}</p>`}<div id="btv"><p class="muted">Looking for a battle…</p></div>`);
   const draw=()=>{const el=$('#btv');if(!el)return;clearInterval(BTT);
     if(!B||B.st==='end'&&!lect&&!A.some(a=>a.id===ME.sid)){el.innerHTML=lect?`<div class="card"><p>Start a battle for everyone who opens this page: ${CH_N} questions, ${BT_SECS} seconds each, faster right answers score more.</p><input id="btn" placeholder="Name (e.g. Week 12 tutorial)" style="width:100%;margin-bottom:8px"><button class="btn gold" id="btnew">Create the battle</button></div>`
       :'<div class="card"><p class="muted" style="margin:0">No battle right now. When your lecturer starts one, it appears here.</p></div>';

@@ -27,8 +27,8 @@ const lcardInits=()=>Object.fromEntries(LCARDS.map(c=>[c.id,lcardInit(c)]));
 /* ---------- lecturer blocks: every card on the Lecturer tab folds to its title and a one-line summary ----------
    A card's data loads the first time it is opened. Open blocks are remembered on this device; blocks with something waiting open by themselves.
    Long tables and lists inside a block show their first 3 rows, with "Show all N". */
-const lfBlock=(id,title,html,sum)=>`<section class="lfold" data-f="${id}"><button type="button" class="lfh" aria-expanded="false" aria-controls="lfb-${id}"><b class="lex">${title}</b><span class="lsum" data-lsum="${id}">${esc(sum||'')}</span><span class="lfa" aria-hidden="true">▾</span></button><div class="lfb" id="lfb-${id}" hidden>${html}</div></section>`;
-const lfBar=()=>`<p class="lfbar"><button type="button" class="linkbtn" data-lfall="1">Expand all</button> · <button type="button" class="linkbtn" data-lfall="0">Collapse all</button></p>`;
+const lfBlock=(id,title,html,sum)=>`<section class="lfold" data-f="${id}" data-lect><button type="button" class="lfh" aria-expanded="false" aria-controls="lfb-${id}"><b class="lex">${title}</b><span class="lsum" data-lsum="${id}">${esc(sum||'')}</span><span class="lfa" aria-hidden="true">▾</span></button><div class="lfb" id="lfb-${id}" hidden>${html}</div></section>`;
+const lfBar=()=>`<p class="lfbar" data-lect><button type="button" class="linkbtn" data-lfall="1">Expand all</button> · <button type="button" class="linkbtn" data-lfall="0">Collapse all</button></p>`;
 const LF_ALL=new Set();/* "Show all" tables and lists, kept while the page is open */
 function lfBind(inits){const st=LS.get('lfold',{});
   document.querySelectorAll('.lfold').forEach(s=>{const id=s.dataset.f,b=s.querySelector('.lfh'),body=s.querySelector('.lfb');let done=false;
@@ -37,6 +37,7 @@ function lfBind(inits){const st=LS.get('lfold',{});
     b.onclick=()=>s._set(body.hidden,true);
     new MutationObserver(()=>lfTrim(body,id)).observe(body,{childList:true,subtree:true});
     s._set(st[id]===1,false)});
+  if(typeof LF_FOCUS!=='undefined'&&LF_FOCUS){const s=document.querySelector(`.lfold[data-f="${LF_FOCUS}"]`);LF_FOCUS='';if(s){s._set(true,false);setTimeout(()=>{s.scrollIntoView({block:'start'});const t=s.querySelector('.lfb input,.lfb textarea');if(t)t.focus({preventScroll:true})},300)}}
   document.querySelectorAll('[data-lfall]').forEach(b=>b.onclick=()=>document.querySelectorAll('.lfold').forEach(s=>s._set(b.dataset.lfall==='1',true)))}
 /* a summary for a folded block; act=true opens it when this device has no choice saved for it */
 function lfSum(id,text,act){const e=document.querySelector(`[data-lsum="${id}"]`);if(!e)return;e.textContent=text;const s=e.closest('.lfold');if(act&&s&&s._set&&LS.get('lfold',{})[id]===undefined)s._set(true,false)}
@@ -106,7 +107,7 @@ lcard('rptc',el=>{rulesOK().then(ok=>{if(!ok)return;el.hidden=false;let tab='ope
 /* ---------- class announcements: announcements/{id} = {t,b,at,exp?} ---------- */
 let ANN=[];
 function annHTML(){const R=(U&&U.annRead)||{},now=Date.now(),list=ANN.filter(a=>!R[a.id]&&(!a.exp||a.exp>now)).slice(0,3);if(!list.length)return '';
-  return `<div class="card inbox ann" style="margin-bottom:16px"><h2 style="margin:0 0 6px">📣 From your lecturer</h2>${list.map(a=>`<div class="note"><b class="lex">${esc(a.t)}</b><p style="margin:4px 0 0">${esc(a.b).replace(/\n/g,'<br>')}</p><div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" style="font-size:.8rem">${a.at?esc(ymd(new Date(a.at))):''}</span><button class="btn ghost sm" data-annread="${esc(a.id)}">Got it</button></div></div>`).join('')}</div>`}
+  return `<div class="card inbox ann" style="margin-bottom:16px"><h2 style="margin:0 0 6px" class="lhd">${lectAvHTML(30)} From your lecturer</h2>${list.map(a=>`<div class="note"><b class="lex">${esc(a.t)}</b><p style="margin:4px 0 0">${esc(a.b).replace(/\n/g,'<br>')}</p><div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" style="font-size:.8rem">${a.at?esc(ymd(new Date(a.at))):''}</span><button class="btn ghost sm" data-annread="${esc(a.id)}">Got it</button></div></div>`).join('')}</div>`}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-annread]');if(!b||!U)return;U.annRead=U.annRead||{};U.annRead[b.dataset.annread]=1;save();route()});
 let annStop=null;
 async function annWatch(){if(annStop||!ME||ME.sid===LECTURER||!(await rulesOK()))return;let first=true;
