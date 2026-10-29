@@ -38,6 +38,7 @@ function wildScore(items,a){let s=0,mx=0;items.forEach((id,i)=>{const it=wildIte
 const wildSensible=items=>items.reduce((t,id)=>{const it=wildItem(id);return t+(it&&it.kind==='chips'?120e3:45e3)},0);
 function wildFlags(e,items){const f=[],sn=wildSensible(items);if(e.ms<sn*.25)f.push('very fast');if(e.s===e.mx&&e.mx>0&&e.ms<sn*.4)f.push('perfect in very little time');
   const r=wildScore(items,e.a);if(r.s!==e.s)f.push('score does not match the answers ('+r.s+')');return f}
+const wildDur=ms=>{const t=Math.round((ms|0)/1000);return Math.floor(t/60)+' min '+String(t%60).padStart(2,'0')+' s'};
 const wildRank=L=>L.slice().sort((a,b)=>b.s-a.s||a.ms-b.ms||(a.fin|0)-(b.fin|0));
 const wildDefTopics=win=>{const L=wildTopicList().map(x=>String(x[0])),wk=String(termWeek(mvDay(win.opens))),i=L.indexOf(wk);return i<0?L.slice(-2):i===0?L.slice(0,2):[L[i-1],L[i]]};
 const wildTL=top=>top.map(k=>(wildTopicList().find(x=>String(x[0])===String(k))||[k,String(k)])[1]);
@@ -74,7 +75,7 @@ ROUTES.wild=async h=>{if(h[1]==='live')return wildLive(wildId(h[2]));if(ME.sid==
       :`<div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">${open?'Open now':D.st==='plan'?'Coming up':'Closed'}</h2><span class="tag">${open?'Closes '+esc(wildWhen(D.closes)):D.st==='plan'?'Opens '+esc(wildWhen(D.opens)):esc(wildWhen(D.closes))}</span></div>
         <p style="margin:8px 0 4px"><b>Topics:</b></p><div class="wtop">${(D.top||[]).map((k,i)=>`<div class="rdrow"><span class="rdl">${esc((D.tl||[])[i]||k)}</span>${notesHref({topic:k},{topic:k})?`<a class="btn ghost sm" href="${notesHref({topic:k},{topic:k})}">📖 Refer to notes</a>`:''}</div>`).join('')}</div>
         ${inT5?`<div class="callout" id="wt5" style="margin-top:10px">🏆 You're in this week's top 5. Hold your place 🎁</div>`
-          :mine&&mine.done?`<div class="callout" style="margin-top:10px">You scored <b>${mine.s}/${mine.mx}</b> in ${Math.round(mine.ms/60000*10)/10} min.${D.win?'':' The winner is announced when class starts.'}</div>`
+          :mine&&mine.done?`<div class="callout" style="margin-top:10px">You scored <b>${mine.s}/${mine.mx}</b> in ${wildDur(mine.ms)}.${D.win?'':' The winner is announced when class starts.'}</div>`
           :open&&D.items?`<div class="card" style="margin-top:10px;text-align:center"><p style="margin:0 0 8px">${D.items.length} questions · 20 minutes · <b>one attempt</b>. The clock keeps running if you close the app. Notes are locked once you start, so read them first.</p><button class="btn gold" id="wgo">▶ Start the challenge</button></div>`
           :D.st==='plan'?'<p class="muted" style="margin:8px 0 0">Read the notes on these topics before the challenge opens.</p>':''}
         ${D.win?`<div class="callout" style="margin-top:10px">🎁 6th spot: <b>${esc(D.win===ME.sid?'You! Collect your gift in class.':wildName(D.win))}</b></div>`:''}</div>
@@ -99,12 +100,14 @@ function wildRun(D,A){WILD_LOCK=true;document.body.classList.add('wlock');const 
   const tick=()=>{const e=$('#wclk'),l=left();if(!document.body.contains(el))return clearInterval(WILDT);if(l<=0)return fin();if(e)e.textContent='⏱ '+Math.floor(l/60000)+':'+String(Math.floor(l/1000)%60).padStart(2,'0')};
   one();tick();WILDT=setInterval(tick,500)}
 /* finishing: the attempt (with every answer), then the public score; +20 XP for taking part */
-async function wildSubmit(D,A){WILD_LOCK=false;document.body.classList.remove('wlock');if(A.done)return;const r=wildScore(D.items,A.a),V=Object.values(A.a),ms=Math.round(V.length>=D.items.length?Math.min(WILD_MS,V.reduce((t,x)=>t+(x.t|0),0)):WILD_MS);
+async function wildSubmit(D,A){WILD_LOCK=false;document.body.classList.remove('wlock');if(A.done&&A.up)return;if(A.done&&!A.up)return wildUpload(D,A);const r=wildScore(D.items,A.a),V=Object.values(A.a),ms=Math.round(V.length>=D.items.length?Math.min(WILD_MS,V.reduce((t,x)=>t+(x.t|0),0)):WILD_MS);
   const a={};Object.entries(A.a).forEach(([i,x])=>{a[i]={v:x.v==null?-1:x.v,t:x.t|0}});
-  try{await CLOUD.put('wild/'+D.id+'/e/'+ME.sid,{st:'done',s:r.s,mx:r.mx,ms,a,fin:CLOUD.ts()},true);
-    await CLOUD.put('wild/'+D.id+'/s/'+ME.sid,{n:String(U.dn||'').slice(0,80),s:r.s,mx:r.mx,ms,at:CLOUD.ts()})}
-  catch(e){toast('⚠️','Your score was not saved',CLOUD.say(e))}
-  Object.assign(A,{done:1,s:r.s,mx:r.mx,ms});save();if(award('wild:'+D.id,20,'6th-spot challenge'))countOnce('wild:'+D.id,'wild')}
+  Object.assign(A,{done:1,up:0,s:r.s,mx:r.mx,ms,sa:a});save();if(award('wild:'+D.id,20,'6th-spot challenge'))countOnce('wild:'+D.id,'wild');return wildUpload(D,A)}
+/* sends a finished attempt (again, if it failed before): the attempt first, then the public score */
+async function wildUpload(D,A){if(A.up||A.busy)return;A.busy=1;
+  try{const e=await CLOUD.get('wild/'+D.id+'/e/'+ME.sid);if(!e||e.st!=='done')await CLOUD.put('wild/'+D.id+'/e/'+ME.sid,{st:'done',s:A.s,mx:A.mx,ms:A.ms,a:A.sa||{},fin:CLOUD.ts()},true);
+    if(!await CLOUD.get('wild/'+D.id+'/s/'+ME.sid))await CLOUD.put('wild/'+D.id+'/s/'+ME.sid,{n:String(U.dn||'').slice(0,80),s:A.s,mx:A.mx,ms:A.ms,at:CLOUD.ts()});A.up=1;save()}
+  catch(e){toast('⚠️','Your score was not sent yet',CLOUD.say(e)+' It is kept on this device and sent next time.')}finally{A.busy=0}}
 function wildReviewHTML(D,a){return D.items.map((id,i)=>{const it=wildItem(id),v=(a||{})[i];if(!it)return '';
   if(it.kind==='chips'){const sel=v&&Array.isArray(v.v)?v.v:[],R=chipsScore(it,sel);return `<div class="wrv"><b>${i+1}. ${esc(it.q)}</b><p class="muted" style="margin:4px 0">Your paragraph (${R.s}/${R.max}): ${esc(chipPara(it,sel))||'–'}</p><p style="margin:0">Strong paragraph: ${esc(chipPara(it,R.best))}</p></div>`}
   return `<div class="wrv"><b>${i+1}. ${esc(it.q)}</b><p style="margin:4px 0">${v&&v.v===0?'✓':'✗'} ${esc(it.o[0])}</p>${it.why?`<p class="muted" style="margin:0;font-size:.85rem">${esc(it.why)}</p>`:''}</div>`}).join('')}
@@ -158,4 +161,4 @@ async function wildHome(){const el=$('#twild');if(el)el.innerHTML='';if(!el||!ME
 /* a running attempt locks the notes; an attempt whose 20 minutes ended while away is handed in on the next visit */
 const wildBusy=()=>!!U&&Object.values(U.wild||{}).some(A=>!A.done&&Date.now()-A.at<WILD_MS);
 onHook('afterLoad',()=>{if(!U||!ME||ME.sid===LECTURER)return;document.body.classList.toggle('wlock',wildBusy());
-  Object.entries(U.wild||{}).forEach(([id,A])=>{if(!A.done&&Date.now()-A.at>=WILD_MS)rulesOK().then(ok=>ok&&CLOUD.get('wild/'+id)).then(D=>{if(D&&D.items)wildSubmit(D,A)}).catch(()=>{})})});
+  Object.entries(U.wild||{}).forEach(([id,A])=>{if(!A.done&&Date.now()-A.at>=WILD_MS||A.done&&!A.up)rulesOK().then(ok=>ok&&CLOUD.get('wild/'+id)).then(D=>{if(D&&D.items)wildSubmit(D,A)}).catch(()=>{})})});

@@ -516,6 +516,6 @@ body.va main :is(textarea,input,select,.chip,.mopt,[data-a]){cursor:not-allowed}
 .cpool{display:flex;flex-wrap:wrap;gap:8px}
 /* weekly 6th-spot challenge (engine/wild.js) */
 .wtop .rdrow{grid-template-columns:minmax(0,1fr) auto}.wrv{border-top:1px solid var(--line);padding:10px 0;font-size:.92rem}
-.wbig .wclock{font-size:2.2rem}.wlive .rdrow{font-size:1rem}.tag.warn{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--ink)}
+.wbig .wclock{font-size:2.2rem}.wlive .rdrow{font-size:1rem;grid-template-columns:minmax(0,1fr) auto auto auto}.wlive .rdl .tag{white-space:normal}.tag.warn{background:color-mix(in srgb,var(--gold) 20%,transparent);color:var(--ink)}
 .rdrow.me{background:color-mix(in srgb,var(--teal) 10%,transparent);border-radius:8px}
 @media (min-width:900px){.wlive .wbig h2{font-size:1.8rem}.wlive .rdrow{font-size:1.15rem;padding:10px 0}}

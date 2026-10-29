@@ -413,17 +413,17 @@ async wild(){if(!R2)return;const al=/400|403|Failed to load resource|identitytoo
   ok(await try_(a,'wild/wT1/s/'+A,{n:nm,s:9,mx:10,ms:60000,at:'$TS'})!=='ok','a public score that does not match the attempt');
   ok(await try_(a,'wild/wT1/s/'+A,{n:nm,s:3,mx:10,ms:60000,at:'$TS'})==='ok','could not post the matching score');await a.done();
   const b=await page({allow:al});await signIn(b,B,PINB);await tourOff(b);ok(await try_(b,'wild/wT1/e/'+B,{st:'go',at:'$TS'})!=='ok','a top-5 student could enter');
-  await b.go('#/wild/wT1');await waitFor(b,()=>!!document.querySelector('#wt5'));await b.done();
+  await b.go('#/wild/wT1');await waitFor(b,()=>!!document.querySelector('#wt5'));await shot(b,'wild-top5',true);await b.done();
   /* a full run as a student, through the page */
-  const c=await page({allow:al});await signIn(c,C,PINC,'Shifa Test');await tourOff(c);await c.go('#/wild/wT3');await waitFor(c,()=>!!document.querySelector('#wgo'));
-  await c.click('#wgo');await waitFor(c,()=>!!document.querySelector('.wrun'));ok(await c.evaluate(()=>wildBusy()&&document.body.classList.contains('wlock')),'notes are not locked during the attempt');
+  const c=await page({allow:al});await signIn(c,C,PINC,'Shifa Test');await tourOff(c);await c.go('#/wild/wT3');await waitFor(c,()=>!!document.querySelector('#wgo'));await shot(c,'wild-start',true);
+  await c.click('#wgo');await waitFor(c,()=>!!document.querySelector('.wrun'));ok(await c.evaluate(()=>wildBusy()&&document.body.classList.contains('wlock')),'notes are not locked during the attempt');await shot(c,'wild-run');
   for(let i=0;i<20&&await c.$('.wrun');i++){if(await c.$('[data-wo]'))await c.click('[data-wo]');else{await c.click('[data-in]');await c.click('[data-ck]')}await c.waitForTimeout(150)}
-  await waitFor(c,()=>/You scored/.test(document.querySelector('#wlv').textContent));
+  await waitFor(c,()=>/You scored/.test(document.querySelector('#wlv').textContent));await shot(c,'wild-done',true);
   const e=await waitDoc('wild/wT3/e',C,d=>d.st&&d.st.stringValue==='done');ok(e,'the attempt was not saved');ok(await waitDoc('wild/wT3/s',C),'the public score was not saved');
   ok(await c.evaluate(()=>!!U.log['wild:wT3']&&!wildBusy()),'no XP for taking part, or still locked');
   /* the lecturer: live screen, then confirm the winner after the close */
   const l2=await page({w:1280,h:900,allow:al});await signIn(l2,L,PINL);await tourOff(l2);
-  await l2.evaluate(()=>CLOUD.put('wild/wT3',{closes:CLOUD.when(Date.now()-1000)},true));await l2.go('#/wild/wT3');await waitFor(l2,()=>!!document.querySelector('[data-win]'));
+  await l2.evaluate(()=>CLOUD.put('wild/wT3',{closes:CLOUD.when(Date.now()-1000)},true));await l2.go('#/wild/wT3');await waitFor(l2,()=>!!document.querySelector('[data-win]'));await shot(l2,'wild-live',true);
   await l2.click('[data-win]');const d=await waitDoc('wild','wT3',x=>x.win);ok(d&&d.win.stringValue===C&&d.st.stringValue==='done','the winner was not saved');await l2.done();
   await c.go('#/wild/wT3');await waitFor(c,()=>!!U.log['wildwin:wT3']);await c.done()},
 /* tools/wild/open.mjs and close.mjs against the emulators: the week's top 5, the document, the invites, then ranked results */
