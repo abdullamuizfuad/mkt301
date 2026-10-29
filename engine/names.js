@@ -19,7 +19,7 @@ async function dirLoad(){if(!ME||ME.sid===LECTURER||!(await rulesOK()))return;
     namePrompt()}catch(e){}}
 onHook('preSync',async()=>{await rulesOK();await dirLoad()});
 /* "Confirm your name" (once, and again when the lecturer adds names): shows the official name, picks the username */
-function namePrompt(force){if(!ME||ME.sid===LECTURER||!U)return;if(!force&&(U.nameOK&&U.un||(!U.dn&&U.nameLater===today())))return;if(document.querySelector('.modal')&&!force){setTimeout(()=>namePrompt(),1500);return}
+function namePrompt(force){if(!ME||ME.sid===LECTURER||!U)return;if(!force&&typeof APP_VERSION!=='undefined'&&!U.seen21&&((U.days||[]).length||U.xp)){setTimeout(()=>namePrompt(),1500);return}/* What's new first */if(!force&&(U.nameOK&&U.un||(!U.dn&&U.nameLater===today())))return;if(document.querySelector('.modal')&&!force){setTimeout(()=>namePrompt(),1500);return}
   const words=nameWords(U.dn),cur=(U.un||'').replace(/^@|\d{3}$/g,'');
   const m=modal('Confirm your name',`<div style="text-align:center"><div style="font-size:2.2rem">🪪</div><h2 style="margin:4px 0 6px">Confirm your name</h2></div>
   ${U.dn?`<p style="text-align:center;margin:0 0 4px">Your name from the class list:</p><p class="lex" style="text-align:center;font-size:1.25rem;font-weight:700;margin:0 0 4px">${esc(U.dn)}</p><p class="muted" style="text-align:center;font-size:.85rem;margin:0 0 12px">${esc(ME.sid)} · this is how classmates see you on the leaderboard and in challenges.</p>
