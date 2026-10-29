@@ -7,8 +7,8 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 | Phase | What | Status |
 |---|---|---|
 | 0 | One shared engine (`engine/`, identical in both repos) | **live** (main: MKT301 `d244165`, MKT101 `7e9b233`) |
-| 1 | CI, XP audit, error reports, streak freeze, at-risk, problem reports, announcements, privacy page, wording fixes, backup export | in progress (code done on `night`; cloud suites with the combined rules running) |
-| 2 | Home dashboard, avatar builder, streak blocks, countdown grid, spaced review, readiness, flashcards, item analysis, name policy | not started |
+| 1 | CI, XP audit, error reports, streak freeze, at-risk, problem reports, announcements, privacy page, wording fixes, backup export | **live** (main: MKT301 `cb6aa81`, MKT101 `ee22bf0`); site and cloud suites green on the combined rules and on the published rules |
+| 2 | Home dashboard, avatar builder, streak blocks, countdown grid, spaced review, readiness, flashcards, item analysis, name policy | code done on `night` (`engine/dash.js`, `engine/avatar.js`); `dash` test group added; suites running |
 | 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | not started |
 | 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | not started |
 | 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | not started |
@@ -61,7 +61,20 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 
 ## Next
 
-- Phase 1: cloud suites green on the combined rules, backup, push to main. Then Phase 2.
+- Phase 2: full suites on `night`, backup, push to main. Then Phase 3.
+
+## Phase 1 fixes found by the cloud suite
+
+- The first save after sign-in waits for the rules probe (`C.probed`), so a row is never written in the old format to the combined rules.
+- Board XP climbs at most ~2 XP a second (rules `xpRate()`); the site retries when the allowance covers the gap (3–20 s), and after a refusal re-reads the row (another device may have written it). It gives up after 5 refusals until the next save.
+- The rules no longer use string slices (`u[1:…]`, `sid[4:7]`), which the rules engine rejected; the username checks use `replace()` and `matches()` instead.
+
+## Phase 2 notes
+
+- Dashboard hooks in `course.js`: `readyAreas(u)`, `qArea(id)`, `revItem(id)`, `flashDecks()`, `dashStats()` (MKT101 adds topics mastered).
+- The countdown card shows only the date, time and countdown (no other wording), per the lecturer's exception.
+- Avatar codes gained an optional 11th character (expression 0–3); 10-character codes still read as before. The board field `a` already allows it.
+- New progress fields (additive): `U.srs`, `U.conf`, `U.fc`, `U.mi`, `U.av`. Review XP keys `rev:<id>:<due>`, flashcards `fc:<id>:<day>`, avatar `avatar:made`.
 
 ## Open questions
 

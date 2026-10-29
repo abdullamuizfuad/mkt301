@@ -159,6 +159,28 @@ async lecturer(){const p=await page({sid:LECT});await p.go('#/lecturer');ok(awai
   ok((await p.textContent('#rvw')).includes('Naver'),'Naver example not listed');await p.done();
   const s=await page({sid:STUDENT});await s.go('#/lecturer');ok(!await s.$('#demo'),'students can open the lecturer page');await s.done()},
 
+async dash(){const p=await page({sid:STUDENT});
+  ok(await p.$('#cdcard')&&await p.$('.sblocks')&&await p.$('#nextact')&&await p.$('#rdcard'),'dashboard parts missing');
+  ok(/Mon 14 Dec 2026 · 9:00 am/.test(await p.textContent('#cdcard'))&&!/exam/i.test(await p.textContent('main')),'countdown wording');await shot(p,'dash-home',true);
+  /* spaced review with the confidence check */
+  const id=await p.evaluate(()=>{const id=Object.keys(qIndex()).concat(typeof MCQ_BY!=='undefined'?Object.keys(MCQ_BY):[]).find(k=>revOf(k));U.srs={[id]:{s:0,due:today(),n:0}};save();return id});
+  ok(id,'nothing reviewable');const x0=(await p.U()).xp;await p.go('#/review');await p.click('[data-sure="1"]');
+  if(await p.$('[data-oi="0"]'))await p.click('[data-oi="0"]');else{await p.click('#rvshow');await p.click('[data-got="1"]')}
+  await p.click('#rvnx');const r=await p.evaluate(id=>({s:U.srs[id],conf:U.conf,xp:U.xp,due:srsDue().length}),id);
+  ok(r.s.s===1&&r.s.due>(await p.evaluate(()=>today()))&&r.xp>=x0+4&&r.due===0,'review not recorded: '+JSON.stringify(r));
+  ok(Object.values(r.conf||{}).some(c=>c[0]===1&&c[1]===1),'confidence not recorded');
+  /* restart-safe: the same review on the same day gives no more XP */
+  await p.evaluate(id=>{U.srs[id]={s:0,due:today(),n:1};save()},id);await p.go("#/");await p.go("#/review");await p.click('[data-sure="0"]');
+  if(await p.$('[data-oi="0"]'))await p.click('[data-oi="0"]');else{await p.click('#rvshow');await p.click('[data-got="1"]')}
+  ok((await p.U()).xp===r.xp,'review XP farmed');
+  /* flashcards */
+  await p.go('#/cards');await p.click('a.card.zone');await p.click('#fcard');await p.click('#fcr [data-k="1"]');
+  ok(await p.evaluate(()=>Object.values(U.fc).filter(s=>s.s===1).length===1),'flashcard not recorded');
+  /* avatar builder: girl, veil and headphones together, an expression */
+  await p.go('#/avatar');await p.click('[data-k="g"][data-v="f"]');await p.click('[data-k="vl"]');await p.click('[data-k="hp"]');await p.click('[data-k="ex"][data-v="2"]');await shot(p,'dash-avatar');
+  await p.click('#avsave');const av=await p.evaluate(()=>U.av);ok(/^f.{7}112$/.test(av),'avatar not saved: '+av);
+  ok(await p.evaluate(()=>!!document.querySelector('#hud .avpill svg')),'avatar not in the top bar');await p.done()},
+
 async layout(){const pages=['#/','#/cases','#/case/iceto/read','#/case/cbtl/board','#/case/tuna/practice','#/case/tuna/exhibits','#/short','#/essay','#/essay/ca/manta','#/essay/coach/coco','#/badges','#/board'];
   for(const w of [320,390,1280])for(const theme of ['dark','light']){const p=await page({sid:STUDENT,w,theme});for(const h of pages){await p.go(h);const sw=await p.evaluate(()=>document.documentElement.scrollWidth);ok(sw<=w,`${h} at ${w}px ${theme}: scrollWidth ${sw}`)}
     ok(await p.evaluate(t=>document.documentElement.dataset.theme===t,theme),'theme not applied');await p.done()}},
