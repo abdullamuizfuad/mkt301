@@ -56,3 +56,10 @@ export const readJSON=(f,d)=>existsSync(f)?JSON.parse(readFileSync(f,'utf8')):d;
 export const writeJSON=(f,x)=>writeFileSync(f,JSON.stringify(x,null,1)+'\n',{mode:0o600});
 /* write one document (replaces it) */
 export async function putDoc(token,p,obj){return req('PATCH',`${FS}/${p.split('/').map(encodeURIComponent).join('/')}`,token,{fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,v instanceof Date?{timestampValue:v.toISOString()}:enc(v)]))})}
+/* several writes in one request (tools/wild): [{path, data, ts:[fields set to the server's time], mask:[only these fields] , create:true}] */
+export async function commitDocs(token,docs){const base=FS.replace(/\/documents$/,''),root=base.replace(/^https?:\/\/[^/]+\/v1\//,'');
+  const fields=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,v instanceof Date?{timestampValue:v.toISOString()}:enc(v)]));
+  return req('POST',`${base}/documents:commit`,token,{writes:docs.map(d=>Object.assign({update:{name:`${root}/documents/${d.path}`,fields:fields(d.data)}},
+    d.mask?{updateMask:{fieldPaths:d.mask.map(fieldPath)}}:{},d.ts&&d.ts.length?{updateTransforms:d.ts.map(f=>({fieldPath:f,setToServerValue:'REQUEST_TIME'}))}:{},d.create?{currentDocument:{exists:false}}:{}))})}
+/* one document → plain fields, or null */
+export async function getDoc(token,p){try{const d=await req('GET',`${FS}/${p.split('/').map(encodeURIComponent).join('/')}`,token);return Object.fromEntries(Object.entries(d.fields||{}).map(([k,v])=>[k,val(v)]))}catch(e){if(/NOT_FOUND|404/.test(e.message))return null;throw e}}

@@ -426,6 +426,21 @@ async wild(){if(!R2)return;const al=/400|403|Failed to load resource|identitytoo
   await l2.evaluate(()=>CLOUD.put('wild/wT3',{closes:CLOUD.when(Date.now()-1000)},true));await l2.go('#/wild/wT3');await waitFor(l2,()=>!!document.querySelector('[data-win]'));
   await l2.click('[data-win]');const d=await waitDoc('wild','wT3',x=>x.win);ok(d&&d.win.stringValue===C&&d.st.stringValue==='done','the winner was not saved');await l2.done();
   await c.go('#/wild/wT3');await waitFor(c,()=>!!U.log['wildwin:wT3']);await c.done()},
+/* tools/wild/open.mjs and close.mjs against the emulators: the week's top 5, the document, the invites, then ranked results */
+async wildTools(){if(!R2)return;const P='mkt301'.toUpperCase(),run=(f,a)=>spawnSync(process.execPath,[path.join(ROOT,'tools/wild',f)].concat(a),{encoding:'utf8',
+    env:Object.assign({},process.env,{[P+'_EMU']:'1',[P+'_LECTURER_PIN']:PINL})});
+  await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signUp?key=x',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'s000001@student.mnu.edu.mv',password:PINL})});
+  const day='mkt301'==='mkt301'?'2026-10-26':'2026-10-27',cls='mkt301'==='mkt301'?'2026-10-27':'2026-10-28',id='w'+cls,hr=day+'T1';
+  await fsPut('users',A,{name:'A',u:JSON.stringify({xp:300,xph:{[hr+'0']:120}}),xp:300,ts:new Date()});await fsPut('users',B,{name:'B',u:JSON.stringify({xp:50,xph:{}}),xp:50,ts:new Date()});
+  const o=run('open.mjs',['--at='+day+'T17:00:00+05:00','--topics='+('mkt301'==='mkt301'?'10,11':'10,11')]);ok(o.status===0,'open.mjs failed: '+o.stdout+o.stderr);
+  const d=await fsDoc('wild',id);ok(d&&d.st.stringValue==='open'&&d.t5.arrayValue.values.map(v=>v.stringValue).join()===A,'top 5 or document wrong: '+JSON.stringify(d&&d.t5));
+  ok(d.items.arrayValue.values.length>=8,'too few questions');ok(!/S0\d{5}/.test(o.stdout.replace(id,'')),'open.mjs printed a student ID');
+  const n=await fetch(`${FS}:runQuery`,{method:'POST',headers:{Authorization:'Bearer owner','Content-Type':'application/json'},body:JSON.stringify({structuredQuery:{from:[{collectionId:'notifs'}],where:{fieldFilter:{field:{fieldPath:'ref'},op:'EQUAL',value:{stringValue:'wild:'+id}}}}})}).then(r=>r.json());
+  const N=n.filter(x=>x.document).map(x=>x.document.fields);ok(N.some(x=>x.to.stringValue===B&&x.k.stringValue==='invite')&&N.some(x=>x.to.stringValue===A&&x.k.stringValue==='result'),'invites not sent');
+  ok(run('open.mjs',['--at='+day+'T18:00:00+05:00']).stdout.includes('already open'),'opened twice');
+  await fsPut('wild/'+id+'/e',B,{st:'done',s:1,mx:12,ms:300000,a:{0:{v:0,t:5000}},fin:new Date(),at:new Date()});await fsPut('wild/'+id+'/e',C,{st:'done',s:12,mx:12,ms:20000,a:{},fin:new Date(),at:new Date()});
+  const c=run('close.mjs',['--id='+id,'--at='+cls+'T17:00:00+05:00']);ok(c.status===0,'close.mjs failed: '+c.stdout+c.stderr);
+  const r=(await fsDoc('wild',id)).res.mapValue.fields;ok(r[C]&&/match|fast/.test(r[C].mapValue.fields.f.stringValue)&&r[B].mapValue.fields.r.integerValue,'results or flags wrong: '+JSON.stringify(r).slice(0,300))},
 };
 async function waitFor(p,fn,arg,t=15000){const t0=Date.now();while(Date.now()-t0<t){if(await p.evaluate(fn,arg).catch(()=>false))return;await p.waitForTimeout(250)}throw new Error('timed out waiting for '+String(fn).slice(0,90))}
 async function waitDoc(col,id,test,t=15000){const t0=Date.now();let d=null;while(Date.now()-t0<t){d=await fsDoc(col,id);if(d&&(!test||test(d)))return d;await new Promise(r=>setTimeout(r,300))}return null}

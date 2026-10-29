@@ -29,6 +29,9 @@ function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)retur
     $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)}
 onHook('afterLoad',()=>{if(ME&&!ME.cloud)whatsNew()});onHook('cloud',whatsNew);
 const WHATSNEW=[
+  ['🎁','The 6th-spot challenge','Every week your lecturer brings a gift for the top 5 students by XP earned that week. Everyone else gets one 20-minute challenge in the 24 hours before class: the best score wins the 6th gift. Read the notes on the two topics before you start.'],
+  ['🧱','Build a paragraph','A new kind of practice: put the right ideas in the right order and leave out the decoys. Find it under Practice.'],
+  ['📖','Refer to notes','Written questions now have a "Refer to notes" button that opens the notes for that topic.'],
   ['🏠','A simpler home','Home now shows just today: what to do next, your screen time, missions and reviews, the days left and your practice areas. Everything else, from readiness to badges, is on My progress. Tap your avatar for My profile.'],
   ['📈','My progress','Your readiness for each area, weak spots, a day-by-day countdown, activity, screen time and badges, all in one place.'],
   ['🧑‍🎨','Build your avatar','Pick your character, skin, hair, eyes, expression, outfit and headgear (headphones and a veil can go together). Tap your avatar on Home.'],
