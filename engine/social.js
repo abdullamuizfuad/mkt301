@@ -12,10 +12,10 @@
    Course hooks: quizItems(rng, n) → [{id, q, o:[correct first], why, label}], quizItem(id) → the same shape or null. */
 const CH_MAX=6,CH_N=10,CH_SECS=300,CH_DAY=5,CH_LIVE_MS=10*60e3,WK_N=15,BT_SECS=20;
 let BTT=null;onHook('leave',()=>clearInterval(BTT));
-let DIR=null,NOTE=[],STUDY=[],noteStop=null,studyStop=null,lastStudy=0;
+let SDIR=null,NOTE=[],STUDY=[],noteStop=null,studyStop=null,lastStudy=0;
 const sidOK=s=>/^S0\d{5}$/.test(s);
-async function dirLoad(){if(DIR)return DIR;try{const d=await CLOUD.docs('directory');DIR={};d.forEach(x=>DIR[x.id]={n:x.n||'',g:x.g||'',u:x.u||''})}catch(e){DIR={}}return DIR}
-const nameOf=sid=>sid===(ME&&ME.sid)?'You':(DIR&&DIR[sid]&&DIR[sid].n)||sid;
+async function socDir(){if(SDIR)return SDIR;try{const d=await CLOUD.docs('directory');SDIR={};d.forEach(x=>SDIR[x.id]={n:x.n||'',g:x.g||'',u:x.u||''})}catch(e){SDIR={}}return SDIR}
+const nameOf=sid=>sid===(ME&&ME.sid)?'You':(SDIR&&SDIR[sid]&&SDIR[sid].n)||sid;
 const mvNow=()=>mvDay(),dowNow=()=>dowOf(mvNow());
 const qmix=(rng,a)=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
 
@@ -34,7 +34,7 @@ function quizRun(host,ids,secs,done,seed){const items=ids.map(id=>quizItem(id)).
 /* ---------- notifications ---------- */
 function bellHTML(){if(!ME||ME.sid===LECTURER||!document.body.classList.contains('rules2'))return '';const n=NOTE.filter(x=>!x.seen).length+STUDY.filter(x=>!(U.stSeen||{})[x.id+':'+x.at]).length;
   return `<a class="pill bell" href="#/notifs" id="bell" aria-label="Notifications${n?', '+n+' new':''}" title="Notifications">🔔${n?`<b>${n>9?'9+':n}</b>`:''}</a>`}
-async function noteWatch(){if(noteStop||!ME||ME.sid===LECTURER||!(await rulesOK()))return;await dirLoad();
+async function noteWatch(){if(noteStop||!ME||ME.sid===LECTURER||!(await rulesOK()))return;await socDir();
   noteStop=CLOUD.watch('notifs',{where:[['to','==',ME.sid]],limit:60},d=>{d.sort((a,b)=>(b.t|0)-(a.t|0));
     /* tidy up: read notifications older than 14 days go */
     d.filter(x=>x.seen&&x.t&&Date.now()-x.t>14*864e5).forEach(x=>CLOUD.del('notifs/'+x.id).catch(()=>{}));const fresh=d.filter(x=>!x.seen&&!NOTE.some(y=>y.id===x.id));NOTE=d;hud();
@@ -43,12 +43,12 @@ async function noteWatch(){if(noteStop||!ME||ME.sid===LECTURER||!(await rulesOK(
 function studyWatch(){if(studyStop){studyStop();studyStop=null}STUDY=[];if(!U.seeSt)return hud();
   studyStop=CLOUD.watch('studying',{where:[['at','>',CLOUD.when(Date.now()-30*60e3)]],order:['at','desc'],limit:20},d=>{STUDY=d.filter(x=>x.id!==ME.sid);hud();if(location.hash==='#/notifs')ROUTES.notifs()},e=>console.warn('Studying now unavailable',e),true)}
 onHook('cloud',noteWatch);
-onHook('signout',()=>{if(noteStop)noteStop();if(studyStop)studyStop();noteStop=studyStop=null;NOTE=[];STUDY=[];DIR=null});
+onHook('signout',()=>{if(noteStop)noteStop();if(studyStop)studyStop();noteStop=studyStop=null;NOTE=[];STUDY=[];SDIR=null});
 /* "studying now": shared at most every 20 minutes while the student earns XP, only if they opted in */
 onHook('award',()=>{if(!U||!U.shSt||!ME||ME.sid===LECTURER||!document.body.classList.contains('rules2')||Date.now()-lastStudy<20*60e3)return;lastStudy=Date.now();
   CLOUD.put('studying/'+ME.sid,{n:String(U.dn||'').slice(0,80),at:CLOUD.ts()}).catch(e=>console.warn('Studying now not shared',e))});
 const notify=(to,k,ref,tx)=>CLOUD.add('notifs',{to,fr:ME.sid,k,ref:String(ref||'').slice(0,40),tx:String(tx||'').slice(0,200),t:CLOUD.ts(),seen:false});
-ROUTES.notifs=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Notifications</h1><p class="muted">Notifications switch on soon.</p>`);await dirLoad();
+ROUTES.notifs=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Notifications</h1><p class="muted">Notifications switch on soon.</p>`);await socDir();
   U.stSeen=U.stSeen||{};const row=(ic,tx,href,when,unseen)=>`<a class="rdrow note${unseen?' new':''}" href="${href}"><span class="em" style="font-size:1.3rem">${ic}</span><span class="rdl">${esc(tx)}</span><span class="muted" style="font-size:.78rem">${when?ago(when):''}</span></a>`;
   shell('#/',`<p><a href="#/">← Home</a></p><div class="row" style="justify-content:space-between"><h1 style="margin:0">🔔 Notifications</h1>${NOTE.some(x=>!x.seen)?'<button class="btn ghost sm" id="nall">Mark all as read</button>':''}</div>
   <div class="card" style="margin-top:12px">${STUDY.map(x=>row('📚',`${x.n||nameOf(x.id)} is studying now. Challenge them?`,'#/challenges/new/'+x.id,x.at,!U.stSeen[x.id+':'+x.at])).join('')}
@@ -72,7 +72,7 @@ const chOver=(c,R)=>c.p.every(s=>R[s])||Date.now()>c.exp||(c.mode==='live'&&c.go
 function chClaim(c,R){if(!chOver(c,R)||U.log['ch:'+c.id])return;const xp=chXP(c,R,ME.sid);if(!xp)return;U.chd=U.chd||{};const d=today(),n=U.chd[d]|0;
   if(n>=CH_DAY){if(!U.log['chcap:'+c.id]){U.log['chcap:'+c.id]=1;toast('⚔️','Challenge finished','No XP: you have had '+CH_DAY+' challenge rewards today');save()}return}
   if(award('ch:'+c.id,xp,'Challenge'))U.chd={[d]:n+1}}
-ROUTES.challenges=async h=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Challenges</h1><p class="muted">Challenges switch on soon.</p>`);await dirLoad();
+ROUTES.challenges=async h=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Challenges</h1><p class="muted">Challenges switch on soon.</p>`);await socDir();
   if(h[1]==='new')return chNew(h[2]);
   shell('#/',`<p><a href="#/">← Home</a></p><div class="row" style="justify-content:space-between"><h1 style="margin:0">⚔️ Challenges</h1><a class="btn" href="#/challenges/new">New challenge</a></div>
   <p class="muted">Challenge up to ${CH_MAX-1} classmates to ${CH_N} quick questions. <b>Live</b>: everyone plays together when you start. <b>Open</b>: everyone has 24 hours.</p>
@@ -80,7 +80,7 @@ ROUTES.challenges=async h=>{if(!(await rulesOK()))return shell('#/',`<p><a href=
   <div class="card" style="margin-top:12px"><h2 style="margin:0 0 6px">XP</h2><ul class="sumlist"><li>You win: +50 for you, +15 for each classmate who played.</li><li>You lose: +25 for each classmate who played, +5 for you.</li><li>Tie: +15 for everyone.</li><li>Rewards from up to ${CH_DAY} challenges a day.</li></ul></div>`);
   CLOUD.watch('challenges',{where:[['p','array-contains',ME.sid]],limit:60},d=>{const el=$('#chl');if(!el)return;d.sort((a,b)=>(b.t|0)-(a.t|0));d=d.slice(0,30);
     el.innerHTML=d.length?d.map(c=>{const over=Date.now()>c.exp||c.st==='done';return `<a class="rdrow" href="#/challenge/${c.id}"><span class="em">${c.mode==='live'?'⚡':'⏳'}</span><span class="rdl">${c.by===ME.sid?'You challenged '+c.p.filter(s=>s!==ME.sid).map(nameOf).join(', '):nameOf(c.by)+' challenged you'+(c.p.length>2?' and '+(c.p.length-2)+' more':'')}</span><span class="tag">${over?'Finished':c.mode==='live'?(c.st==='live'?'Live now':'Waiting'):'Open'}</span></a>`}).join(''):'<p class="muted" style="margin:0">No challenges yet. Start one!</p>'},e=>{const el=$('#chl');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})};
-function chNew(pre){const all=Object.entries(DIR).filter(([s])=>s!==ME.sid&&s!==LECTURER).sort((a,b)=>a[1].n<b[1].n?-1:1),sel=new Set(pre&&DIR[pre]?[pre]:[]);
+function chNew(pre){const all=Object.entries(SDIR).filter(([s])=>s!==ME.sid&&s!==LECTURER).sort((a,b)=>a[1].n<b[1].n?-1:1),sel=new Set(pre&&SDIR[pre]?[pre]:[]);
   shell('#/',`<p><a href="#/challenges">← Challenges</a></p><h1>New challenge</h1>
   <div class="card"><h2 style="margin:0 0 6px">Who? <span class="muted" id="chn" style="font-size:.9rem"></span></h2><input id="chq" placeholder="Search names" aria-label="Search names" style="width:100%;margin-bottom:8px">
    <div id="chp" class="chpick">${all.length?all.map(([s,x])=>`<button type="button" class="chip${sel.has(s)?' on':''}" data-s="${s}" aria-pressed="${sel.has(s)}">${esc(x.n||s)}</button>`).join(''):'<p class="muted">Your lecturer has not added the class names yet.</p>'}</div></div>
@@ -94,7 +94,7 @@ function chNew(pre){const all=Object.entries(DIR).filter(([s])=>s!==ME.sid&&s!==
       await Promise.all([...sel].map(s=>notify(s,'invite',id,`${U.dn||ME.name} challenged you (${mode==='live'?'live':'24 hours'})`)));
       toast('⚔️','Challenge sent',sel.size+' classmate'+(sel.size===1?'':'s'));location.hash='#/challenge/'+id}
     catch(e){$('#chgo').disabled=false;toast('⚠️','Not sent',CLOUD.say(e))}}}
-ROUTES.challenge=async h=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Challenge</h1><p class="muted">Challenges switch on soon.</p>`);await dirLoad();const id=String(h[1]||'');let C=null,R={},playing=false;
+ROUTES.challenge=async h=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Challenge</h1><p class="muted">Challenges switch on soon.</p>`);await socDir();const id=String(h[1]||'');let C=null,R={},playing=false;
   shell('#/',`<p><a href="#/challenges">← Challenges</a></p><div id="chv"><p class="muted">Loading…</p></div>`);
   const draw=()=>{const el=$('#chv');if(!el||playing)return;if(!C){el.innerHTML='<p class="muted">This challenge was not found.</p>';return}
     const over=chOver(C,R),mine=R[ME.sid],isBy=C.by===ME.sid,o=chOutcome(C,R),canPlay=!mine&&!over&&(C.mode==='open'||C.st==='live');
@@ -117,8 +117,8 @@ const wkFri=d=>{const w=dowOf(d);return w===5?d:w===6?addDays(d,-1):addDays(d,-(
 const wkOpen=()=>[5,6].includes(dowNow());
 function wkTeams(rows){const T={};rows.forEach(r=>{const g=r.g||'No section',t=T[g]||(T[g]={g,n:0,s:0});t.n++;t.s+=r.n?r.s/r.n:0});
   return Object.values(T).map(t=>Object.assign(t,{avg:Math.round(t.s/t.n*100)})).sort((a,b)=>b.avg-a.avg||b.n-a.n)}
-ROUTES.weekend=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Weekend challenge</h1><p class="muted">The weekend challenge switches on soon.</p>`);await dirLoad();
-  const w=wkFri(mvNow()),open=wkOpen(),myG=(DIR[ME.sid]||{}).g||'';let rows=[],played=false;
+ROUTES.weekend=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Weekend challenge</h1><p class="muted">The weekend challenge switches on soon.</p>`);await socDir();
+  const w=wkFri(mvNow()),open=wkOpen(),myG=(SDIR[ME.sid]||{}).g||'';let rows=[],played=false;
   shell('#/',`<p><a href="#/">← Home</a></p><h1>🏝️ Weekend challenge</h1><p class="muted">${open?`Open now until Saturday midnight. ${WK_N} questions, one try. Your team is your class section${myG?' ('+esc(myG)+')':''}.`:'Opens on Friday at 00:00 and closes on Saturday at midnight (Maldives time).'}</p>
   <div id="wkp"></div><div class="grid g2" style="margin-top:12px"><div class="card"><h2 style="margin:0 0 6px">Teams</h2><div id="wkt"><p class="muted">Loading…</p></div></div><div class="card"><h2 style="margin:0 0 6px">Top players</h2><div id="wki"></div></div></div>`);
   const draw=()=>{const T=wkTeams(rows),me=rows.find(r=>r.sid===ME.sid);played=!!me;
@@ -134,7 +134,7 @@ ROUTES.weekend=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/
 
 /* ---------- live quiz battle (the lecturer runs it from #/battle) ---------- */
 function btScore(B,A){return A.map(a=>{let sc=0;Object.entries(a.a||{}).forEach(([i,v])=>{if(v&&v[0]===0)sc+=500+Math.max(0,Math.round(500*(1-(v[1]|0)/(BT_SECS*1000))))});return {sid:a.id,n:a.n,sc}}).sort((x,y)=>y.sc-x.sc)}
-ROUTES.battle=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Quiz battle</h1><p class="muted">Quiz battles switch on soon.</p>`);await dirLoad();
+ROUTES.battle=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Quiz battle</h1><p class="muted">Quiz battles switch on soon.</p>`);await socDir();
   const lect=ME.sid===LECTURER;let B=null,A=[];
   shell('#/',`<p><a href="#/">← Home</a></p><h1>🎮 Quiz battle</h1><div id="btv"><p class="muted">Looking for a battle…</p></div>`);
   const draw=()=>{const el=$('#btv');if(!el)return;clearInterval(BTT);
