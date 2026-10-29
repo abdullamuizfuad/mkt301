@@ -20,7 +20,7 @@ onHook('afterLoad',()=>{if(LS.get('ver','')===APP_VERSION)return;const sid=ME&&M
 /* true while What's new is still to come for this student (the name confirmation waits for it) */
 const whatsNewDue=()=>LS.get('ver','')===APP_VERSION&&!window.__noWhatsNew&&!!U&&!U.seen21&&!!ME&&ME.sid!==LECTURER&&!!((U.days||[]).length||U.xp);
 /* What's new: once per student, after their progress is loaded (from the cloud when they use a PIN) */
-function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)return;/* tests turn it off like the break reminders */verClose();if(!U||U.seen21||!ME||ME.sid===LECTURER)return;
+function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)return;/* tests turn it off like the break reminders */verClose();if(!U||U.seen21||!ME||ME.sid===LECTURER||VIEWAS)return;
   if(!(U.days||[]).length&&!U.xp)return;/* brand-new students get the tour instead */
   const sid=ME.sid,show=()=>{if(!U||U.seen21||!ME||ME.sid!==sid)return;if(document.querySelector('.modal'))return setTimeout(show,1500);U.seen21=1;save();
     const m=modal("What's new",`<div style="text-align:center"><div style="font-size:2.4rem">✨</div><h2 style="margin:4px 0">What's new in Version ${APP_VERSION}</h2></div>
@@ -29,7 +29,8 @@ function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)retur
     $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)}
 onHook('afterLoad',()=>{if(ME&&!ME.cloud)whatsNew()});onHook('cloud',whatsNew);
 const WHATSNEW=[
-  ['🏠','Your own dashboard','Home now shows your level, streak, what to do next, a day-by-day countdown, your readiness for each area and your weak spots.'],
+  ['🏠','A simpler home','Home now shows just today: what to do next, your screen time, missions and reviews, the days left and your practice areas. Everything else, from readiness to badges, is on My progress. Tap your avatar for My profile.'],
+  ['📈','My progress','Your readiness for each area, weak spots, a day-by-day countdown, activity, screen time and badges, all in one place.'],
   ['🧑‍🎨','Build your avatar','Pick your character, skin, hair, eyes, expression, outfit and headgear (headphones and a veil can go together). Tap your avatar on Home.'],
   ['🧠','Review and flashcards','Questions you practise come back after 1, 3, 7 and 14 days. Say how sure you are first: the 😬 sure-but-wrong ones are worth a second look.'],
   ['❄️','Streak freezes','Every 4 days in a row earns a freeze that covers a missed day.'],

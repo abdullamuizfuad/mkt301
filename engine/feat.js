@@ -107,7 +107,7 @@ lcard('annc',el=>{rulesOK().then(ok=>{if(!ok)return;el.hidden=false;
 const FRZ_MAX=2;
 function frzGap(){const F=U.frz||{},days=new Set(U.days),t=today();let d=addDays(t,-1);const gap=[];while(!days.has(d)&&!(F.d||{})[d]&&gap.length<5){gap.push(d);d=addDays(d,-1)}
   return {gap,before:days.has(d)||!!(F.d||{})[d],last:d}}
-function frzTick(){if(!U||!ME||ME.sid===LECTURER)return;const F=U.frz=U.frz||{b:0,d:{},g:{},eb:{}};F.d=F.d||{};F.g=F.g||{};F.eb=F.eb||{};const t=today();let ch=false;
+function frzTick(){if(!U||!ME||ME.sid===LECTURER||VIEWAS)return;const F=U.frz=U.frz||{b:0,d:{},g:{},eb:{}};F.d=F.d||{};F.g=F.g||{};F.eb=F.eb||{};const t=today();let ch=false;
   const {gap,before}=frzGap();
   if(gap.length&&before&&gap.length<=F.b){gap.forEach(x=>F.d[x]='f');F.b-=gap.length;ch=true;toast('❄️','Streak freeze used',gap.length>1?gap.length+' missed days covered':'Yesterday is covered: your streak is safe')}
   else if(gap.length===1&&before&&U.log['stblock:'+t+':1']&&!F.eb[weekKey(t)]){F.d[gap[0]]='e';F.eb[weekKey(t)]=t;ch=true;toast('🔥','Streak earned back','Your 20 focused minutes saved yesterday')}

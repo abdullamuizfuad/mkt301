@@ -1,4 +1,4 @@
-/* MKT Arena engine: the student's own dashboard (home), streak blocks, the countdown grid, spaced review with the confidence check,
+/* MKT Arena engine: dashboard parts used by home and My progress (engine/simple.js): next action, streak blocks, the countdown grid, spaced review with the confidence check,
    topic readiness, flashcards and MCQ item analysis. Course hooks (all optional, in course.js):
      readyAreas(u) → [{k, label, href, cov 0..1, acc 0..1|null}]   areas for readiness (k matches qArea)
      qArea(id) → area key for a question id                         (default: qIndex()[id].area)
@@ -23,14 +23,14 @@ function streakBlocksHTML(u){u=u||U;const n=streak(u),F=u.frz||{},fz=F.d||{},day
 
 /* ---------- countdown and the day grid to 14 Dec 2026 ---------- */
 function cdText(){const ms=EXAM_AT-Date.now();if(ms<=0)return 'Today';const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5);return `${d} day${d===1?'':'s'} · ${h} hour${h===1?'':'s'}`}
-function countdownHTML(u){u=u||U;const days=new Set(u.days),fz=(u.frz||{}).d||{},t=mvDay(),first=[...u.days].sort()[0]||t;
+function countdownHTML(u,bare){u=u||U;const days=new Set(u.days),fz=(u.frz||{}).d||{},t=mvDay(),first=[...u.days].sort()[0]||t;
   let st=[first,addDays(t,-27)].sort()[0];st=addDays(st,-dowOf(st));if(st<'2026-08-23')st='2026-08-23';
   const rows=[];for(let w=st;w<=EXAM_DAY;w=addDays(w,7)){const cells=[];for(let i=0;i<7;i++){const d=addDays(w,i),we=i===5||i===6,cls=[days.has(d)?'on':fz[d]?'fz':'',d===t?'today':'',we?'we':'',d<t&&!days.has(d)&&!fz[d]?'miss':'',d>EXAM_DAY?'out':''];
       const mark=d===EXAM_DAY?'🎯':d===W14?'📝':fz[d]&&!days.has(d)?'❄️':'';
       cells.push(`<i class="${cls.filter(Boolean).join(' ')}" title="${d}${d===EXAM_DAY?' · 9:00 am':''}${d===W14?' · week 14 starts, practice paper unlocks':''}${days.has(d)?' · practised':''}${we?' · weekend':''}">${mark}</i>`)}
     const wk=termWeek(w);rows.push(`<div class="cdrow${wk===14?' w14':''}"><span class="cdw">${wk>=1&&wk<=16?'Wk '+wk:''}</span>${cells.join('')}</div>`)}
   const left=Math.max(0,Math.ceil((Date.parse(EXAM_DAY+'T00:00:00+05:00')-Date.parse(t+'T00:00:00+05:00'))/864e5)),done=[...days].filter(d=>d>=st&&d<=t).length;
-  return `<div class="card cdcard" id="cdcard"><h2 style="margin:0">⏳ Mon 14 Dec 2026 · 9:00 am</h2><p class="lex cdnum" id="cdnum" aria-live="off">${cdText()}</p>
+  return `<div class="${bare?'':'card '}cdcard" id="cdcard">${bare?'<p style="margin:0">Mon 14 Dec 2026 · 9:00 am</p>':'<h2 style="margin:0">⏳ Mon 14 Dec 2026 · 9:00 am</h2>'}<p class="lex cdnum" id="cdnum" aria-live="off">${cdText()}</p>
   <div class="cdgrid" role="img" aria-label="Days from ${st} to 14 December 2026: ${done} practised so far, ${left} days to go"><div class="cdrow cdh"><span class="cdw"></span>${['S','M','T','W','T','F','S'].map(x=>`<b>${x}</b>`).join('')}</div>${rows.join('')}</div>
   <p class="muted cdkey"><span><i class="k on"></i>practised</span><span><i class="k today"></i>today</span><span><i class="k we"></i>weekend</span><span>📝 week 14: practice paper</span><span>🎯 14 Dec</span></p>${typeof ppLine==='function'?`<a class="btn ghost sm" href="#/paper" id="pplink">📝 Practice paper: ${esc(ppLine())}</a>`:''}</div>`}
 setInterval(()=>{const e=document.getElementById('cdnum');if(e)e.textContent=cdText()},30000);
@@ -74,9 +74,9 @@ function readiness(u){u=u||U;if(typeof readyAreas!=='function')return [];const C
   return readyAreas(u).map(a=>{const c=C[a.k]||[0,0,0,0],sureWrong=c[0]-c[1],cal=c[0]+c[2]?(c[1]+c[3]*.5)/(c[0]+c[2]):null;
     const parts=[[a.cov,.55],[a.acc,.3],[cal,.15]].filter(p=>p[0]!=null),w=parts.reduce((t,p)=>t+p[1],0);
     return Object.assign({},a,{pct:Math.round(parts.reduce((t,p)=>t+p[0]*p[1],0)/(w||1)*100*(a.cov==null?1:Math.min(1,.4+a.cov))),sureWrong})}).map(a=>Object.assign(a,{pct:Math.max(0,Math.min(100,a.pct))}))}
-function readyHTML(u,limit){const R=readiness(u).sort((a,b)=>a.pct-b.pct);if(!R.length)return '';const avg=Math.round(R.reduce((t,a)=>t+a.pct,0)/R.length);
+function readyHTML(u,limit,bare){const R=readiness(u).sort((a,b)=>a.pct-b.pct);if(!R.length)return '';const avg=Math.round(R.reduce((t,a)=>t+a.pct,0)/R.length);
   const row=a=>`<a class="rdrow" href="${a.href||'#/'}"><span class="rdl">${esc(a.label)}</span><span class="bar"><i style="width:${a.pct}%;background:${a.pct>=70?'var(--green)':a.pct>=40?'var(--gold)':'var(--pink)'}"></i></span><b>${a.pct}%</b>${a.sureWrong>=2?'<span class="tag" title="Answers you were sure about but got wrong">😬 '+a.sureWrong+'</span>':''}</a>`;
-  const lim=limit||6;return `<div class="card" id="rdcard"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📈 Readiness</h2><span class="tag">Overall ${avg}%</span></div>
+  const lim=limit||6;return `<div class="${bare?'':'card'}" id="rdcard">${bare?'':`<div class="row" style="justify-content:space-between"><h2 style="margin:0">📈 Readiness</h2><span class="tag">Overall ${avg}%</span></div>`}
   <p class="muted" style="font-size:.85rem;margin:6px 0 8px">How much you have practised each area, how well it went, and whether your confidence matched (😬 = sure but wrong). Weakest first.</p>
   ${R.slice(0,lim).map(row).join('')}${R.length>lim?`<details><summary class="click muted" style="font-size:.88rem;margin-top:6px">All ${R.length} areas</summary>${R.slice(lim).map(row).join('')}</details>`:''}</div>`}
 
@@ -87,21 +87,6 @@ function nextAction(){if(typeof ppBusy==='function'&&ppBusy())return ['📝','Pr
   const R=readiness().sort((a,b)=>a.pct-b.pct)[0];if(R&&R.pct<70)return ['📈','Build up: '+R.label,'Your least practised area right now.',R.href||'#/'];
   const w=weakTopics()[0];if(w)return ['🩹','Fix a weak spot: '+tkLabel(w),'Practise it again to clear it.',weakHref(w)];
   return ['🃏','Flashcards','Five minutes of quick recall.','#/cards']}
-function weakHTML(){const w=weakTopics().slice(0,3);return `<div class="card"><h2 style="margin:0 0 6px">🩹 Weak spots</h2>${w.length?w.map(k=>`<a class="rdrow" href="${weakHref(k)}"><span class="rdl">${esc(tkLabel(k))}</span><span class="btn ghost sm">Practise</span></a>`).join(''):'<p class="muted" style="margin:0">None yet. Plans with missed or wrong ideas show up here.</p>'}</div>`}
-function dashHeadHTML(){const L=level(U.xp),got=Object.keys(U.badges).length,nm=U.dn||ME.name,nx=nextAction(),due=srsDue().length;
-  return `<div class="card hero dash"><a class="dav" href="#/avatar" title="Edit my avatar" aria-label="Edit my avatar">${avatarSVG(myAv(),112,'My avatar')}<span class="tag">✏️ Edit</span></a>
-  <div style="min-width:0"><h1 style="margin:0">${esc(nm)}</h1><p class="muted" style="margin:2px 0 0">${U.un?esc(U.un)+' · ':''}${esc(ME.sid)}${U.dg?' · '+esc(U.dg):''}</p>
-  <div class="lvline"><b class="lex">Level ${L.i+1} · ${esc(L.name)}</b><span class="muted">${L.to?(L.to-U.xp)+' XP to '+esc(LEVELS[L.i+1][1]):'Top level reached'}</span></div><div class="bar"><i style="width:${L.pct}%"></i></div>
-  <div class="stats"><div class="stat"><b>${U.xp}</b><span>XP</span></div><div class="stat"><b>🔥 ${streak(U)}</b><span>day streak</span></div><a class="stat" href="#/badges"><b>${got}/${BADGES.length}</b><span>badges</span></a><a class="stat" href="#/review"><b>🧠 ${due}</b><span>to review</span></a>${typeof dashStats==='function'?dashStats().map(x=>`<a class="stat" href="${x[2]||'#/'}"><b>${x[0]}</b><span>${esc(x[1])}</span></a>`).join(''):''}</div>
-  ${streakBlocksHTML()}</div></div>
-  <a class="card zone next" href="${nx[3]}" id="nextact"><span class="em">${nx[0]}</span><div style="flex:1;min-width:0"><span class="muted" style="font-size:.78rem;font-weight:700;letter-spacing:.04em">NEXT UP</span><h2 style="margin:2px 0">${esc(nx[1])}</h2><p class="muted" style="margin:0;font-size:.9rem">${esc(nx[2])}</p></div><span class="btn">Go →</span></a>`}
-function badgesMiniHTML(){const got=BADGES.filter(b=>U.badges[b.id]).sort((a,b)=>U.badges[a.id]<U.badges[b.id]?1:-1).slice(0,4);
-  return `<div class="card"><h2>Recent badges</h2>${got.length?`<div class="badges">${got.map(b=>`<div class="badge got"><div class="ico">${b.ico}</div><b>${b.name}</b></div>`).join('')}</div>`:'<p class="muted">None yet. Practise to earn your first.</p>'}<p style="margin:12px 0 0"><a href="#/badges">See all badges →</a></p></div>`}
-/* the top of every student's home page */
-function dashHTML(){if(!U)return '';if(ME.sid===LECTURER)return `<div class="card"><h1 style="margin:0">Welcome back, ${esc(String(ME.name).split(' ')[0])}</h1><p class="muted" style="margin:4px 0 0">Students see their own dashboard here. Your tools are on the <a href="#/lecturer">Lecturer</a> tab.</p></div>`;
-  return `${dashHeadHTML()}<div class="grid g2" style="margin-top:16px">${countdownHTML()}<div>${readyHTML()}<div style="margin-top:16px">${weakHTML()}</div></div></div>
-  ${typeof socialCardHTML==='function'?socialCardHTML():''}<div class="grid g2" style="margin-top:16px"><div class="card"><h2 style="margin:0 0 6px">📅 Activity</h2>${heatHTML(U.days)}<h3 style="margin:12px 0 4px">Recent activity</h3>${recentHTML(U)}</div>${badgesMiniHTML()}</div>`}
-
 /* ---------- flashcards (#/cards) ---------- */
 const fcId=(k,front)=>{let h=0;for(const c of k+'|'+front)h=(h*31+c.charCodeAt(0))>>>0;return k+'_'+h.toString(36)};
 ROUTES.cards=h=>{const D=typeof flashDecks==='function'?flashDecks():[];U.fc=U.fc||{};

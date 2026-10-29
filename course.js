@@ -102,31 +102,10 @@ const TOUR=[['🧩','Plan with chips','Every question starts with a plan. Tap th
  ['🏁','Finish your way','After planning, choose: <b>📝 Plan only</b> to move on, <b>✍️ Write on paper</b> against the clock, or <b>⌨️ Type my answer</b> (or speak it with 🎤) for an automatic check of the key ideas. Your lecturer may mark typed answers too.'],
  ['✨','XP, missions and badges','Earn XP for reading, planning and writing. Three daily missions change every day and get tougher as you level up. <b>⏱️ Screen time</b> counts your active minutes: 20 a day meets your daily goal. In class, tap <b>Join</b> when your lecturer starts a live session.'],
  ['💾','Keep your progress safe','Your progress lives on this device. Tap <b>💾 Save</b> in the top bar to email a copy to your lecturer or download it.']];
-function home(){
-  rollDay();
-  const GO=CRS.missionGo={read:'#/cases',verdicts:'#/cases',verdictsRight:'#/cases',plans:'#/cases',timed:'#/cases',perfect:'#/short',bplans:'#/short',btimed:'#/short',catool:'#/essay',catimed:'#/essay',esstool:'#/essay',ecplan:'#/essay',essays:'#/essay',typed:'#/short',stgoal:'#/short'};
-  const ms=missions().map(m=>{const v=Math.min(U.day.c[m.k]||0,m.n);return `<div class="mission"><span class="tick ${v>=m.n?'on':''}">${v>=m.n?'✓':''}</span><div style="flex:1">${esc(m.x)}<div class="bar" style="margin-top:6px"><i style="width:${v/m.n*100}%"></i></div></div><span class="muted">${v}/${m.n}</span>${v<m.n?`<a class="btn ghost sm" href="${GO[m.k]||'#/cases'}" style="min-height:32px;padding:4px 10px">Go</a>`:''}</div>`}).join('');
-  const caseCards=CASES.map(c=>{const read=c.sections.filter(s=>U.log['read:'+c.id+':'+s.id]).length;return `<a class="card zone" href="#/case/${c.id}/read"><div class="em">${c.icon}</div><h3>${esc(c.title)}</h3><p class="muted" style="font-size:.9rem">${esc(c.subtitle)}</p><div class="bar"><i style="width:${read/c.sections.length*100}%;background:var(--teal)"></i></div><p class="muted" style="font-size:.8rem;margin:6px 0 0">${read}/${c.sections.length} sections read</p></a>`}).join('');
-  shell('#/',`${inboxHTML()}${dashHTML()}
-  <div class="grid g2" style="margin-top:16px">
-   <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Today's mission</h2><span class="tag">${TIERS[U.day.t]} · +${MBONUS[U.day.t]} XP</span></div><p class="muted" style="font-size:.9rem;margin-top:6px">${U.day.done?'✅ Done for today. New missions tomorrow.':'Complete all three for the bonus. New missions every day, and they get tougher as you level up.'}</p>${ms}</div>
-   <div class="card"><h2>Quick practice</h2><div class="grid g2" style="gap:10px"><a class="card zone" href="#/review" style="padding:14px"><div class="em">🧠</div><h3 style="margin:4px 0">Review</h3><p class="muted" style="font-size:.85rem;margin:0">${srsDue().length} due today</p></a><a class="card zone" href="#/cards" style="padding:14px"><div class="em">🃏</div><h3 style="margin:4px 0">Flashcards</h3><p class="muted" style="font-size:.85rem;margin:0">Key terms by week</p></a></div></div>
-  </div>
-  <div style="margin-top:16px">${stCardHTML()}</div>
-  <h2 style="margin-top:26px">Section A · Case studies</h2>
-  <div class="grid g3">${caseCards}
-  </div>
-  <h2 style="margin-top:26px">More practice</h2>
-  <div class="grid g2">
-   <a class="card zone" href="#/short"><div class="em">🧩</div><h3>Section B · Short answers</h3><p class="muted" style="font-size:.9rem">Build answer plans from chips, then write against the clock.</p><div class="chipline"><span class="tag">${BANK_B.length} questions</span></div></a>
-   <a class="card zone" href="#/essay"><div class="em">🏆</div><h3>Section C · Strategy & essay</h3><p class="muted" style="font-size:.9rem">Competitive advantage tools and an essay coach for 20-mark answers.</p><div class="chipline"><span class="tag">${BANK_C.structured.length} strategy scenarios</span><span class="tag">${BANK_C.essays.length} essays</span></div></a>
-  </div>
-  <div class="card" style="margin-top:26px" id="bk"><div class="row" style="justify-content:space-between"><h2 style="margin:0">💾 Save my progress</h2><span class="tag" id="bkl"></span></div>
-  <p class="muted" style="font-size:.9rem;margin:8px 0 12px">Your progress lives on this device only. Save a backup to move it to another phone or laptop, or to keep it safe before clearing your browser.</p>
-  <div class="row"><button class="btn" id="bkd">⬇ Download backup file</button><button class="btn ghost" id="bkc">📧 Email or copy…</button><button class="btn ghost" id="bkr">Restore a backup</button></div>
-  <div id="bkp" class="hide" style="margin-top:14px"><label for="bkt">Paste your backup code, or choose your backup file</label><textarea id="bkt" style="min-height:90px" placeholder="MKT301B-..."></textarea>
-  <div class="row" style="margin-top:10px"><input type="file" id="bkf" accept=".txt,text/plain" style="max-width:100%;color:var(--ink2)"><button class="btn gold" id="bkgo">Restore</button></div><div class="err" id="bke"></div></div></div>`);
-  backupCard()}
+CRS.missionGo={read:'#/cases',verdicts:'#/cases',verdictsRight:'#/cases',plans:'#/cases',timed:'#/cases',perfect:'#/short',bplans:'#/short',btimed:'#/short',catool:'#/essay',catimed:'#/essay',esstool:'#/essay',ecplan:'#/essay',essays:'#/essay',typed:'#/short',stgoal:'#/short'};
+/* the four big practice tiles on home and on #/practice (engine/simple.js) */
+function homeTiles(){return [['📚','Section A · Cases',CASES.length+' cases: read, judge, practise','#/cases'],['🧩','Section B · Short answers',BANK_B.length+' questions','#/short'],
+  ['🏆','Section C · Strategy & essay',BANK_C.structured.length+' scenarios · '+BANK_C.essays.length+' essays','#/essay'],['🃏','Flashcards','Key terms by week','#/cards']]}
 function soon(active,title,em,text){shell(active,`<div class="card" style="text-align:center;padding:40px 20px"><div style="font-size:3rem">${em}</div><h1>${title}</h1><p class="muted">${text}</p><a class="btn" href="#/cases">Practise a case meanwhile</a></div>`)}
 function caseList(){shell('#/cases',`<h1>Section A · Case studies</h1><p class="muted">Read each case in full, judge the boardroom, then practise answers on paper. Any of these cases could be the one you meet later, so practise them all.</p>
  <div class="grid g3">${CASES.map(c=>`<a class="card zone" href="#/case/${c.id}/read"><div class="em">${c.icon}</div><h3>${esc(c.title)}</h3><p class="muted" style="font-size:.9rem">${esc(c.subtitle)}</p><div class="chipline"><span class="tag">${esc(c.tag)}</span></div></a>`).join('')}</div>`)}
@@ -465,26 +444,13 @@ function studentPage(sid){
   if(!cloudOn())return shell('#/lecturer',`<p><a href="#/lecturer">← Lecturer</a></p><div class="callout">Student profiles need the live connection. Sign in with your PIN while online to open them.</div>`);
   if(!/^S0\d{5}$/.test(sid||''))return lecturer();
   shell('#/lecturer',`<p><a href="${esc(PFROM||'#/lecturer')}" id="pback">← Back</a></p><div id="prof"><p class="muted">Loading ${esc(sid)}…</p></div>`);
-  let X,RV,open=null,tab='ans';const drafts={};
+  let X,RV,open=null,tab='ans';const drafts={},OPEN=new Set();
   const draw=force=>{const el=$('#prof');if(!el||X===undefined||RV===undefined)return;const ae=document.activeElement;if(!force&&ae&&el.contains(ae)&&/TEXTAREA|INPUT|SELECT/.test(ae.tagName))return;
     if(!X||!X.u){el.innerHTML=`<div class="card"><h2>${esc(sid)}</h2><p class="muted">This student hasn't signed in with a PIN yet, so there is no saved progress. (Email: ${esc(CLOUD.email(sid))})</p></div>${actionsHTML()}`;bindActions();return}
-    const u=Object.assign({log:{},days:[],badges:{},n:{}},X.u),n=u.n||{},L=level(u.xp|0),I=qIndex(),done=practised(u);
+    const u=Object.assign({log:{},days:[],badges:{},n:{}},X.u),L=level(u.xp|0),I=qIndex();
     const ans=Object.entries(u.ans||{}).sort((a,b)=>String(a[1].at)<String(b[1].at)?1:-1),notes=Object.entries(RV).filter(([k])=>isNote(k)).sort((a,b)=>String(a[1].at)<String(b[1].at)?1:-1);
-    const marked=ans.filter(([k])=>RV[k]).length,first=[...(u.days||[])].sort()[0],ig=u.integ||{},{dec,miss}=decoyStats(u);
-    const weeks=[...new Set(BANK_B.map(q=>q.week))].sort((a,b)=>a-b),W=((u.wk||{}).t)||{};
-    const topicRows=weeks.map(w=>{const qs=BANK_B.filter(q=>q.week===w),d=qs.filter(q=>done.has(q.id)).length,wk=W['w'+w];
-      return `<div class="pb"><span><b>Week ${w}</b><br><span class="muted" style="font-size:.8rem">${esc([...new Set(qs.map(q=>q.topic))].slice(0,3).join(', '))}</span></span>
-      <div class="bar"><i style="width:${(d/qs.length*100)|0}%;background:var(--teal)"></i></div><span style="text-align:right;font-size:.82rem">${d}/${qs.length} practised${wk&&wk[1]?'<br>⚠️ weak-spot '+wk[1]:''}</span></div>`}).join('');
-    const scRows=BANK_C.structured.map(sc=>{const ps=['a','b','c'].map(p=>[p,(u.cw||{})[sc.id+':'+p]||{}]);
-      return `<div class="pb"><span>${sc.icon||'🏰'} <b>${esc(sc.name)}</b></span><div class="bar"><i style="width:${(ps.filter(x=>x[1].final).length/3*100)|0}%"></i></div>
-      <span style="text-align:right;font-size:.82rem">${ps.map(([p,st])=>'('+p+') '+(st.final?'✓ '+((st.ticks||[]).length)+' checks':st.step>=1?'writing':st.checked?'tool done':'–')).join(' · ')}</span></div>`}).join('');
-    const esRows=BANK_C.essays.map(e=>{const E=(u.ess||{})[e.id]||{},tot=RUBRIC.reduce((a,r,i)=>a+(+((E.marks||{})[i]||0)),0);
-      return `<div class="pb"><span>${e.icon||'✍️'} <b>${esc(e.name)}</b></span><div class="bar"><i style="width:${Math.min(100,((E.step|0)/4)*100)}%"></i></div>
-      <span style="text-align:right;font-size:.82rem">${E.final?'self-marked <b>'+tot+'/20</b>':E.written?'written, not marked':E.planDone?'plan done':E.step?'step '+((E.step|0)+1)+' of 5':'not started'}</span></div>`}).join('');
-    const caseRows=CASES.map(c=>{const rd=c.sections.filter(s=>u.log['read:'+c.id+':'+s.id]).length,vs=c.boardroom.map((a,i)=>[a,(u.verd||{})[c.id+':'+i]]).filter(x=>x[1]),ok=vs.filter(x=>x[1]===x[0].v).length,
-      qd=c.questions.filter(q=>done.has(q.id)).length;
-      return `<div class="pb"><span>${c.icon} <b>${esc(c.title)}</b></span><div class="bar"><i style="width:${(rd/c.sections.length*100)|0}%"></i></div>
-      <span style="text-align:right;font-size:.82rem">read ${rd}/${c.sections.length} · Boardroom ${vs.length}/${c.boardroom.length}${vs.length?' ('+Math.round(ok/vs.length*100)+'% match)':''}<br>practice ${qd}/${c.questions.length}</span></div>`}).join('');
+    const marked=ans.filter(([k])=>RV[k]).length,first=[...(u.days||[])].sort()[0];
+    if(!OPEN.init){OPEN.init=1;if(ans.some(([k])=>!RV[k]))OPEN.add('ans')}
     const ansItem=([k,a])=>{const e=I[a.q],r=RV[k],good=e?e.q.chips.filter(c=>c.g).length:0,fl=a.fl||{},flt=flagText(fl);
       const d=drafts[k]||{band:r?r.band:a.b|0,xp:r?r.xp:Math.min(30,(a.b|0)*4),fb:r?r.fb:''};
       return `<div class="mqi" data-k="${esc(k)}"><div class="row" style="justify-content:space-between"><b style="font-size:.9rem">${esc(e?e.label:a.q)}</b><span class="muted" style="font-size:.8rem">${esc(String(a.at||'').slice(0,16).replace('T',' '))}</span></div>
@@ -500,29 +466,13 @@ function studentPage(sid){
       <div><h1 style="margin:0">${esc(X.name||sid)}</h1><p class="muted" style="margin:2px 0 0">🎓 ${esc(L.name)} · <b>${u.xp|0} XP</b>${L.to?' · '+(L.to-(u.xp|0))+' XP to '+esc(LEVELS[L.i+1][1]):' · top level'}</p>
       <div class="bar" style="margin-top:8px"><i style="width:${L.pct}%;background:var(--teal)"></i></div></div></div>
       <div class="kv"><div>ID<b>${esc(sid)}</b></div><div>Student email<b>${esc(CLOUD.email(sid))}</b></div><div>Name (class list)<b>${u.dn?esc(u.dn):'not added yet'}</b></div><div>Username<b>${u.un?esc(u.un):'not picked yet'}</b></div>
-      <div>Streak<b>🔥 ${streak(u)} day${streak(u)===1?'':'s'}</b></div><div>Last active<b>${ago(X.ts)}</b></div><div>First practised<b>${esc(first||'–')}</b></div></div></div>
-    <div class="grid g2"><div class="card psec"><h2>Activity</h2>${heatHTML(u.days)}
-      <div class="stats" style="grid-template-columns:repeat(3,1fr)"><div class="stat"><b>${n.plans|0}</b><span>plans</span></div><div class="stat"><b>${n.verdicts|0}</b><span>Boardroom calls</span></div><div class="stat"><b>${n.catool|0}</b><span>strategy tools</span></div>
-      <div class="stat"><b>${n.timed|0}</b><span>timed</span></div><div class="stat"><b>${n.typed|0}</b><span>typed</span></div><div class="stat"><b>${marked}</b><span>marked</span></div>
-      <div class="stat"><b>${n.strat|0}</b><span>strategy scenarios</span></div><div class="stat"><b>${n.essays|0}</b><span>essays</span></div><div class="stat"><b>${n.missions|0}</b><span>missions</span></div></div>
-      <h3 style="margin-top:14px">Recent activity</h3>${recentHTML(u)}</div>
-    <div class="card psec"><h2>Badges <span class="tag">${Object.keys(u.badges).length}/${BADGES.length}</span></h2>
-      <div>${BADGES.map(b=>u.badges[b.id]?`<span class="bsm got" title="${esc(b.d)}">${b.ico} ${esc(b.name)} <span class="muted">${esc(u.badges[b.id])}</span></span>`:'').join('')}</div>
-      <details style="margin-top:8px"><summary class="muted" style="cursor:pointer">Not yet earned (${BADGES.filter(b=>!u.badges[b.id]).length})</summary>${BADGES.filter(b=>!u.badges[b.id]).map(b=>`<span class="bsm no" title="${esc(b.d)}">${b.ico} ${esc(b.name)}</span>`).join('')}</details>
-</div></div>
-    ${presProfileHTML(u,sid)}
-    <div class="card psec"><h2>Section B by week</h2><p class="muted" style="font-size:.82rem;margin-top:-4px">Bar: short-answer questions practised. ⚠️ weak-spot score.</p>${topicRows}</div>
-    <div class="card psec"><h2>Section C</h2><h3>Competitive advantage</h3>${scRows}<h3 style="margin-top:12px">Essay Coach</h3>${esRows}</div>
-    <div class="grid g2"><div class="card psec"><h2>Weak spots</h2>${(()=>{const w=((u.wk||{}).t)||{},ks=Object.keys(w).filter(k=>w[k][1]>0).sort((a,b)=>w[b][1]/Math.max(1,w[b][0])-w[a][1]/Math.max(1,w[a][0])).slice(0,6);
-      return (ks.length?`<ol class="sumlist">${ks.map(k=>`<li>${esc(tkLabel(k))} <span class="tag">${w[k][1]} pts over ${w[k][0]} tries</span></li>`).join('')}</ol>`:'<p class="muted">None recorded yet.</p>')
-      +`<h3>Decoys picked (${dec.length})</h3>${dec.length?`<ul class="sumlist">${dec.slice(0,8).map(d=>`<li><b>${esc(d.t)}</b><div class="muted" style="font-size:.8rem">${esc(d.where)}${d.why?' · '+esc(d.why):''}</div></li>`).join('')}</ul>`:'<p class="muted">None.</p>'}
-      <h3>Key ideas missed in plans (${miss.length})</h3>${miss.length?`<ul class="sumlist">${miss.slice(0,8).map(d=>`<li>${esc(d.t)}<div class="muted" style="font-size:.8rem">${esc(d.where)}</div></li>`).join('')}</ul>`:'<p class="muted">None.</p>'}`})()}</div>
-    <div class="card psec"><h2>Cases</h2>${caseRows}<h3 style="margin-top:14px">Integrity</h3><p style="font-size:.9rem;margin:0">${Object.keys(ig).length?Object.entries(ig).map(([k,v])=>`${esc({paste:'Pastes blocked',bigKept:'Large inserts kept (often voice typing)',big:'Big insertions removed (older rule)',fast:'Answers too fast'}[k]||k)}: <b>${v|0}</b>`).join(' · '):'No integrity flags.'}</p>
-      <p class="muted" style="font-size:.8rem">Flags are signals, not proof. Large inserts are usually voice typing; open an answer to see each flag's snippet.</p></div></div>
-    <div class="card psec"><h2>Typed answers <span class="tag">${ans.length}</span> <span class="tag">${marked} marked</span></h2>${ans.length?ans.slice(0,30).map(ansItem).join(''):'<p class="muted">No typed answers yet.</p>'}${ans.length>30?'<p class="muted" style="font-size:.85rem">Showing the newest 30.</p>':''}</div>
-    <div class="card psec"><h2>Messages you've sent</h2>${notes.length?notes.map(([k,v])=>`<div class="note" style="border-left:3px solid var(--teal);padding:6px 10px;margin-top:6px"><p style="margin:0">${esc(v.fb)}</p><span class="muted" style="font-size:.8rem">${esc(String(v.at).slice(0,16).replace('T',' '))} · ${u.notes&&u.notes[k]?(u.notesRead&&u.notesRead[k]?'read':'delivered'):'not opened yet'}</span></div>`).join(''):'<p class="muted">None yet.</p>'}</div>
+      <div>Streak<b>🔥 ${streak(u)} day${streak(u)===1?'':'s'}</b></div><div>Last active<b>${ago(X.ts)}</b></div><div>First practised<b>${esc(first||'–')}</b></div></div>
+      ${profSumHTML(u,{last:X.ts,risk:riskOf(X)})}<div class="row" style="margin-top:10px"><button type="button" class="btn sm" data-va="${esc(sid)}">👁 View as student</button></div></div>
+    ${secsHTML(profSections(u,{sid,lect:1,marked}),OPEN)}${integSecHTML(u,OPEN)}
+    ${secsHTML([{id:'ans',ico:'✍️',t:'Typed answers',sum:`${ans.length} answer${ans.length===1?'':'s'} · ${marked} marked`,html:(ans.length?ans.slice(0,30).map(ansItem).join(''):'<p class="muted">No typed answers yet.</p>')+(ans.length>30?'<p class="muted" style="font-size:.85rem">Showing the newest 30.</p>':'')},
+      {id:'msgs',ico:'✉️',t:"Messages you've sent",sum:notes.length?notes.length+' sent':'None yet',html:notes.length?notes.map(([k,v])=>`<div class="note" style="border-left:3px solid var(--teal);padding:6px 10px;margin-top:6px"><p style="margin:0">${esc(v.fb)}</p><span class="muted" style="font-size:.8rem">${esc(String(v.at).slice(0,16).replace('T',' '))} · ${u.notes&&u.notes[k]?(u.notesRead&&u.notesRead[k]?'read':'delivered'):'not opened yet'}</span></div>`).join(''):'<p class="muted">None yet.</p>'}],OPEN)}
     ${profileXHTML(sid,u)}${nameEditHTML(sid,u)}${actionsHTML()}`;
-    bindActions();
+    secsBind(el,OPEN);bindActions();
     el.querySelectorAll('.mqi').forEach(box=>{const k=box.dataset.k,a=(u.ans||{})[k],r=RV[k];
       box.querySelector('[data-open]')&&(box.querySelector('[data-open]').onclick=()=>{open=k;draw(1)});
       box.querySelector('[data-close]')&&(box.querySelector('[data-close]').onclick=()=>{open=null;delete drafts[k];draw(1)});
@@ -545,6 +495,29 @@ function studentPage(sid){
     $('#pdl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({sid,name:X&&X.name,lastActive:X&&X.ts,progress:X&&X.u,reviews:RV},null,1)],{type:'application/json'}));a.download='mkt301-'+sid+'-'+today()+'.json';a.click()}}
   const err=e=>{const el=$('#prof');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`};
   CLOUD.watchStudent(sid,x=>{X=x;draw()},err);CLOUD.watchReview(sid,r=>{RV=r;draw()},err);presProfileWatch(()=>draw())}
+
+/* the course's parts of a profile (engine/simple.js): shared by the lecturer's view of a student and the student's own My progress */
+function profCourse(u,ctx){const n=u.n||{},done=practised(u);
+  const weeks=[...new Set(BANK_B.map(q=>q.week))].sort((a,b)=>a-b),W=((u.wk||{}).t)||{};
+  const topicRows=weeks.map(w=>{const qs=BANK_B.filter(q=>q.week===w),d=qs.filter(q=>done.has(q.id)).length,wk=W['w'+w];
+  return `<div class="pb"><span><b>Week ${w}</b><br><span class="muted" style="font-size:.8rem">${esc([...new Set(qs.map(q=>q.topic))].slice(0,3).join(', '))}</span></span>
+  <div class="bar"><i style="width:${(d/qs.length*100)|0}%;background:var(--teal)"></i></div><span style="text-align:right;font-size:.82rem">${d}/${qs.length} practised${wk&&wk[1]?'<br>⚠️ weak-spot '+wk[1]:''}</span></div>`}).join('');
+  const scRows=BANK_C.structured.map(sc=>{const ps=['a','b','c'].map(p=>[p,(u.cw||{})[sc.id+':'+p]||{}]);
+  return `<div class="pb"><span>${sc.icon||'🏰'} <b>${esc(sc.name)}</b></span><div class="bar"><i style="width:${(ps.filter(x=>x[1].final).length/3*100)|0}%"></i></div>
+  <span style="text-align:right;font-size:.82rem">${ps.map(([p,st])=>'('+p+') '+(st.final?'✓ '+((st.ticks||[]).length)+' checks':st.step>=1?'writing':st.checked?'tool done':'–')).join(' · ')}</span></div>`}).join('');
+  const esRows=BANK_C.essays.map(e=>{const E=(u.ess||{})[e.id]||{},tot=RUBRIC.reduce((a,r,i)=>a+(+((E.marks||{})[i]||0)),0);
+  return `<div class="pb"><span>${e.icon||'✍️'} <b>${esc(e.name)}</b></span><div class="bar"><i style="width:${Math.min(100,((E.step|0)/4)*100)}%"></i></div>
+  <span style="text-align:right;font-size:.82rem">${E.final?'self-marked <b>'+tot+'/20</b>':E.written?'written, not marked':E.planDone?'plan done':E.step?'step '+((E.step|0)+1)+' of 5':'not started'}</span></div>`}).join('');
+  const caseRows=CASES.map(c=>{const rd=c.sections.filter(s=>u.log['read:'+c.id+':'+s.id]).length,vs=c.boardroom.map((a,i)=>[a,(u.verd||{})[c.id+':'+i]]).filter(x=>x[1]),ok=vs.filter(x=>x[1]===x[0].v).length,
+  qd=c.questions.filter(q=>done.has(q.id)).length;
+  return `<div class="pb"><span>${c.icon} <b>${esc(c.title)}</b></span><div class="bar"><i style="width:${(rd/c.sections.length*100)|0}%"></i></div>
+  <span style="text-align:right;font-size:.82rem">read ${rd}/${c.sections.length} · Boardroom ${vs.length}/${c.boardroom.length}${vs.length?' ('+Math.round(ok/vs.length*100)+'% match)':''}<br>practice ${qd}/${c.questions.length}</span></div>`}).join('');
+  const bDone=BANK_B.filter(q=>done.has(q.id)).length,sDone=BANK_C.structured.filter(sc=>['a','b','c'].every(p=>((u.cw||{})[sc.id+':'+p]||{}).final)).length,eDone=BANK_C.essays.filter(e=>((u.ess||{})[e.id]||{}).final).length;
+  const rd=CASES.reduce((t,c)=>t+c.sections.filter(s=>u.log['read:'+c.id+':'+s.id]).length,0),all=CASES.reduce((t,c)=>t+c.sections.length,0);
+  return {stats:[[n.plans|0,'plans'],[n.verdicts|0,'Boardroom calls'],[n.catool|0,'strategy tools'],[n.timed|0,'timed'],[n.typed|0,'typed'],[ctx.marked|0,'marked'],[n.strat|0,'strategy scenarios'],[n.essays|0,'essays'],[n.missions|0,'missions']],
+    secs:[{id:'secb',ico:'🧩',t:'Section B by week',sum:bDone+'/'+BANK_B.length+' short answers practised',html:'<p class="muted" style="font-size:.82rem;margin-top:0">Bar: short-answer questions practised. ⚠️ weak-spot score.</p>'+topicRows},
+      {id:'secc',ico:'🏆',t:'Section C',sum:sDone+'/'+BANK_C.structured.length+' scenarios · '+eDone+'/'+BANK_C.essays.length+' essays finished',html:`<h3 style="margin-top:0">Competitive advantage</h3>${scRows}<h3 style="margin-top:12px">Essay Coach</h3>${esRows}`}],
+    cases:{sum:rd+'/'+all+' case sections read',html:caseRows}}}
 
 /* ---------- course hooks for the engine ---------- */
 const CASE_ALL=CASES,BANK_B_ALL=BANK_B;

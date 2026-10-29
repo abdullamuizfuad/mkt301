@@ -53,10 +53,13 @@ function avatarSVG(code,size,title){const a=avParse(code),sk=AV.skin[a.sk],hc=AV
   ${front}${veilFront}${hg}${phones}</g></svg>`}
 const myAv=()=>U&&U.av?U.av:avFor(ME?ME.sid:'');
 
-/* builder: #/avatar */
+/* My profile (#/avatar): name, @username and the avatar builder */
 ROUTES.avatar=()=>{const a=avParse(myAv());const opt=(k,names,label,vis)=>`<div class="avrow"><b class="lex">${label}</b><div class="avopts" role="group" aria-label="${label}">${names.map((n,i)=>`<button type="button" class="avo ${a[k]===i?'on':''}" data-k="${k}" data-v="${i}" aria-pressed="${a[k]===i}">${vis?vis(i):''}<span>${esc(n)}</span></button>`).join('')}</div></div>`;
   const sw=c=>`<i class="sw" style="background:${c}"></i>`;
-  shell('#/',`<p><a href="#/">← Home</a></p><h1>Your avatar</h1><div class="grid g2 avb"><div class="card" style="text-align:center"><div id="avp">${avatarSVG(avCode(a),180,'Your avatar')}</div><p class="muted" style="font-size:.85rem">Shown on your home page, the leaderboard and in challenges.</p><button class="btn" id="avsave">Save avatar</button> <button class="btn ghost" id="avrand">🎲 Surprise me</button></div>
+  const nm=U.dn||ME.name;
+  shell('#/',`<p><a href="#/">← Home</a></p><h1>My profile</h1><div class="card" id="pfname" style="margin-bottom:16px"><h2 style="margin:0">${esc(nm)}</h2><p class="muted" style="margin:2px 0 10px">${U.un?esc(U.un)+' · ':''}${esc(ME.sid)}${U.dg?' · '+esc(U.dg):''}</p>
+  ${typeof CLOUD!=='undefined'&&CLOUD.rules2&&U.dn?`<button type="button" class="btn ghost sm" id="pfun">🪪 ${U.un?'Change my @username':'Pick my @username'}</button>`:'<p class="muted" style="font-size:.85rem;margin:0">Your official name and @username appear here once your lecturer adds the class list.</p>'}</div>
+  <h2>Your avatar</h2><div class="grid g2 avb"><div class="card" style="text-align:center"><div id="avp">${avatarSVG(avCode(a),180,'Your avatar')}</div><p class="muted" style="font-size:.85rem">Shown on your home page, the leaderboard and in challenges.</p><button class="btn" id="avsave">Save avatar</button> <button class="btn ghost" id="avrand">🎲 Surprise me</button></div>
   <div class="card">${`<div class="avrow"><b class="lex">Character</b><div class="avopts" role="group" aria-label="Character"><button type="button" class="avo ${a.g==='f'?'on':''}" data-k="g" data-v="f" aria-pressed="${a.g==='f'}"><span>👧 Girl</span></button><button type="button" class="avo ${a.g==='m'?'on':''}" data-k="g" data-v="m" aria-pressed="${a.g==='m'}"><span>👦 Boy</span></button></div></div>`}
   ${opt('sk',AV.skinN,'Skin',i=>sw(AV.skin[i]))}${opt('hs',AV.hairN,'Hair style')}${opt('hc',AV.hairCN,'Hair colour',i=>sw(AV.hairC[i]))}${opt('ey',AV.eyesN,'Eyes')}${opt('ex',AV.exN,'Expression')}${opt('of',AV.outfitN,'Outfit')}
   <div class="avrow"><b class="lex">Colour</b><div class="avopts" role="group" aria-label="Outfit colour">${AV.outfitC.map((c,i)=>`<button type="button" class="avo ${a.oc===i?'on':''}" data-k="oc" data-v="${i}">${sw(c)}</button>`).join('')}</div></div>
@@ -64,5 +67,6 @@ ROUTES.avatar=()=>{const a=avParse(myAv());const opt=(k,names,label,vis)=>`<div 
   <div class="avrow"><b class="lex">Extras</b><div class="avopts"><button type="button" class="avo ${a.hp?'on':''}" data-k="hp" data-v="t" aria-pressed="${!!a.hp}"><span>🎧 Headphones</span></button><button type="button" class="avo ${a.vl?'on':''}" data-k="vl" data-v="t" aria-pressed="${!!a.vl}"><span>🧕 Veil</span></button></div></div></div></div>`);
   const draw=()=>{$('#avp').innerHTML=avatarSVG(avCode(a),180,'Your avatar');document.querySelectorAll('.avo').forEach(b=>{const k=b.dataset.k,v=b.dataset.v;const on=k==='g'?a.g===v:v==='t'?!!a[k]:a[k]===+v;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)})};
   document.querySelectorAll('.avo').forEach(b=>b.onclick=()=>{const k=b.dataset.k,v=b.dataset.v;if(k==='g')a.g=v;else if(v==='t')a[k]=a[k]?0:1;else a[k]=+v;draw()});
+  $('#pfun')&&($('#pfun').onclick=()=>namePrompt(true));
   $('#avrand').onclick=()=>{const r=n=>Math.floor(Math.random()*n);Object.assign(a,{sk:r(6),hs:r(8),hc:r(8),ey:r(4),ex:r(4),of:r(6),oc:r(6),hg:r(3)});draw()};
   $('#avsave').onclick=()=>{const first=!U.av;U.av=avCode(a);save();if(first&&award('avatar:made',10,'Avatar created'))countOnce('avatar:made');hud();toast('🧑‍🎨','Avatar saved','');location.hash='#/'}};
