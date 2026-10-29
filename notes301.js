@@ -7,7 +7,7 @@
    English for final-year students. Areas that practice questions use
    most get the full treatment; the rest get a line or two.
    Practice material only. Examples are labelled as examples. Anything
-   the lecturer should check against the textbook is listed in `review`.
+   still needing the lecturer's judgement is listed in `review` (checked against the 10th Global Edition).
 
    Week entry (same fields as MKT101's notes.js topic entry, plus a few):
      wk, title  week number and the outline topic
@@ -83,11 +83,6 @@ NOTES301.weeks[10]={wk:10,title:"Global Marketing Communications Decisions 1: Ad
  check:[["What is the difference between publicity and public relations?","Publicity is unpaid media coverage the company cannot control. PR is the company's planned work to build goodwill and manage that coverage."],["Name three factors that push a brand to localise its ads.","Any three: culture, language, religion, culture-bound product, advertising laws, media habits."],["What is pattern advertising?","One overall theme and look in every country, with local copy, faces and details."]],
  prompts:["I am a final-year international marketing student. Explain standardised, localised and pattern advertising in simple English, with one Asian brand example of each. Then give me a short case and ask me to choose one and justify it.","Explain the difference between publicity and public relations in simple English. Then give me a short crisis story about a food brand in a foreign country and ask me to plan the PR response in five steps.","Act as my tutor. Ask me five quick questions on global advertising: agency holding companies, agency roles and media availability around the world. Correct my answers briefly."]
 };
-NOTES301.review.push(
- [10,"'Pattern advertising' is used as the middle option between standardised and localised. Check this term matches the lecture slides."],
- [10,"Agency examples (WPP, Omnicom, Publicis Groupe, Ogilvy) are current at the time of writing; check against chapter 13's list."],
- [10,"Maggi India (2015) and Samsung Galaxy Note 7 (2016) are used as PR examples; check they suit the class."]
-);
 
 /* ===================== WEEK 11 ===================== */
 NOTES301.weeks[11]={wk:11,title:"Global Marketing Communications Decisions 2: Sales Promotion, Personal Selling and Special Forms",
@@ -136,10 +131,6 @@ NOTES301.weeks[11]={wk:11,title:"Global Marketing Communications Decisions 2: Sa
  check:[["Name the six steps of the selling presentation.","Approach, presentation, demonstration, negotiation, close, servicing."],["Give one reason to hire host-country salespeople.","They know the language, culture and buyers, and cost less than expatriates."],["What is product placement?","Paying for a brand to appear inside a film, TV show, music video or game."]],
  prompts:["I am a final-year international marketing student. Explain the strategic/consultative selling model in simple English, using a company selling equipment to resorts as the example.","Give me three short stories about companies entering new countries. For each, ask me which sales promotion tool fits best and why. Correct my answers.","Explain expatriate, host-country and third-country salespeople in simple English. Then give me a case and ask me to choose one and justify it."]
 };
-NOTES301.review.push(
- [11,"The five strategic steps and six presentation steps follow the strategic/consultative selling model in chapter 14; check the step names match the lecture slides."],
- [11,"Sales force nationality factors are summarised in simplified form; check the chapter's list of contingency factors."]
-);
 
 /* ===================== WEEK 1 ===================== */
 NOTES301.weeks[1]={wk:1,title:"Introduction to Global Marketing",
@@ -183,10 +174,6 @@ NOTES301.weeks[1]={wk:1,title:"Introduction to Global Marketing",
  check:[["Same product, new country: which growth strategy is this?","Market development."],["Which orientation treats a region, such as ASEAN, as one market?","Regiocentric."],["Name two types of leverage.","Any two: experience transfers, scale economies, resource utilisation, global strategy."]],
  prompts:["I am a final-year international marketing student. Explain the EPRG framework in simple English with one Asian company example for each orientation. Then give me three short company stories and ask me to name the orientation with evidence.","Explain the product/market growth matrix in simple English, using Maldivian businesses as examples. Then ask me to place four new examples in the right box.","Explain leverage in global marketing with simple examples. Then quiz me with three short questions."]
 };
-NOTES301.review.push(
- [1,"The four types of leverage (experience transfers, scale economies, resource utilisation, global strategy) follow Keegan's usual list; check chapter 1 of the 10th edition."],
- [1,"Value is shown as benefits divided by price (the value equation). Check this matches the lecture."]
-);
 
 /* ===================== WEEK 2 ===================== */
 NOTES301.weeks[2]={wk:2,title:"The International Business Environment",
@@ -219,7 +206,7 @@ NOTES301.weeks[2]={wk:2,title:"The International Business Environment",
   {h:"The political environment",l:[["Political risk","The risk that government action or instability harms a business, for example sudden rule changes, unrest or seizure of assets."],["Taxes","Tax rules differ and can change the profit from a market."],["Expropriation","When a government takes over a foreign company's property, sometimes without fair payment."],["Sovereignty","A country's right to set its own rules, which can conflict with global companies' plans."]],
    eg:["Example: A sudden import ban on a product category can stop an exporter's sales overnight."]},
   {h:"The legal environment",p:"There is no single world law. International law covers agreements between countries; each country also has its own system.",
-   dia:{type:"compare",title:"Main legal systems",cols:[["Common law",["Based on court decisions and custom","Examples: UK, India, Singapore"]],["Civil law",["Based on written codes","Examples: France, Germany, Japan, Thailand"]],["Islamic law (Sharia)",["Based on religious principles","Affects contracts, finance and food","Examples: Saudi Arabia; parts of the system in the Maldives"]]]},
+   dia:{type:"compare",title:"Main legal systems",cols:[["Common law",["Based on court decisions and custom","Examples: UK, India, Singapore"]],["Civil law",["Based on written codes","Examples: France, Germany, Japan, Thailand"]],["Islamic law (Sharia)",["Based on religious principles","Affects contracts, finance and food","Examples: Saudi Arabia, Iran; many Muslim countries, including the Maldives, mix Islamic law with other legal traditions"]]]},
    l:[["Jurisdiction","Which country's courts decide a dispute."],["Intellectual property","Patents, trademarks and copyrights. Register your brand in each country before entering."],["Competition (antitrust) law","Rules against price-fixing and abuse of market power."],["Licensing and trade secrets","Contracts protect know-how shared with partners."],["Bribery and corruption","Laws such as the US Foreign Corrupt Practices Act and the UK Bribery Act punish bribes paid abroad."]],
    eg:["Example: A brand that enters a country without registering its trademark may find a local firm has already registered the name."],
    tip:"For legal questions, give the issue, the risk, and one way to protect the business."}
@@ -233,11 +220,6 @@ NOTES301.weeks[2]={wk:2,title:"The International Business Environment",
  check:[["What is the difference between a free trade area and a customs union?","A customs union adds a common external tariff for non-members."],["Give one example of a high-context culture and one of a low-context culture.","High: Japan, Thailand, Arab countries. Low: Germany, the USA, Australia."],["What should a company do about its trademark before entering a new country?","Register it in that country."]],
  prompts:["I am a final-year international marketing student in the Maldives. Explain high-context and low-context cultures in simple English, with examples from Asia and the Gulf, and how each changes the way a company should sell.","Give me three pairs of countries. For each pair, ask me to name two differences that would make a food brand change its marketing. Correct my answers.","Explain free trade areas, customs unions, common markets and economic unions in simple English, with one real example of each."]
 };
-NOTES301.review.push(
- [2,"The 'major changes in the world economy' list is summarised from Keegan's usual points; check it against chapter 2 of the 10th edition."],
- [2,"Economic system names (market capitalism, centrally planned socialism, centrally planned capitalism, market socialism) follow Keegan's grid; check the labels."],
- [2,"Legal systems: the note says 'parts of the system in the Maldives' follow Islamic law; the lecturer may want to phrase this differently."]
-);
 
 /* ===================== WEEK 3 ===================== */
 NOTES301.weeks[3]={wk:3,title:"Global Information Systems and Market Research",
@@ -278,9 +260,6 @@ NOTES301.weeks[3]={wk:3,title:"Global Information Systems and Market Research",
  check:[["What is direct perception?","Learning about a market by going there in person to see, hear and experience it."],["Give two weaknesses of secondary data in foreign markets.","Any two: may be old, incomplete, not comparable between countries, collected for a different purpose."],["What does back-translation check?","That a translated questionnaire keeps the same meaning."]],
  prompts:["I am a final-year international marketing student. Explain direct perception and secondary data in simple English, with a Maldivian business entering a foreign market as the example.","Explain how a management information system helps a global company make better decisions in different countries. Give me three examples, then quiz me.","Give me a short case of a company entering a new country and ask me to design the research steps. Correct my answer."]
 };
-NOTES301.review.push(
- [3,"The research process steps follow Keegan's eight-step list; check the exact step names in chapter 6."]
-);
 
 /* ===================== WEEK 4 ===================== */
 NOTES301.weeks[4]={wk:4,title:"Segmentation, Targeting and Positioning",
@@ -322,10 +301,6 @@ NOTES301.weeks[4]={wk:4,title:"Segmentation, Targeting and Positioning",
  check:[["Name the three tests for choosing a target market.","Size and growth, competition, compatibility and feasibility."],["What is concentrated targeting?","Focusing on one segment."],["What are the parts of a positioning statement?","Target, category, point of difference, competitor, reason to believe."]],
  prompts:["I am a final-year international marketing student. Explain segmentation, targeting and positioning in simple English, using an Asian brand entering a new country as the example.","Give me a short case with three customer groups. Ask me to choose the best first target and justify it. Then mark my answer.","Help me practise positioning statements. Give me three products and markets, and correct the statements I write."]
 };
-NOTES301.review.push(
- [4,"The three targeting strategies are named standardised, concentrated and differentiated (as in the outline). Check against chapter 7's terms."],
- [4,"The three consumer culture positioning options (global, local, foreign) are included; check they are taught in this unit."]
-);
 
 /* ===================== WEEK 5 ===================== */
 NOTES301.weeks[5]={wk:5,title:"Importing, Exporting and Sourcing",
@@ -365,10 +340,6 @@ NOTES301.weeks[5]={wk:5,title:"Importing, Exporting and Sourcing",
  check:[["Which payment method is safest for the exporter?","Cash with order (payment in advance)."],["Give two non-tariff barriers.","Any two: strict standards or testing, licences, labelling rules, slow customs, local content rules."],["What is the difference between export selling and export marketing?","Export marketing adapts the mix to foreign customers; export selling does not."]],
  prompts:["I am a final-year international marketing student. Explain export payment methods from safest to riskiest in simple English, with a short example for each.","Give me three short cases about companies choosing where to make their products. Ask me to name three sourcing factors for each. Correct my answers.","Explain how governments support exports and restrict imports, with Asian examples. Then quiz me."]
 };
-NOTES301.review.push(
- [5,"Sourcing factor list (management vision, factor costs, logistics, infrastructure, political risk, market access, exchange rates, country image) follows Keegan's usual list; check chapter 8."],
- [5,"Dyson's move to Malaysia/Singapore is used as a sourcing example; check it is acceptable."]
-);
 
 /* ===================== WEEK 6 ===================== */
 NOTES301.weeks[6]={wk:6,title:"Global Market-Entry Strategies: Licensing, Investment and Strategic Alliances",
@@ -415,10 +386,6 @@ NOTES301.weeks[6]={wk:6,title:"Global Market-Entry Strategies: Licensing, Invest
  check:[["What is the main advantage of a wholly owned subsidiary?","Full control of brand, quality and profit."],["What is a master franchise?","One partner gets franchise rights for a whole country or region."],["Name one way to protect know-how when using a partner.","Any one: register trademarks, confidentiality and non-compete clauses, share only part of the know-how, batch approval and audits."]],
  prompts:["I am a final-year international marketing student. Explain licensing, franchising, contract manufacturing, joint ventures and wholly owned subsidiaries in simple English with one Asian example each.","Give me three short company cases and ask me to recommend an entry mode for each, with one risk and one safeguard. Mark my answers.","Explain keiretsu and chaebol in simple English and how they affect foreign companies."]
 };
-NOTES301.review.push(
- [6,"The market expansion strategies grid (country concentration/diversification × market concentration/diversification) follows Keegan; check the labels in chapter 9."],
- [6,"Walmart–Flipkart, Maruti Suzuki, Tokyo Disneyland and Domino's/Jubilant are used as examples; check they suit the class."]
-);
 
 /* ===================== WEEK 7 ===================== */
 NOTES301.weeks[7]={wk:7,title:"Brand and Product Decisions in Global Marketing",
@@ -464,10 +431,6 @@ NOTES301.weeks[7]={wk:7,title:"Brand and Product Decisions in Global Marketing",
  check:[["Same product, new message for a different use: which strategy?","Product extension–communication adaptation."],["Give one positive country-of-origin example.","Any one: German cars, Japanese electronics, Italian fashion, French perfume, Korean beauty."],["What is brand dilution?","Weakening of a brand's image, for example through cheap channels or overexposure."]],
  prompts:["I am a final-year international marketing student. Explain the five product and communication strategies in simple English with an Asian brand example for each. Then quiz me with four short cases.","Explain brand dilution and how a premium brand can protect itself when selling in mass channels in another country.","Explain country of origin effects with examples from Asia, and ask me whether 'from the Maldives' would help three different products."]
 };
-NOTES301.review.push(
- [7,"The five strategic alternatives are numbered in the usual Keegan order (Keegan's own numbering may differ); check against chapter 10 and the slides."],
- [7,"Brand dilution and how to manage it are added because practice cases use this idea; check the depth suits the unit."]
-);
 
 /* ===================== WEEK 8 ===================== */
 NOTES301.weeks[8]={wk:8,title:"Pricing Decisions",
@@ -514,10 +477,6 @@ NOTES301.weeks[8]={wk:8,title:"Pricing Decisions",
  check:[["What is the difference between dumping and a normal low price?","Dumping is below the home price or below cost; a normal low price comes from lower costs and still covers them."],["Under which Incoterm does the seller pay everything, including import duty?","DDP (Delivered Duty Paid)."],["What is transfer pricing?","Prices one part of a company charges another part in a different country."]],
  prompts:["I am a final-year international marketing student. Explain ethnocentric, polycentric and geocentric pricing in simple English, using one brand selling in three Asian countries.","Explain grey markets and five ways a brand can reduce them. Then give me a short case and ask me to recommend two.","Quiz me on Incoterms, dumping, transfer pricing and countertrade with five short questions. Correct my answers."]
 };
-NOTES301.review.push(
- [8,"Only four common Incoterms (EXW, FOB, CIF, DDP) are shown; check which Incoterms the unit expects."],
- [8,"Countertrade forms follow Keegan's usual list (barter, counterpurchase, offset, compensation trading/buyback, switch trading); check chapter 11."]
-);
 
 /* ===================== WEEK 9 ===================== */
 NOTES301.weeks[9]={wk:9,title:"Global Marketing Channels and Physical Distribution",
@@ -554,10 +513,6 @@ NOTES301.weeks[9]={wk:9,title:"Global Marketing Channels and Physical Distributi
  check:[["Which transport mode is fastest but most expensive?","Air."],["What is a hypermarket?","A very large store combining a supermarket and a discount store."],["Give two guidelines for choosing an overseas distributor.","Any two: research the market, check coverage and reputation, agree clear terms, support and train, control performance."]],
  prompts:["I am a final-year international marketing student. Compare the six transport modes in simple English, and give me an Asian example of a product suited to each.","Give me three products and markets. Ask me to design a channel and choose a transport mode for each. Mark my answers.","Explain how retail formats differ between India, Japan and the Gulf states, in simple English."]
 };
-NOTES301.review.push(
- [9,"The six transport modes are listed as rail, truck, air, water, pipeline and internet, following Keegan; check chapter 12."],
- [9,"The list of retail formats is shortened; check which formats the slides cover."]
-);
 
 /* ===================== WEEK 12 ===================== */
 NOTES301.weeks[12]={wk:12,title:"Global Marketing and the Digital Revolution",
@@ -597,10 +552,6 @@ NOTES301.weeks[12]={wk:12,title:"Global Marketing and the Digital Revolution",
  check:[["Give one example of convergence.","Any one: super apps combining transport, food and payments; mobile money; cars as connected computers."],["What is a disruptive technology?","A simpler, cheaper innovation that serves ignored customers, then improves and overturns established firms."],["Name three issues in designing a website for different countries.","Any three: language, currency, payment, delivery, culture and images, law, speed, domain and search."]],
  prompts:["I am a final-year international marketing student. Explain convergence and disruptive technology in simple English, with Asian examples, and quiz me.","Give me a business and three countries. Ask me to list how its website should change for each country. Correct my answer.","Explain the main global e-commerce trends in Asia in simple English, with examples."]
 };
-NOTES301.review.push(
- [12,"The list of 'major innovations' in the digital revolution is simplified; check chapter 15's list."],
- [12,"'Value network' and sustaining/disruptive technologies follow Christensen as used in Keegan; check the definitions."]
-);
 
 /* ===================== WEEK 13 ===================== */
 NOTES301.weeks[13]={wk:13,title:"Strategic Elements of Competitive Advantage",
@@ -646,10 +597,6 @@ NOTES301.weeks[13]={wk:13,title:"Strategic Elements of Competitive Advantage",
  check:[["Name Porter's five forces.","Rivalry, threat of new entrants, threat of substitutes, buyer power, supplier power."],["What do the letters ERRC stand for?","Eliminate, Reduce, Raise, Create."],["Name the four main determinants of Porter's diamond.","Factor conditions, demand conditions, related and supporting industries, firm strategy, structure and rivalry."]],
  prompts:["I am a final-year international marketing student. Explain Porter's five forces in simple English with an Asian example for each, then give me a short industry case to analyse.","Explain Porter's diamond using Japan's car industry, then ask me to apply it to another country and industry. Mark my answer.","Explain Blue Ocean Strategy and the ERRC grid with two famous examples, then ask me to build an ERRC grid for a new business."]
 };
-NOTES301.review.push(
- [13,"Hypercompetition arenas (cost/quality, timing/know-how, strongholds, deep pockets) follow D'Aveni as used in Keegan; check chapter 16."],
- [13,"Blue Ocean Strategy is included because practice questions use it with strategic intent; check how much the slides cover."]
-);
 
 /* ===================== WEEK 14 ===================== */
 NOTES301.weeks[14]={wk:14,title:"Leadership, Organisation and Corporate Social Responsibility",
@@ -691,8 +638,14 @@ NOTES301.weeks[14]={wk:14,title:"Leadership, Organisation and Corporate Social R
  check:[["Name two organisation structures for global firms.","Any two: international division, regional management centre, geographic, global product division, matrix."],["What did Starbucks agree after the Global Exchange campaign?","To sell Fair Trade coffee in its own US stores, and to build long-term direct links with coffee growers."],["What is kaizen?","Continuous small improvements by everyone."]],
  prompts:["I am a final-year international marketing student. Explain the main organisation structures for global companies in simple English, and ask me which fits three short company cases.","Explain the Starbucks and Global Exchange CSR story in simple English and the lessons for global marketers.","Help me practise expansion plans. Give me a small Asian company and three markets, and mark my plan on market order, pace, entry modes and risk."]
 };
-NOTES301.review.push(
- [14,"The Starbucks–Global Exchange account (2000 campaign, Fair Trade coffee, later C.A.F.E. Practices) is summarised from public sources; check the details used in chapter 17."],
- [14,"'Planning and managing an expansion' is a study skill section added to support case and essay practice; it is not a textbook section."],
- [14,"Microsoft under Satya Nadella is used as a leadership example; check it suits the class."]
-);
+
+/* Checked against Green & Keegan, Global Marketing, 10th Global Edition. What is left needs the lecturer's judgement. */
+NOTES301.review=[
+ [2,"Legal systems: the Maldives is described as mixing Islamic law with other legal traditions. Check you are happy with this wording."],
+ [5,"Added example: check you are happy with it. Dyson moving much of its manufacturing to Malaysia and Singapore (not in the textbook's sourcing section)."],
+ [6,"Added example: check you are happy with it. Domino's in India through its franchise partner Jubilant FoodWorks (Walmart–Flipkart, Maruti Suzuki and Tokyo Disneyland are also mentioned in the textbook)."],
+ [7,"Brand dilution has its own short section because several practice cases use the idea; the textbook covers it only briefly. Check the depth suits the unit."],
+ [10,"Added example: check you are happy with it. Maggi noodles in India (2015) and the Samsung Galaxy Note 7 recall (2016) as PR examples."],
+ [14,"Added example: check you are happy with it. Microsoft under Satya Nadella as a leadership example."],
+ [14,"'Building an international marketing plan' follows the structure of the group marketing plan in the subject outline; it is a study aid, not a textbook section."]
+];
