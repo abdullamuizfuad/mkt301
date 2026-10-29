@@ -333,6 +333,21 @@ async social(){if(!R2)return;await fsPut('directory',A,{n:'Hawwa Uyoon Ali',g:'H
   const x0=await a.evaluate(()=>U.xp);await l.click('#btend');await waitFor(a,()=>(document.querySelector('#btv')||{}).textContent?.includes('You came 1'));await a.waitForTimeout(500);
   ok((await a.evaluate(()=>U.xp))-x0===30,'battle XP wrong: '+((await a.evaluate(()=>U.xp))-x0));
   await a.done();await b.done();await l.done()},
+async qbank(){if(!R2)return;const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await l.waitForSelector('#qbc:not([hidden]) #qbload',{state:'attached'});
+  const [k,id]=await l.evaluate(()=>{const k=Object.keys(qbankKinds())[0];return [k,k==='mcq'?BANK.mcq[0].id:BANK_B[0].id]});
+  await l.click('#qbc summary');await l.fill('#qbid',id);await l.click('#qbload');const j=JSON.parse(await l.inputValue('#qbj'));j.q='EDITED: '+j.q;await l.fill('#qbj',JSON.stringify(j));await l.click('[data-qs="live"]');
+  await waitFor(l,()=>(document.querySelector('#qbl')||{}).textContent?.includes('EDITED'));
+  /* a draft with a mistake is refused by the check; a good draft is saved but not shown to students */
+  await l.fill('#qbid','');await l.fill('#qbj',JSON.stringify(Object.assign({},j,{id:'',q:'Draft only: '+j.q})));await l.click('[data-qs="draft"]');await l.waitForTimeout(800);
+  await l.fill('#qbj',JSON.stringify(Object.assign({},j,{id:'',q:'What will be on the exam?'})));await l.click('[data-qs="live"]');ok((await l.textContent('#qberr')).includes('exam'),'exam wording not refused');await shot(l,'fb-qbank');
+  const s=await page();await signIn(s,A,PIN);await tourOff(s);await waitFor(s,([k,id])=>/^EDITED/.test((qbankKinds()[k].find(id)||{}).q||''),[k,id]);
+  ok(await s.evaluate(()=>!JSON.stringify(typeof BANK_B!=='undefined'?BANK_B:BANK).includes('Draft only')),'draft reached a student');
+  const r=await s.evaluate(async()=>{try{await CLOUD.docs('qbank');return 'allowed'}catch(e){return 'refused'}});ok(r==='refused','students can list drafts');
+  /* Claude's drafts: the upload tool against the emulator */
+  const fs2=require('fs'),f=path.join(os.tmpdir(),'qgen-test.json');fs2.writeFileSync(f,JSON.stringify([{kind:k,data:Object.assign({},j,{id:'gen-test-1',q:'A new practice question about '+j.q.slice(8,60)}),note:'test'}]));
+  const env=Object.assign({},process.env,{MKT301_EMU:'1',MKT101_EMU:'1',MKT301_LECTURER_PIN:PINL,MKT101_LECTURER_PIN:PINL,HTTPS_PROXY:'',https_proxy:''});
+  const up=spawnSync(process.execPath,[path.join(ROOT,'tools','qgen','upload.mjs'),f],{encoding:'utf8',env});ok(up.status===0&&/Uploaded 1/.test(up.stdout),'qgen upload failed: '+up.stdout+up.stderr);
+  await waitFor(l,()=>(document.querySelector('#qbl')||{}).textContent?.includes('gen-test-1'));await l.done();await s.done()},
 async xpAudit(){if(!R2)return;const u=await fsDoc('users',B);const U2=JSON.parse(u.u.stringValue);U2.xp=(U2.xp|0)+5000;await fsPut('users',B,{name:u.name.stringValue,u:JSON.stringify(U2),xp:U2.xp,ts:new Date()});
   const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#xpab')||{}).textContent?.includes('S085542'));
   ok((await l.textContent('#xpab')).includes('not explained'),'inflated XP not flagged');
