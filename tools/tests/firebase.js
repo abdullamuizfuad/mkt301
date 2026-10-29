@@ -201,7 +201,9 @@ async profile(){const c=await page();await signIn(c,C,PINC,'Shifa Test');await t
 /* question coverage: seeded attempts show up with the right counts, the not-attempted filter and the CSV */
 async coverage(){const al=/400|Failed to load resource|identitytoolkit/;const c=await page({allow:al});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
   const ids=await c.evaluate(()=>{const G=covCatalogue(),w=G.filter(g=>g.kind==='written').pop(),m=G.find(g=>g.kind==='mcq');
-    return {w:w.items[w.items.length-1].id,wg:w.k,m:m?m.items[m.items.length-1].id:null,mg:m?m.k:null,total:G.reduce((t,g)=>t+g.items.length,0)}});
+    /* a question this student hasn't touched (the marking test answers a random one) */
+    const used=id=>Object.keys(U.log).some(k=>k.split(':')[1]===id)||Object.values(U.ans||{}).some(a=>a.q===id),wi=w.items.slice().reverse().find(it=>!used(it.id))||w.items[w.items.length-1];
+    return {w:wi.id,wg:w.k,m:m?m.items[m.items.length-1].id:null,mg:m?m.k:null,total:G.reduce((t,g)=>t+g.items.length,0)}});
   await c.evaluate(i=>{U.log['plan:'+i.w+':2026-10-01']=1;U.log['typed:'+i.w+':2026-10-02']=1;U.ans=U.ans||{};U.ans[i.w+'_cov1']={q:i.w,t:'A seeded answer for the coverage test.',at:'2026-10-02T10:00:00.000Z',b:4};
     if(i.m){U.cnt=U.cnt||{};U.cnt['mcq:'+i.m+':2026-10-01']={d:'2026-10-01',k:['mcq','mcqRight']};U.cnt['mcq:'+i.m+':2026-10-02']={d:'2026-10-02',k:['mcq']}}save()},ids);await synced(c);await c.waitForTimeout(2500);await c.done();
   const l=await page({w:1280,h:900,allow:al});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);await l.go('#/lecturer');
