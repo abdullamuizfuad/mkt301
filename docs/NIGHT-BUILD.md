@@ -10,7 +10,7 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 | 1 | CI, XP audit, error reports, streak freeze, at-risk, problem reports, announcements, privacy page, wording fixes, backup export | **live** (main: MKT301 `cb6aa81`, MKT101 `ee22bf0`); site and cloud suites green on the combined rules and on the published rules |
 | 2 | Home dashboard, avatar builder, streak blocks, countdown grid, spaced review, readiness, flashcards, item analysis, name policy | **live** (main: MKT301 `b21a490`, MKT101 `11b0c18`) |
 | 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | **live** (main: MKT301 `c2593f1`, MKT101 `de16579`) |
-| 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | code done on `night` (`engine/social.js`, rules blocks, `tools/push/`, `docs/PUSH.md`); site suites green; cloud suites next |
+| 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | **live** (main: MKT301 `2fca700`, MKT101 `bfa3fbd`); switches on when the combined rules are published |
 | 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | not started |
 | Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | not started |
 
@@ -61,8 +61,14 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 
 ## Next
 
-- Phase 4: run the cloud suites one at a time (MKT301 new rules, old rules; MKT101 new, old), regenerating the rules first (`python3 tools/build-rules.py <ids csv> -o <scratchpad>/rules/<course>.rules`); then backups and push `night` to main.
-- Then Phase 5 (question generation and editor, weekly report, backup button, attendance export, hints, a11y and performance, new-term rollover), then Release 2.1.
+Phase 5, in this order (WIP commit to `night` after each):
+1. Question bank overlay `qbank/{id}` + lecturer editor card + `tools/qgen/` (Claude drafts → lecturer approves). Course hook `qbankApply(list)`.
+2. Weekly report card (lecturer): active students, XP, screen time, practice per week; CSV.
+3. Attendance export from live-session reports (CSV: SID × session).
+4. Hints on practice plans (💡, records U.hint, no XP change).
+5. Accessibility and performance pass (focus, reduced motion, skip link).
+6. New-term rollover: `docs/NEW-TERM.md`, `CRS.termStart` filter on the board.
+Then suites, backup, push to main; then Release 2.1 (APP_VERSION '2.1', one-time sign-out without losing progress, What's new #/whatsnew, name confirmation).
 
 ## Phase 4 notes
 
