@@ -20,7 +20,10 @@ async function page(o={}){const ctx=await browser.newContext({viewport:{width:o.
   p.on('console',m=>{const t=m.text();if(m.type()==='error'&&!/mailto|favicon|fonts\.g/.test(t)&&!(p.allow&&p.allow.test(t)))p.errs.push('console: '+t)});
   p.on('dialog',d=>d.accept());if(o.block)await p.route('**/vendor/firebase.js',r=>r.abort());
   await p.goto(URL0);await p.waitForTimeout(300);
-  p.go=async h=>{await p.evaluate(h=>{location.hash=h},h);await p.waitForTimeout(400)};
+  p.go=async h=>{await p.evaluate(h=>{location.hash=h},h);await p.waitForTimeout(400);
+    /* the Lecturer tab's blocks and a profile's sections start folded: open them all for the tests */
+    if(/^#\/lecturer/.test(h)&&await p.$('[data-lfall="1"]')){await p.click('[data-lfall="1"]');await p.waitForTimeout(300)}
+    if(/^#\/student\//.test(h)){for(let i=0;i<25&&!await p.$('#prof details.sec');i++)await p.waitForTimeout(200);await p.evaluate(()=>document.querySelectorAll('#prof details.sec').forEach(d=>d.open=true));await p.waitForTimeout(100)}};
   p.done=async()=>{const w=await p.evaluate(()=>[document.documentElement.scrollWidth,innerWidth]);ok(w[0]<=w[1],`horizontal scroll ${w[0]}>${w[1]}`);ok(!p.errs.length,p.errs.join('\n'));await ctx.close()};
   return p}
 /* sign-in screen → PIN step */
@@ -79,7 +82,7 @@ async restartSync(){const p=await page();await signIn(p,A,PIN);await tourOff(p);
   await p.evaluate(()=>{U.xp-=8985;save()});await p.waitForTimeout(2600);await synced(p);await p.done()},
 
 async lecturer(){const p=await page({w:1280,h:900});await createPin(p,L,PINL,'Abdulla Muiz Fuad');await tourOff(p);await p.go('#/lecturer');await p.waitForTimeout(1200);
-  const t=await p.textContent('#cdb');ok(t.includes('S081441')&&t.includes('S085542')&&t.includes('Mariyam Ali'),'dashboard missing students');ok(/(^|\D)3\/32/.test(t),'signed-up count wrong');
+  const t=await p.textContent('#cdb');ok(t.includes('S081441')&&t.includes('S085542')&&t.includes('Mariyam Ali'),'dashboard missing students: '+t.slice(0,400));ok(/(^|\D)3\/32/.test(t),'signed-up count wrong');
   ok(!await p.$('#cdb tr td:nth-child(3):text("S000001")'),'lecturer listed as a student');
   const rowsBefore=await p.$$eval('#cdb tr[data-sid]',r=>r.length);await p.click('[data-win="30"]');await p.waitForTimeout(300);
   ok(await p.$eval('[data-win="30"]',b=>b.classList.contains('sel')),'30-minute filter not selected');
@@ -179,6 +182,7 @@ async profile(){const c=await page();await signIn(c,C,PINC,'Shifa Test');await t
   await l.go('#/lecturer');await l.waitForTimeout(1000);await l.fill('#csq','shifa');await l.waitForTimeout(200);
   ok(await l.$$eval('#cdb tr[data-sid]',r=>r.length===1&&r[0].dataset.sid==='S082110'),'search did not filter the table');
   await l.click('#cdb tr[data-sid="'+C+'"]');await l.waitForTimeout(1000);ok(await l.evaluate(()=>location.hash)==='#/student/'+C,'table row did not open the profile');
+  await l.evaluate(()=>document.querySelectorAll('#prof details.sec').forEach(d=>d.open=true));
   /* inline marking from the profile */
   await l.click('#prof .mqi [data-open]');await l.selectOption('#prof [data-f="band"]','4');await l.fill('#prof [data-f="xp"]','16');await l.fill('#prof [data-f="fb"]','Good structure. Add an example.');await l.click('#prof [data-save]');await l.waitForTimeout(800);
   const rv=await fsDoc('reviews',C),m=rv.m.mapValue.fields,k=Object.keys(m).find(x=>!/^note_/.test(x));ok(int(m[k].mapValue.fields.band)===4,'inline mark not saved');
@@ -197,7 +201,7 @@ async profile(){const c=await page();await signIn(c,C,PINC,'Shifa Test');await t
   const ph=await page({theme:'dark'});await signIn(ph,L,PINL,'Abdulla Muiz Fuad');await tourOff(ph);await ph.go('#/student/'+C);await ph.waitForTimeout(1200);ok((await ph.textContent('#prof')).includes('Shifa Test'),'phone profile missing');await shot(ph,'prof-phone-dark',true);await ph.done();
   /* students: no clickable rows, no profiles */
   await c.go('#/board');await c.waitForTimeout(800);ok(!await c.$('#lbl [data-sid]'),'student sees clickable rows');
-  await c.go('#/student/'+A);await c.waitForTimeout(500);ok(!await c.$('#prof')&&await c.evaluate(()=>!location.hash.includes('student')||!!document.querySelector('.hero')),'student opened a profile');await c.done()},
+  await c.go('#/student/'+A);await c.waitForTimeout(500);ok(!await c.$('#prof')&&await c.evaluate(()=>!location.hash.includes('student')||!!document.querySelector('#thead')),'student opened a profile');await c.done()},
 
 /* question coverage: seeded attempts show up with the right counts, the not-attempted filter and the CSV */
 async coverage(){const al=/400|Failed to load resource|identitytoolkit/;const c=await page({allow:al});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
@@ -369,6 +373,25 @@ async xpAudit(){if(!R2)return;const u=await fsDoc('users',B);const U2=JSON.parse
   /* full class backup */
   await l.go('#/lecturer');await l.waitForSelector('#bkgo');const [dl]=await Promise.all([l.waitForEvent('download'),l.click('#bkgo')]);
   const j=JSON.parse(fs.readFileSync(await dl.path(),'utf8'));ok(j.students>=3&&j.data.users[A]&&j.data.board&&j.data.directory,'backup incomplete: '+JSON.stringify(j.counts));await l.done()},
+/* View as student: the lecturer sees the student's pages; nothing reaches the cloud */
+async viewAs(){const l=await page({w:390,h:844});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+  const u0=await fsDoc('users',A),b0=await fsDoc('board',A);ok(u0,'no progress to view');
+  await l.go('#/');await l.click('#lhva');await waitFor(l,()=>!!document.querySelector('#vares .vapick'));await l.fill('#vaq',A.slice(-3));await l.waitForTimeout(150);
+  await l.click(`#vares [data-va="${A}"]`);await waitFor(l,()=>!!document.getElementById('vabar'));ok((await l.textContent('#vabar')).includes(A),'banner missing');
+  ok(await l.$('#thead')&&await l.$('#trow')&&!await l.$('main [data-lect]'),'student home not shown');
+  for(const h of ['#/progress','#/short','#/board','#/avatar','#/challenges','#/weekend','#/notifs','#/paper']){await l.go(h);ok(!await l.$('main [data-lect]'),'lecturer-only part on '+h)}
+  await l.go('#/short');const ch=await l.$('.qcard .chip');if(ch)await ch.click();await l.evaluate(()=>{save();CLOUD.flush();award('va:test',99,'x')});await l.waitForTimeout(3000);
+  const u1=await fsDoc('users',A),b1=await fsDoc('board',A);ok(JSON.stringify(u0)===JSON.stringify(u1)&&JSON.stringify(b0)===JSON.stringify(b1),'the student\'s cloud data changed while viewing');
+  await l.click('#vax');await l.waitForTimeout(300);ok(await l.evaluate(()=>ME.sid)===L&&!await l.$('#vabar'),'Exit did not restore the lecturer');ok(!(await fsDoc('board',L)),'the lecturer has a board row');await l.done()},
+
+/* the lecturer's avatar: saved and published to meta/lecturer; students see it on announcements; still no XP */
+async lectAvatar(){if(!R2)return;const l=await page({w:1280,h:900});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+  await l.go('#/avatar');await l.click('[data-k="g"][data-v="m"]');await l.click('[data-k="hp"]');await l.click('#avsave');const code=await l.evaluate(()=>U.av);
+  const m=await waitDoc('meta','lecturer',d=>d.a&&d.a.stringValue===code);ok(m&&m.n.stringValue==='Abdulla Muiz Fuad','meta/lecturer not written');
+  ok(await l.evaluate(()=>U.xp===0)&&!(await fsDoc('board',L)),'the lecturer earned XP or has a board row');
+  await fsPut('announcements','avtest',{t:'Hello class',b:'Avatar test',at:new Date(),exp:new Date(Date.now()+864e5)});await l.done();
+  const s=await page();await signIn(s,A,PIN);await tourOff(s);await s.go('#/');await waitFor(s,()=>!!document.querySelector('.ann .lav svg'));
+  ok(await s.evaluate(c=>lectAv()===c,code),'student does not see the lecturer\'s avatar');await s.done()},
 };
 async function waitFor(p,fn,arg,t=15000){const t0=Date.now();while(Date.now()-t0<t){if(await p.evaluate(fn,arg).catch(()=>false))return;await p.waitForTimeout(250)}throw new Error('timed out waiting for '+String(fn).slice(0,90))}
 async function waitDoc(col,id,test,t=15000){const t0=Date.now();let d=null;while(Date.now()-t0<t){d=await fsDoc(col,id);if(d&&(!test||test(d)))return d;await new Promise(r=>setTimeout(r,300))}return null}
