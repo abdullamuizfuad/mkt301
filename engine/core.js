@@ -41,7 +41,7 @@ function hud(){if(!ME){$('#hud').innerHTML='';return}const L=level(U.xp);
 async function signOut(){if(ME&&U)presOff();hook('signout');if(ME&&ME.cloud){await CLOUD.flush();await CLOUD.signOut()}LS.del('session');ME=null;U=null;hud();location.hash='#/';gate()}
 function shell(active,body){
   const nav=NAV.concat(ME.sid===LECTURER?[['#/lecturer','Lecturer']]:[]).map(n=>`<a href="${n[0]}" class="${n[0]===active?'on':''}">${n[1]}</a>`).join('');
-  app.innerHTML=`<div class="wrap"><nav class="tabs">${nav}</nav><main>${body}</main>
+  app.innerHTML=`<div class="wrap"><nav class="tabs" aria-label="Sections">${nav}</nav><main id="main" tabindex="-1">${body}</main>
   <footer><div class="row"><span>Signed in as <b>${esc(ME.name)}</b> · ${esc(ME.sid)}</span><button class="btn ghost sm" id="so">Sign out</button></div>
   <p style="margin-top:10px">Practice material only. Write your full answers on paper. · <a href="javascript:void 0" id="help">? How it works</a> · <a href="javascript:void 0" id="inst">📲 Install the app</a> · <a href="#/privacy">Privacy</a></p></footer></div>`;
   $('#so').onclick=signOut;$('#help').onclick=()=>tour(0);$('#inst').onclick=()=>installPop(0);scrollTo(0,0)}
@@ -227,7 +227,7 @@ function liveBoard(){
    ${CLOUD.rules2&&U.dn?`<button class="btn ghost sm" id="nkun">🪪 ${U.un?'Change my @username':'Pick my @username'}</button>`:''}
    <p class="muted" style="font-size:.85rem;margin-top:12px">No need to send anything: your score updates automatically. ${syncChip()}</p>`}</div></div>`);
   $('#nkun')&&($('#nkun').onclick=()=>namePrompt(true));
-  CLOUD.watchBoard(rows=>{const el=$('#lbl');if(!el)return;rows=rows.filter(r=>r.id!==LECTURER);
+  CLOUD.watchBoard(rows=>{const el=$('#lbl');if(!el)return;rows=rows.filter(r=>r.id!==LECTURER&&termNow(r));
     const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r av ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(showName(r.n,r.id))}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span>${typeof avatarSVG==='function'?avatarSVG(r.a||avFor(r.id),36,''):''}<div style="flex:1;min-width:0"><b>${nameLine(r.n,r.u,r.id)}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Earn some XP and you will appear here.</p>';
     if(lec)el.querySelectorAll('[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStudent(r.dataset.sid)}}})},
     e=>{const el=$('#lbl');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
@@ -477,3 +477,7 @@ function route(){CLOUD.unwatch();hook('leave');if(!ME)return gate();const h=loca
   if(h[0]==='live')return livePage();
   if(h[0]==='session')return sessionReport(String(h[1]||''));
   ({'':home,cases:caseList,badges:badgesPage,board:boardPage,lecturer:lecturer}[h[0]]||home)()}
+/* new term (docs/NEW-TERM.md): CRS.termStart hides leaderboard rows nobody has saved since the term began */
+const termNow=r=>{const t0=CRS.termStart?Date.parse(CRS.termStart+'T00:00:00+05:00'):0,t=r.t&&r.t.toMillis?r.t.toMillis():+r.t||0;return !t0||t>=t0};
+/* accessibility: after moving to another page, keyboard and screen-reader users start at the new content */
+window.addEventListener('hashchange',()=>setTimeout(()=>{const m=document.getElementById('main');if(m&&!m.contains(document.activeElement)&&!document.querySelector('.modal'))m.focus({preventScroll:true})},60));

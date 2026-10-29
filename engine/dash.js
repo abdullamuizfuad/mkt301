@@ -131,3 +131,11 @@ lcard('mic',el=>{if(typeof revItem!=='function'||typeof MCQ_BY==='undefined')ret
       return `<tr><td style="max-width:420px"><b>${esc(r.id)}</b> ${esc(r.q.q)}</td><td>${r.n} (${r.st} students)</td><td><b style="color:${r.p>=90?'var(--blue)':r.p<30?'var(--red)':'inherit'}">${r.p}%</b></td><td>${wn?esc(r.q.o[wi+1])+' · '+Math.round(wn/r.n*100)+'%':'–'}</td></tr>`}).join('')}</table></div>
       <button class="btn ghost sm" id="micsv" style="margin-top:8px">⬇ CSV</button>`;
     $('#micsv').onclick=()=>dl(CRS.id+'-mcq-items.csv',['id,topic,tries,students,correct_pct,wrong1,wrong2,wrong3'].concat(rows.map(r=>[r.id,r.q.t,r.n,r.st,r.p,...r.w].join(','))).join('\n'),'text/csv')}});
+
+/* ---------- hints on practice plans: each 💡 shows the start of one key idea not picked yet (recorded in the plan as st.hint, U.hints; no XP change) ---------- */
+function hintHTML(q,st){const good=q.chips.map((c,j)=>c.g?j:-1).filter(j=>j>=0),n=Math.min(st.hint|0,good.length-1),shown=(st.hints||[]).slice(0,n);
+  const cue=t=>{const m=/^([^:]{2,40}):/.exec(t);return m?m[1]+'…':t.split(/\s+/).slice(0,4).join(' ')+'…'};
+  return `<div class="hints" data-hintq="${esc(q.id)}">${shown.map(j=>`<p class="hint">💡 Think about: <b>${esc(cue(q.chips[j].t))}</b></p>`).join('')}${n<good.length-1?`<button type="button" class="btn ghost sm" data-hint="1">💡 ${n?'Another hint':'Hint'}</button>`:''}</div>`}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-hint]');if(!b||!U)return;const box=b.closest('[data-hintq]'),id=box.dataset.hintq,q=(qIndex()[id]||{}).q,st=U.plansSaved&&U.plansSaved[id];if(!q||!st)return;
+  const left=q.chips.map((c,j)=>c.g&&!st.sel.includes(j)&&!(st.hints||[]).includes(j)?j:-1).filter(j=>j>=0);if(!left.length){b.remove();return}
+  st.hints=(st.hints||[]).concat(left[Math.floor(Math.random()*left.length)]);st.hint=st.hints.length;U.hints=(U.hints|0)+1;save();box.outerHTML=hintHTML(q,st)});

@@ -183,7 +183,7 @@ function qCard(q,i,o={}){
       <button class="route" data-a="rpaper"><span>✍️</span><b>Write on paper</b><small>Timed, about ${mins} min. Full XP.</small></button>
       <button class="route" data-a="rtyped"><span>⌨️</span><b>Type my answer</b><small>Type or speak it. Automatic check of key ideas.</small></button></div>
       <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-a="replan">Re-plan</button></div>`}
-    else h+=`<div class="row" style="margin-top:14px"><button class="btn" data-a="check" ${st.sel.length?'':'disabled'}>Check my plan</button><span class="muted" style="font-size:.85rem">${st.sel.length} selected</span></div>`}
+    else h+=`${typeof hintHTML==='function'&&st.sel?hintHTML(q,st):''}<div class="row" style="margin-top:14px"><button class="btn" data-a="check" ${st.sel.length?'':'disabled'}>Check my plan</button><span class="muted" style="font-size:.85rem">${st.sel.length} selected</span></div>`}
   else if(st.route==='plan'){
     h+=`${planHTML}<div class="fb ok"><b>✓ Finished with your plan.</b> Want more practice and XP? You can still write or type it.</div>
     <div class="row" style="margin-top:10px"><button class="btn ghost sm" data-a="rpaper">✍️ Write on paper</button><button class="btn ghost sm" data-a="rtyped">⌨️ Type my answer</button></div>${nextBtn}`}
