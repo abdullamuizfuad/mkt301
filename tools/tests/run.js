@@ -368,6 +368,7 @@ async engine(){const r=require('child_process').spawnSync(process.execPath,[path
 async offline(){const p=await page({sid:STUDENT});const active=await p.evaluate(async()=>!!(await navigator.serviceWorker.ready).active);ok(active,'service worker not active');await p.done()}
 };
 
+Object.assign(T,require('./wild-site.js')({page,ok,STUDENT,LECT,shot}));
 (async()=>{const server=spawn('python3',['-m','http.server',String(PORT)],{cwd:ROOT,stdio:'ignore'});await new Promise(r=>setTimeout(r,800));
   browser=await chromium.launch({headless:!ARGS.headed});
   for(const [name,fn] of Object.entries(T)){if(ARGS.only&&!String(ARGS.only).split(',').includes(name))continue;const t0=Date.now();
