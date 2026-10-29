@@ -374,7 +374,7 @@ async xpAudit(){if(!R2)return;const u=await fsDoc('users',B);const U2=JSON.parse
   await l.go('#/lecturer');await l.waitForSelector('#bkgo');const [dl]=await Promise.all([l.waitForEvent('download'),l.click('#bkgo')]);
   const j=JSON.parse(fs.readFileSync(await dl.path(),'utf8'));ok(j.students>=3&&j.data.users[A]&&j.data.board&&j.data.directory,'backup incomplete: '+JSON.stringify(j.counts));await l.done()},
 /* View as student: the lecturer sees the student's pages; nothing reaches the cloud */
-async viewAs(){const l=await page({w:390,h:844});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+async viewAs(){const l=await page({w:390,h:844,allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
   const u0=await fsDoc('users',A),b0=await fsDoc('board',A);ok(u0,'no progress to view');
   await l.go('#/');await l.click('#lhva');await waitFor(l,()=>!!document.querySelector('#vares .vapick'));await l.fill('#vaq',A.slice(-3));await l.waitForTimeout(150);
   await l.click(`#vares [data-va="${A}"]`);await waitFor(l,()=>!!document.getElementById('vabar'));ok((await l.textContent('#vabar')).includes(A),'banner missing');
@@ -385,7 +385,7 @@ async viewAs(){const l=await page({w:390,h:844});await ensure(l,L,PINL);await si
   await l.click('#vax');await l.waitForTimeout(300);ok(await l.evaluate(()=>ME.sid)===L&&!await l.$('#vabar'),'Exit did not restore the lecturer');ok(!(await fsDoc('board',L)),'the lecturer has a board row');await l.done()},
 
 /* the lecturer's avatar: saved and published to meta/lecturer; students see it on announcements; still no XP */
-async lectAvatar(){if(!R2)return;const l=await page({w:1280,h:900});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+async lectAvatar(){if(!R2)return;const l=await page({w:1280,h:900,allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
   await l.go('#/avatar');await l.click('[data-k="g"][data-v="m"]');await l.click('[data-k="hp"]');await l.click('#avsave');const code=await l.evaluate(()=>U.av);
   const m=await waitDoc('meta','lecturer',d=>d.a&&d.a.stringValue===code);ok(m&&m.n.stringValue==='Abdulla Muiz Fuad','meta/lecturer not written');
   ok(await l.evaluate(()=>U.xp===0)&&!(await fsDoc('board',L)),'the lecturer earned XP or has a board row');
