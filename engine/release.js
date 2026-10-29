@@ -8,22 +8,24 @@ const APP_VERSION='2.1';
 function verBanner(){if(document.getElementById('verban'))return;document.body.insertAdjacentHTML('afterbegin',`<div class="verban" id="verban" role="status"><b>✨ Version ${APP_VERSION} is here.</b> Please sign in again. Your progress is safe.<button class="x" aria-label="Close" onclick="verClose()">✕</button></div>`)}
 function verClose(){LS.del('vermsg');const b=document.getElementById('verban');if(b)b.remove()}
 onHook('beforeMe',()=>{if(LS.get('vermsg',0)&&!LS.get('session',null))setTimeout(verBanner,0)});
+/* signed in when the page opened (an existing session) → the one-time sign-out; signing in now counts as signing in again */
+const VER_BOOT=!!LS.get('session',null);
 onHook('afterLoad',()=>{if(LS.get('ver','')===APP_VERSION)return;const sid=ME&&ME.sid;
-  /* a first visit or a new device: nothing to sign out of */
-  if(!sid||!U){LS.set('ver',APP_VERSION);return}
-  if(!(U.days||[]).length&&!U.xp){LS.set('ver',APP_VERSION);U.seen21=1;save();return}
+  if(!sid||!U||!VER_BOOT||start.verDone){LS.set('ver',APP_VERSION);return}start.verDone=1;
   setTimeout(async()=>{if(!ME||ME.sid!==sid||LS.get('ver','')===APP_VERSION)return;
     try{LS.set('u_bak21_'+sid,JSON.parse(JSON.stringify(U)))}catch(e){}
     if(ME.cloud){const t0=Date.now();while(Date.now()-t0<20000&&CLOUD.state!=='synced')await new Promise(r=>setTimeout(r,400));if(CLOUD.state!=='synced')return;/* try again next visit */
       try{save();await CLOUD.flush()}catch(e){return}if(CLOUD.state!=='synced')return}
     LS.set('ver',APP_VERSION);LS.set('vermsg',1);closeModal();await signOut();verBanner()},1500)});
-onHook('afterLoad',()=>{if(LS.get('ver','')!==APP_VERSION)return;verClose();if(!U||U.seen21||!ME||ME.sid===LECTURER)return;
-  if(!(U.days||[]).length&&!U.xp){U.seen21=1;save();return}/* brand-new students get the tour instead */
-  const show=()=>{if(!U||U.seen21||!ME)return;if(document.querySelector('.modal'))return setTimeout(show,1500);U.seen21=1;save();
+/* What's new: once per student, after their progress is loaded (from the cloud when they use a PIN) */
+function whatsNew(){if(LS.get('ver','')!==APP_VERSION)return;verClose();if(!U||U.seen21||!ME||ME.sid===LECTURER)return;
+  if(!(U.days||[]).length&&!U.xp)return;/* brand-new students get the tour instead */
+  const sid=ME.sid,show=()=>{if(!U||U.seen21||!ME||ME.sid!==sid)return;if(document.querySelector('.modal'))return setTimeout(show,1500);U.seen21=1;save();
     const m=modal("What's new",`<div style="text-align:center"><div style="font-size:2.4rem">✨</div><h2 style="margin:4px 0">What's new in Version ${APP_VERSION}</h2></div>
     <ul class="sumlist">${WHATSNEW.slice(0,5).map(w=>`<li>${w[0]} <b>${esc(w[1])}</b></li>`).join('')}</ul>
     <div class="row" style="justify-content:center;margin-top:12px"><a class="btn ghost" href="#/whatsnew" id="wnmore">Read more</a><button class="btn" id="wnok">Let's go</button></div>`);
-    $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)});
+    $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)}
+onHook('afterLoad',()=>{if(ME&&!ME.cloud)whatsNew()});onHook('cloud',whatsNew);
 const WHATSNEW=[
   ['🏠','Your own dashboard','Home now shows your level, streak, what to do next, a day-by-day countdown, your readiness for each area and your weak spots.'],
   ['🧑‍🎨','Build your avatar','Pick your character, skin, hair, eyes, expression, outfit and headgear (headphones and a veil can go together). Tap your avatar on Home.'],

@@ -354,6 +354,14 @@ async lectReports(){const l=await page({w:1280,h:900});await signIn(l,L,PINL);aw
   const [dl]=await Promise.all([l.waitForEvent('download'),l.click('#wkrb [data-wk]')]);const csv=fs.readFileSync(await dl.path(),'utf8');ok(csv.startsWith('"week_of","sid"')&&csv.includes('S081441'),'weekly CSV wrong');
   if(!process.env.OLDRULES){const [d2]=await Promise.all([l.waitForEvent('download',{timeout:15000}),l.click('#attgo')]);const a=fs.readFileSync(await d2.path(),'utf8');ok(a.startsWith('"sid","name","sessions_joined"'),'attendance CSV wrong')}
   await shot(l,'fb-reports',true);await l.done()},
+async release21(){const before=int((await fsDoc('users',A)).xp);const p=await page({ver:false});await signIn(p,A,PIN);
+  /* signing in on a device: no sign-out, What's new once */
+  await p.waitForSelector('.modal[aria-label="What\'s new"]',{timeout:15000});await p.click('#wnok');await p.waitForTimeout(2600);await synced(p);
+  /* a device that was already signed in before the update: saved, signed out once, progress safe */
+  await p.evaluate(()=>localStorage.removeItem(CRS.ls+'ver'));await p.reload();await p.waitForSelector('#verban',{timeout:30000});await p.waitForSelector('#nm');
+  ok(int((await fsDoc('users',A)).xp)===before,'cloud progress changed by the sign-out');
+  await signIn(p,A,PIN);await p.waitForTimeout(2500);ok(await p.evaluate(b=>U.xp===b&&!!U.seen21&&!document.querySelector('.modal[aria-label="What\'s new"]')&&!document.querySelector('#verban'),before),'progress or What\'s new wrong after signing in again');
+  await p.reload();await p.waitForTimeout(3000);ok(await p.evaluate(()=>!!ME&&ME.cloud),'signed out a second time');await p.done()},
 async xpAudit(){if(!R2)return;const u=await fsDoc('users',B);const U2=JSON.parse(u.u.stringValue);U2.xp=(U2.xp|0)+5000;await fsPut('users',B,{name:u.name.stringValue,u:JSON.stringify(U2),xp:U2.xp,ts:new Date()});
   const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#xpab')||{}).textContent?.includes('S085542'));
   ok((await l.textContent('#xpab')).includes('not explained'),'inflated XP not flagged');
