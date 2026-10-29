@@ -35,7 +35,7 @@ function countOnce(key,...ks){if(VIEWAS)return;U.cnt=U.cnt||{};if(U.cnt[key])ret
 function uncount(test){U.cnt=U.cnt||{};rollDay();Object.keys(U.cnt).filter(test).forEach(key=>{const c=U.cnt[key];
   c.k.forEach(k=>{U.n[k]=Math.max(0,(U.n[k]||0)-1);if(c.d===today()&&U.day.c[k])U.day.c[k]--});delete U.cnt[key]})}
 const MINPCT=.4,minMins=t=>Math.ceil(t*MINPCT/60);
-function checkBadges(){BADGES.forEach(b=>{if(!U.badges[b.id]&&b.t(U)){U.badges[b.id]=today();toast(b.ico,'Badge unlocked: '+b.name,b.d)}})}
+function checkBadges(){if(VIEWAS||ME&&ME.sid===LECTURER)return;BADGES.forEach(b=>{if(!U.badges[b.id]&&b.t(U)){U.badges[b.id]=today();toast(b.ico,'Badge unlocked: '+b.name,b.d)}})}
 function toast(em,t,s){const el=document.createElement('div');el.className='toast';el.innerHTML=`<span class="em">${em}</span><div><b class="lex">${esc(t)}</b><div class="muted" style="font-size:.85rem">${esc(s)}</div></div>`;const box=$('#toasts');box.append(el);while(box.children.length>3)box.firstChild.remove();setTimeout(()=>el.remove(),2800)}
 function hud(){if(!ME){$('#hud').innerHTML='';return}const L=level(U.xp);
   if(ME.sid===LECTURER){$('#hud').innerHTML=`<a class="avpill" href="#/avatar" title="My profile" aria-label="My profile" data-lect>${typeof avatarSVG==='function'?avatarSVG(lectAv(),30,''):''}</a><span class="pill lvl" data-lect>Lecturer</span>`;return}

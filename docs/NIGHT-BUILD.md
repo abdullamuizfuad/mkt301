@@ -13,6 +13,7 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 | 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | **live** (main: MKT301 `2fca700`, MKT101 `bfa3fbd`); switches on when the combined rules are published |
 | 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | **live** (see Phase 5 notes) |
 | Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | **live** (`engine/release.js`) |
+| Simple home | Today home, My progress, tab bar, View as student, lecturer home and blocks | see "Simple home" below |
 
 ## Engine layout (Phase 0)
 
@@ -119,3 +120,52 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 - Typed answers use the same typing box as practice (paste blocked, voice typing allowed, integrity notes kept in the answer).
 - Self-check after the paper (not timed): tick the key ideas covered. XP `pp:<paper>:<question>` (2 + up to 8 for ideas, max 10) and `pp:<paper>:mcq` (half the MCQs right, max 15), only for the first 3 papers. Report: key ideas covered, MCQ %, time per section, carried minutes.
 - Section times are my choice (no lecturer decision yet): see Open questions.
+
+## Simple home (after Version 2.1)
+
+Status: **built on `night`**, site and cloud suites green; merged to `main` once backed up (see the commits in git log).
+
+- **Home ("Today")**, `engine/simple.js` `home()` replaces the course `home()` functions:
+  - a header strip: avatar, name and @username, ✏️ Edit profile (→ `#/avatar`), level bar, 7 streak blocks, freezes
+  - a small countdown: days left, "Mon 14 Dec 2026 · 9:00 am" and a mini grid; it links to `#/progress/cd`
+  - NEXT UP
+  - a Today row: screen-time ring, missions x/3 (tap to open), number to review
+  - announcements, lecturer notes, the streak rescue and unread notifications, only when there is something to show
+  - practice tiles from the course hook `homeTiles()`, plus the 📝 Practice paper tile (locked for students until 22 Nov; "Preview" for the lecturer)
+  - Phone height: MKT301 ~5,990 px before → ~1,190 px after (about 880 px of content plus the footer); MKT101 ~6,900 → ~1,190.
+- **My progress** (`#/progress`, `#/progress/<section>` opens one section). It is built by `profSections(u, ctx)`, the same sections as the lecturer's student profile:
+  - countdown, readiness, weak spots, the course's sections (hook `profCourse`), activity, screen time, badges, cases
+  - each section folds to a one-line summary (`<details>`)
+  - the summary row (`profSumHTML`) is shared with the lecturer profile, which adds the at-risk flag, last active, integrity, typed answers and messages
+- **Practice** (`#/practice`), **Save my progress** (`#/backup`), and the **More** menu (`[data-more]`: My profile, My progress, Badges, Notes, Flashcards, Review, Practice paper, Save, How it works, What's new, Install, Privacy, Sign out).
+- **Phone tab bar** (≤700 px): Home · Practice · Progress (Lecturer for the lecturer) · Leaderboard · More.
+  - It is one block in `simple.js` (`tabbarHTML`) plus one CSS block in `engine.css`; `CRS.tabbar=false` removes it.
+  - The footer, with Sign out, is unchanged.
+- **My profile** (`#/avatar`): name, @username with 🪪 Change my @username, and the avatar builder.
+- **The lecturer is never a player** (recorded in CLAUDE.md):
+  - `award()` and `checkBadges()` do nothing for S000001, and the lecturer has no board or studying row.
+  - Challenges, the weekend challenge and notifications show a "for students" card (`notPlayer`), and the lecturer is excluded from pickers.
+  - The top bar shows the lecturer's avatar and a Lecturer tag.
+  - The lecturer home holds:
+    - Class today: active today, to mark, open reports, at risk; each one opens its block on the Lecturer tab (`data-lgo`)
+    - buttons: View as student, Marking, Post announcement, Start live session, Leaderboard, Lecturer tools
+    - at-risk and recently active lists, top 3 each
+    - previews: the paper and practice tiles, with no XP
+  - Every lecturer-only element has `data-lect`; the `lectonly` test renders every route as a student and finds none.
+- **Lecturer avatar**:
+  - saved in U.av and published to `meta/lecturer` `{a, n, t}` (the published rules already allow this)
+  - students see it via `lectAvHTML()` on announcements, lecturer messages, marked answers, the live-session bar and the quiz battle host line
+  - default avatar: `LECT_AV_DEFAULT`
+- **View as student** (lecturer only, read-only):
+  - picker: search by name, ID or @username; on the lecturer home, the Lecturer tab (first block), My progress, and each profile (👁 button)
+  - `vaEnter()` swaps ME/U for the student's cloud progress in memory
+  - while `VIEWAS` is set: save, award, countOnce, LS.set/del, every CLOUD write, screen time and freezes are no-ops, and answer controls show "Read-only: you're viewing as a student."
+  - Exit restores the lecturer's own state; tests check that localStorage and the student's cloud documents are unchanged
+- **Lecturer tab blocks** (`lfBlock`/`lfBind` in `engine/feat.js`):
+  - every card folds to its title plus a summary; data loads the first time a block opens
+  - open blocks are remembered per device (LS `lfold`); Marking, Reports and At risk open by themselves when something is waiting
+  - Expand all / Collapse all
+  - tables and lists show their top 3 rows with "Show all N ▾"
+- **Sections**: `secLabel(g)` shows "MKT301_H01 course" as "H01" (stored values unchanged). With no sections (MKT101), the weekend challenge has one "Whole class" team and no team bonus.
+- What's new: "A simpler home" is the first entry. Service worker caches: mkt301-v12, mkt101-arena-v10.
+- Tests: `simplehome`, `progress`, `tabbar`, `lecthome`, `lectonly`, `viewas`, `lfold`, `sections` (site); `viewAs`, `lectAvatar` (cloud). Screenshots: `scratchpad/night/simple/`, made with `scratchpad/sh/shots.js`.

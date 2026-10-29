@@ -459,3 +459,4 @@ body.va main :is(textarea,input,select,.chip,.mopt,[data-a]){cursor:not-allowed}
 .vares{display:grid;gap:6px;margin-top:8px}.vapick{display:block;text-align:left;width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);font:inherit;cursor:pointer}
 .vapick:hover{border-color:var(--teal)}
 .thead .lvline{justify-content:space-between}
+#psum{margin-bottom:12px}.psrisk{margin-bottom:4px}

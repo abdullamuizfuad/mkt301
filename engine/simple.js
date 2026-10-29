@@ -90,7 +90,7 @@ ROUTES.backup=()=>{shell('#/backup',`<p><a href="#/">← Home</a></p><div class=
 const xp7=u=>{const from=addDays(today(),-6);return Object.entries(u.xpd||{}).filter(([d])=>d>=from).reduce((t,[,x])=>t+(x|0),0)};
 function profSumHTML(u,o){o=o||{};const R=readiness(u).sort((a,b)=>a.pct-b.pct),w=R[0],wk=weakOf(u)[0];
   const tiles=[o.self?['Days practised',(u.days||[]).length]:['Last active',esc(ago(o.last))],['XP last 7 days',xp7(u)],['Streak','🔥 '+streak(u)],['Weakest',w?esc(w.label)+' · '+w.pct+'%':esc(wk||'–')]]
-    .concat(o.self&&typeof dashStats==='function'?dashStats().map(x=>[esc(x[1]),esc(x[0])]):[]);
+    .concat(o.self&&typeof dashStats==='function'?dashStats().map(x=>[esc(x[1].charAt(0).toUpperCase()+x[1].slice(1)),esc(x[0])]):[]);
   const risk=o.risk?`<p class="psrisk ${o.risk.length?'bad':'ok'}">${o.risk.length?'⚠️ At risk: '+esc(o.risk.join(' · ')):'✓ No risk signs'}</p>`:'';
   return `<div class="psum" id="psum">${tiles.map(t=>`<div><span>${t[0]}</span><b>${t[1]}</b></div>`).join('')}</div>${risk}`}
 function weakSecHTML(u){const w=((u.wk||{}).t)||{},ks=Object.keys(w).filter(k=>w[k][1]>0).sort((a,b)=>w[b][1]/Math.max(1,w[b][0])-w[a][1]/Math.max(1,w[a][0])).slice(0,6),{dec,miss}=decoyStats(u);
