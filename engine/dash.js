@@ -26,10 +26,10 @@ function countdownHTML(u){u=u||U;const days=new Set(u.days),fz=(u.frz||{}).d||{}
   let st=[first,addDays(t,-27)].sort()[0];st=addDays(st,-dowOf(st));if(st<'2026-08-23')st='2026-08-23';
   const rows=[];for(let w=st;w<=EXAM_DAY;w=addDays(w,7)){const cells=[];for(let i=0;i<7;i++){const d=addDays(w,i),we=i===5||i===6,cls=[days.has(d)?'on':fz[d]?'fz':'',d===t?'today':'',we?'we':'',d<t&&!days.has(d)&&!fz[d]?'miss':'',d>EXAM_DAY?'out':''];
       const mark=d===EXAM_DAY?'🎯':d===W14?'📝':fz[d]&&!days.has(d)?'❄️':'';
-      cells.push(`<i class="${cls.filter(Boolean).join(' ')}" title="${d}${d===EXAM_DAY?' · exam day':''}${d===W14?' · week 14 starts, practice paper unlocks':''}${days.has(d)?' · practised':''}${we?' · weekend':''}">${mark}</i>`)}
+      cells.push(`<i class="${cls.filter(Boolean).join(' ')}" title="${d}${d===EXAM_DAY?' · 9:00 am':''}${d===W14?' · week 14 starts, practice paper unlocks':''}${days.has(d)?' · practised':''}${we?' · weekend':''}">${mark}</i>`)}
     const wk=termWeek(w);rows.push(`<div class="cdrow${wk===14?' w14':''}"><span class="cdw">${wk>=1&&wk<=16?'Wk '+wk:''}</span>${cells.join('')}</div>`)}
   const left=Math.max(0,Math.ceil((Date.parse(EXAM_DAY+'T00:00:00+05:00')-Date.parse(t+'T00:00:00+05:00'))/864e5)),done=[...days].filter(d=>d>=st&&d<=t).length;
-  return `<div class="card cdcard" id="cdcard"><h2 style="margin:0">⏳ Exam day: Mon 14 Dec 2026, 9:00 am</h2><p class="lex cdnum" id="cdnum" aria-live="off">${cdText()}</p>
+  return `<div class="card cdcard" id="cdcard"><h2 style="margin:0">⏳ Mon 14 Dec 2026 · 9:00 am</h2><p class="lex cdnum" id="cdnum" aria-live="off">${cdText()}</p>
   <div class="cdgrid" role="img" aria-label="Days from ${st} to 14 December 2026: ${done} practised so far, ${left} days to go"><div class="cdrow cdh"><span class="cdw"></span>${['S','M','T','W','T','F','S'].map(x=>`<b>${x}</b>`).join('')}</div>${rows.join('')}</div>
   <p class="muted cdkey"><span><i class="k on"></i>practised</span><span><i class="k today"></i>today</span><span><i class="k we"></i>weekend</span><span>📝 week 14: practice paper</span><span>🎯 14 Dec</span></p></div>`}
 setInterval(()=>{const e=document.getElementById('cdnum');if(e)e.textContent=cdText()},30000);
