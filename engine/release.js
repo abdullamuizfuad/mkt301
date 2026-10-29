@@ -17,6 +17,8 @@ onHook('afterLoad',()=>{if(LS.get('ver','')===APP_VERSION)return;const sid=ME&&M
     if(ME.cloud){const t0=Date.now();while(Date.now()-t0<20000&&CLOUD.state!=='synced')await new Promise(r=>setTimeout(r,400));if(CLOUD.state!=='synced')return;/* try again next visit */
       try{save();await CLOUD.flush()}catch(e){return}if(CLOUD.state!=='synced')return}
     LS.set('ver',APP_VERSION);LS.set('vermsg',1);closeModal();await signOut();verBanner()},1500)});
+/* true while What's new is still to come for this student (the name confirmation waits for it) */
+const whatsNewDue=()=>LS.get('ver','')===APP_VERSION&&!window.__noWhatsNew&&!!U&&!U.seen21&&!!ME&&ME.sid!==LECTURER&&!!((U.days||[]).length||U.xp);
 /* What's new: once per student, after their progress is loaded (from the cloud when they use a PIN) */
 function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)return;/* tests turn it off like the break reminders */verClose();if(!U||U.seen21||!ME||ME.sid===LECTURER)return;
   if(!(U.days||[]).length&&!U.xp)return;/* brand-new students get the tour instead */
