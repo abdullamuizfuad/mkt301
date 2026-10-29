@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MKT301 Notes Preview</title>
+<style>
+:root{--bg:#0f0f1a;--card:#1a1a2e;--ink:#eee;--ink2:#b9b9d0;--acc:#7cf29a;--line:#2e2e48}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,sans-serif}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:.2em 0}h2{font-size:1.25rem}h3{font-size:1.05rem;margin:.2em 0 .4em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0}
+.muted{color:var(--ink2)}.big{font-size:1.1rem;font-weight:600;color:var(--acc)}
+nav a{display:inline-block;margin:3px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;color:var(--ink);text-decoration:none;font-size:.85rem}
+ul{padding-left:20px}li{margin:3px 0}.eg{background:#14261c;border-radius:10px;padding:8px 10px;margin:8px 0}.tip{background:#2a2412;border-radius:10px;padding:8px 10px}
+figure{margin:10px 0;border:1px dashed var(--line);border-radius:12px;padding:10px}figcaption{font-weight:700;margin-bottom:6px}
+.dflow{list-style:none;padding:0;display:grid;gap:6px}.dflow li{background:#22223a;border-radius:8px;padding:6px 8px}.dflow small,.dcmp small,.dcell small{display:block;color:var(--ink2)}
+.dcmp{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}.dcmp>div{background:#22223a;border-radius:8px;padding:8px}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.dcell{background:#22223a;border-radius:8px;padding:8px}
+.dpyr div{margin:3px auto;background:#22223a;border-radius:6px;padding:5px;text-align:center}
+details{margin:6px 0}summary{cursor:pointer;font-weight:600}
+</style></head><body><main id="m"></main>
+<script src="../notes301.js"></script>
+<script>
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sub=x=>x?`<small>${esc(x)}</small>`:'';
+const L=l=>l?`<ul>${l.map(x=>`<li>${Array.isArray(x)?`<b>${esc(x[0])}:</b> ${esc(x[1])}`:esc(x)}</li>`).join('')}</ul>`:'';
+function dia(d){if(!d)return'';let b='';
+ if(d.type==='flow')b=`<ol class="dflow">${d.steps.map(([h,s],i)=>`<li><b>${i+1}. ${esc(h)}</b>${sub(s)}</li>`).join('')}</ol>`;
+ else if(d.type==='compare')b=`<div class="dcmp">${d.cols.map(([h,it])=>`<div><b>${esc(h)}</b><ul>${it.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`;
+ else if(d.type==='grid')b=`<p class="muted">${esc(d.yl)} (${esc(d.y.join(' / '))}) × ${esc(d.xl)} (${esc(d.x.join(' / '))})</p><div class="dgrid">${d.cells.map(([h,s])=>`<div class="dcell"><b>${esc(h)}</b>${sub(s)}</div>`).join('')}</div>`;
+ else if(d.type==='pyramid')b=`<div class="dpyr">${d.levels.map(([h,s],i)=>`<div style="width:${Math.round(40+60*i/Math.max(1,d.levels.length-1))}%"><b>${esc(h)}</b>${sub(s)}</div>`).join('')}</div>`;
+ return `<figure>${d.title?`<figcaption>${esc(d.title)}</figcaption>`:''}${b}</figure>`}
+const N=NOTES301,ks=Object.keys(N.weeks).map(Number).sort((a,b)=>a-b),q=new URLSearchParams(location.search),w=+q.get('w')||ks[0],W=N.weeks[w];
+let h=`<h1>MKT301 notes (preview)</h1><nav>${ks.map(k=>`<a href="?w=${k}">Week ${k}</a>`).join('')}</nav>`;
+if(W)h+=`<div class="card"><p class="muted">Week ${W.wk}</p><h2>${esc(W.title)}</h2><p class="big">${esc(W.big)}</p><h3>In one minute</h3>${L(W.min)}<p><b>You should be able to:</b> ${esc(W.lo)}</p></div>`+
+ W.ideas.map(c=>`<section class="card"><h3>${esc(c.h)}</h3>${[].concat(c.p||[]).map(x=>`<p>${esc(x)}</p>`).join('')}${L(c.l)}${dia(c.dia)}${[].concat(c.more||[]).map(x=>`<p>${esc(x)}</p>`).join('')}${[].concat(c.eg||[]).map(x=>`<p class="eg">${esc(x)}</p>`).join('')}${c.tip?`<p class="tip"><b>Tip:</b> ${esc(c.tip)}</p>`:''}</section>`).join('')+
+ `<div class="card"><h3>${esc(W.apply.h)}</h3>${dia({type:'flow',steps:W.apply.steps})}</div>`+
+ `<div class="card"><h3>Key terms</h3>${L(W.terms)}</div><div class="card"><h3>Common mistakes</h3>${L(W.mistakes)}</div>`+
+ `<div class="card"><h3>Worked practice question (${W.worked.marks} marks)</h3><p>${esc(W.worked.q)}</p><details><summary>Plan</summary><ol>${W.worked.plan.map(x=>`<li>${esc(x)}</li>`).join('')}</ol></details><details><summary>Model answer</summary>${W.worked.model.map(([t,p])=>`<p><b>${esc(t)}:</b> ${esc(p)}</p>`).join('')}</details></div>`+
+ `<div class="card"><h3>Quick checks</h3>${W.check.map(([a,b])=>`<details><summary>${esc(a)}</summary><p>${esc(b)}</p></details>`).join('')}</div>`;
+h+=`<div class="card"><h3>For the lecturer to check</h3>${L(N.review.map(([k,t])=>'Week '+k+': '+t))}</div>`;
+document.getElementById('m').innerHTML=h;
+</script></body></html>
