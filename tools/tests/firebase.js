@@ -348,6 +348,11 @@ async qbank(){if(!R2)return;const l=await page({w:1280,h:900});await signIn(l,L,
   const env=Object.assign({},process.env,{MKT301_EMU:'1',MKT101_EMU:'1',MKT301_LECTURER_PIN:PINL,MKT101_LECTURER_PIN:PINL,HTTPS_PROXY:'',https_proxy:''});
   const up=spawnSync(process.execPath,[path.join(ROOT,'tools','qgen','upload.mjs'),f],{encoding:'utf8',env});ok(up.status===0&&/Uploaded 1/.test(up.stdout),'qgen upload failed: '+up.stdout+up.stderr);
   await waitFor(l,()=>(document.querySelector('#qbl')||{}).textContent?.includes('gen-test-1'));await l.done();await s.done()},
+async lectReports(){const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await l.waitForSelector('#wkrgo');await l.click('#wkrgo');
+  await waitFor(l,()=>!!document.querySelector('#wkrb table'));const t=await l.textContent('#wkrb');ok(/\d+\/\d+/.test(t),'weekly report empty');
+  const [dl]=await Promise.all([l.waitForEvent('download'),l.click('#wkrb [data-wk]')]);const csv=fs.readFileSync(await dl.path(),'utf8');ok(csv.startsWith('"week_of","sid"')&&csv.includes('S081441'),'weekly CSV wrong');
+  if(!process.env.OLDRULES){const [d2]=await Promise.all([l.waitForEvent('download',{timeout:15000}),l.click('#attgo')]);const a=fs.readFileSync(await d2.path(),'utf8');ok(a.startsWith('"sid","name","sessions_joined"'),'attendance CSV wrong')}
+  await shot(l,'fb-reports',true);await l.done()},
 async xpAudit(){if(!R2)return;const u=await fsDoc('users',B);const U2=JSON.parse(u.u.stringValue);U2.xp=(U2.xp|0)+5000;await fsPut('users',B,{name:u.name.stringValue,u:JSON.stringify(U2),xp:U2.xp,ts:new Date()});
   const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#xpab')||{}).textContent?.includes('S085542'));
   ok((await l.textContent('#xpab')).includes('not explained'),'inflated XP not flagged');

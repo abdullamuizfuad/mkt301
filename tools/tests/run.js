@@ -210,6 +210,14 @@ async paper(){const p=await page({sid:STUDENT,clock:true});await p.clock.setSyst
   const x1=(await p.U()).xp;await p.evaluate(()=>{U.pp.cur.ck=0;save()});await p.go('#/');await p.go('#/paper');await p.click('#ppfin');ok((await p.U()).xp===x1,'self-check XP farmed');
   await p.done()},
 
+async hints(){const p=await page({sid:STUDENT});await p.go('#/short');await p.waitForSelector('.qcard [data-hint]');await p.click('.qcard [data-hint]');
+  ok(await p.$('.qcard .hint'),'hint not shown');const id=(await p.locator('.qcard').first().getAttribute('id')).slice(2);
+  const st=await p.evaluate(id=>U.plansSaved[id],id);ok(st&&st.hints&&st.hints.length===1,'hint not recorded');
+  await p.locator('.qcard .chip').first().click();ok(await p.$$eval('.qcard .hint',a=>a.length)===1,'hint lost on redraw');
+  /* skip link and focus */
+  await p.reload();await p.waitForTimeout(500);await p.keyboard.press('Tab');ok(await p.evaluate(()=>document.activeElement.classList.contains('skip')),'skip link is not first');await p.keyboard.press('Enter');ok(await p.evaluate(()=>document.activeElement.id==='main'),'skip link does not reach the content');
+  await p.done()},
+
 async layout(){const pages=['#/','#/paper','#/cases','#/case/iceto/read','#/case/cbtl/board','#/case/tuna/practice','#/case/tuna/exhibits','#/short','#/essay','#/essay/ca/manta','#/essay/coach/coco','#/badges','#/board'];
   for(const w of [320,390,1280])for(const theme of ['dark','light']){const p=await page({sid:STUDENT,w,theme});for(const h of pages){await p.go(h);const sw=await p.evaluate(()=>document.documentElement.scrollWidth);ok(sw<=w,`${h} at ${w}px ${theme}: scrollWidth ${sw}`)}
     ok(await p.evaluate(t=>document.documentElement.dataset.theme===t,theme),'theme not applied');await p.done()}},
