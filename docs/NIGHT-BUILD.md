@@ -12,7 +12,7 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 | 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | **live** (main: MKT301 `c2593f1`, MKT101 `de16579`) |
 | 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | **live** (main: MKT301 `2fca700`, MKT101 `bfa3fbd`); switches on when the combined rules are published |
 | 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | **live** (see Phase 5 notes) |
-| Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | not started |
+| Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | **live** (`engine/release.js`) |
 
 ## Engine layout (Phase 0)
 
@@ -61,8 +61,20 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 
 ## Next
 
-- Release 2.1: `APP_VERSION='2.1'`; a one-time sign-out after the update (progress is saved to the cloud first and never deleted); then the What's new popup (`#/whatsnew`, linked from "? How it works"); then the confirm-name/username prompt (names.js). Tests, backup, push to main.
-- Then the final report: combined rules files in the scratchpad (`rules/mkt301-FINAL.rules`, `rules/mkt101-FINAL.rules`).
+- Everything in the brief is live. The lecturer still has to:
+  1. Publish the combined rules for each project (`<scratchpad>/rules/mkt301-FINAL.rules`, `mkt101-FINAL.rules`, or regenerate them with `python3 tools/build-rules.py <ids csv>`).
+  2. Paste each Moodle participants CSV into Lecturer → Class names.
+  3. Optionally, set up phone notifications (`docs/PUSH.md`).
+- Open question: practice paper section times.
+
+## Release 2.1 notes
+
+- `engine/release.js`. `APP_VERSION='2.1'`. A device that was already signed in when the update loads does this once:
+  1. It copies its progress to `localStorage` (`u_bak21_<SID>`).
+  2. It waits until the cloud copy is saved (if it can't be saved, it tries again on the next visit).
+  3. It signs out and shows a banner: "Version 2.1 is here. Please sign in again. Your progress is safe."
+- Signing in fresh doesn't trigger a sign-out. What's new shows once (`U.seen21`) after the progress loads (after the cloud pull for PIN accounts), with Read more → `#/whatsnew` (also in the footer next to "? How it works"). The name confirmation (names.js) waits until What's new has been seen. Brand-new students get the tour instead.
+- Tests set `window.__noWhatsNew` and a `ver` key; the `release` (site) and `release21` (cloud) tests cover the real flow.
 
 ## Phase 5 notes
 
