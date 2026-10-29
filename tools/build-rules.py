@@ -80,10 +80,10 @@ __EMAILS__
     function dirWord(sid, u) {
       let dir = get(/databases/$(database)/documents/directory/$(sid)).data;
       return ('u' in dir && dir.u == u)
-        || (' ' + dir.n.lower().replace('[^a-z]+', ' ') + ' ').matches('.* ' + u[1:u.size() - 3].lower() + ' .*');
+        || (' ' + dir.n.lower().replace('[^a-z]+', ' ') + ' ').matches('.* ' + u.replace('[^A-Za-z]', '').lower() + ' .*');
     }
     function validUser(sid, u) {
-      return u == '' || (u.matches('^@[A-Za-z]{2,20}' + sid[4:7] + '$') && (!hasDir(sid) || dirWord(sid, u)));
+      return u == '' || (u.matches('^@[A-Za-z]{2,20}[0-9]{3}$') && sid.matches('^S[0-9]{3}' + u.replace('[^0-9]', '') + '$') && (!hasDir(sid) || dirWord(sid, u)));
     }
     function validRow(sid) {
       let d = request.resource.data;
