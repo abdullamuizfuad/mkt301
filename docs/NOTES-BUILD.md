@@ -17,3 +17,4 @@ Order: 10, 11, then 1–9, 12, 13, 14.
 - Week 5
 - Week 6
 - Week 7
+- Week 8
