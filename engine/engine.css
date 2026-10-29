@@ -354,3 +354,4 @@ a.stat{color:inherit;text-decoration:none}
 #rvbody .mopt.bad{border-color:var(--red);background:color-mix(in srgb,var(--red) 18%,transparent)}
 .hud .avpill{display:inline-flex;border-radius:50%;line-height:0}
 .hud .avpill .avsvg{border-radius:50%}
+@media (max-width:360px){.hud .avpill{display:none}}

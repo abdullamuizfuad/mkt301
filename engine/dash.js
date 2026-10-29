@@ -4,6 +4,7 @@
      qArea(id) → area key for a question id                         (default: qIndex()[id].area)
      revItem(id) → {kind:'mcq', q, o:[...correct first], why, label} | null   (MCQs; written questions come from qIndex)
      flashDecks() → [{k, label, cards:[[front, back]]}]
+     dashStats() → [[value, label, href]]                           extra tiles in the dashboard header
    New progress fields (additive): U.srs {id:{s,due,n}}, U.conf {area:[sure,sureRight,unsure,unsureRight]}, U.fc {id:{s,due}}, U.mi {id:[n,right,w1,w2,w3]}.
    All dates are GMT+5 (Maldives). */
 const MV=5*3600e3,EXAM_AT=Date.parse('2026-12-14T09:00:00+05:00'),PAPER_AT=Date.parse('2026-11-22T00:00:00+05:00'),W14='2026-11-22',EXAM_DAY='2026-12-14';
@@ -91,7 +92,7 @@ function dashHeadHTML(){const L=level(U.xp),got=Object.keys(U.badges).length,nm=
   return `<div class="card hero dash"><a class="dav" href="#/avatar" title="Edit my avatar" aria-label="Edit my avatar">${avatarSVG(myAv(),112,'My avatar')}<span class="tag">✏️ Edit</span></a>
   <div style="min-width:0"><h1 style="margin:0">${esc(nm)}</h1><p class="muted" style="margin:2px 0 0">${U.un?esc(U.un)+' · ':''}${esc(ME.sid)}${U.dg?' · '+esc(U.dg):''}</p>
   <div class="lvline"><b class="lex">Level ${L.i+1} · ${esc(L.name)}</b><span class="muted">${L.to?(L.to-U.xp)+' XP to '+esc(LEVELS[L.i+1][1]):'Top level reached'}</span></div><div class="bar"><i style="width:${L.pct}%"></i></div>
-  <div class="stats"><div class="stat"><b>${U.xp}</b><span>XP</span></div><div class="stat"><b>🔥 ${streak(U)}</b><span>day streak</span></div><a class="stat" href="#/badges"><b>${got}/${BADGES.length}</b><span>badges</span></a><a class="stat" href="#/review"><b>🧠 ${due}</b><span>to review</span></a></div>
+  <div class="stats"><div class="stat"><b>${U.xp}</b><span>XP</span></div><div class="stat"><b>🔥 ${streak(U)}</b><span>day streak</span></div><a class="stat" href="#/badges"><b>${got}/${BADGES.length}</b><span>badges</span></a><a class="stat" href="#/review"><b>🧠 ${due}</b><span>to review</span></a>${typeof dashStats==='function'?dashStats().map(x=>`<a class="stat" href="${x[2]||'#/'}"><b>${x[0]}</b><span>${esc(x[1])}</span></a>`).join(''):''}</div>
   ${streakBlocksHTML()}</div></div>
   <a class="card zone next" href="${nx[3]}" id="nextact"><span class="em">${nx[0]}</span><div style="flex:1;min-width:0"><span class="muted" style="font-size:.78rem;font-weight:700;letter-spacing:.04em">NEXT UP</span><h2 style="margin:2px 0">${esc(nx[1])}</h2><p class="muted" style="margin:0;font-size:.9rem">${esc(nx[2])}</p></div><span class="btn">Go →</span></a>`}
 function badgesMiniHTML(){const got=BADGES.filter(b=>U.badges[b.id]).sort((a,b)=>U.badges[a.id]<U.badges[b.id]?1:-1).slice(0,4);
