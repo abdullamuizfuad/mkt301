@@ -256,7 +256,11 @@ async breaks(){const p=await page({sid:STUDENT,clock:true,breaks:true});const br
   await p.evaluate(()=>{PR.sess=null;PR.sessOn=false;PR.fc=0;presBar()});
   await p.done()},
 
-async engine(){const r=require('child_process').spawnSync(process.execPath,[path.join(ROOT,'tools','sync-engine.mjs'),'--check'],{encoding:'utf8'});ok(r.status===0,'shared engine out of sync:\n'+r.stdout+r.stderr)},
+async engine(){const r=require('child_process').spawnSync(process.execPath,[path.join(ROOT,'tools','sync-engine.mjs'),'--check'],{encoding:'utf8'});ok(r.status===0,'shared engine out of sync:\n'+r.stdout+r.stderr)
+  /* every script shares one global scope: a function or const declared twice silently replaces the first */
+  const fs=require('fs'),files=fs.readdirSync(path.join(ROOT,'engine')).filter(f=>f.endsWith('.js')).map(f=>'engine/'+f).concat(['course.js']),seen={},dup=[];
+  for(const f of files)for(const m of fs.readFileSync(path.join(ROOT,f),'utf8').matchAll(/^(?:async )?(?:function|const|let) ([A-Za-z0-9_$]+)/gm)){if(seen[m[1]]&&seen[m[1]]!==f)dup.push(m[1]+' ('+seen[m[1]]+', '+f+')');seen[m[1]]=f}
+  ok(!dup.length,'declared in two files: '+dup.join('; '))},
 
 async offline(){const p=await page({sid:STUDENT});const active=await p.evaluate(async()=>!!(await navigator.serviceWorker.ready).active);ok(active,'service worker not active');await p.done()}
 };
