@@ -61,11 +61,12 @@ async function wildOpen(win,topics){if(ME.sid!==LECTURER)return;const old=await 
 const wildPlan=(win,top)=>CLOUD.put('wild/'+win.id,{wk:win.id,top:top.map(String),tl:wildTL(top),st:'plan',by:LECTURER,opens:CLOUD.when(win.opens),closes:CLOUD.when(win.closes)});
 
 /* ---------- students: #/wild ---------- */
-ROUTES.wild=async h=>{if(h[1]==='live')return wildLive();if(ME.sid===LECTURER)return wildLive();
+const wildId=x=>x&&/^w[\w-]{1,30}$/.test(x)?x:null;
+ROUTES.wild=async h=>{if(h[1]==='live')return wildLive(wildId(h[2]));if(ME.sid===LECTURER)return wildLive(wildId(h[1]));
   if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>🎁 6th-spot challenge</h1><p class="muted">The weekly challenge switches on soon.</p>`);
   const win=wildWin(),prev=wildPrev();await wildDir();
   shell('#/',`<p><a href="#/">← Home</a></p><h1>🎁 6th-spot challenge</h1><p class="muted">Every week your lecturer brings a gift for the top 5 students by XP earned that week. Everyone else can win the <b>6th gift</b>: the best score in this 20-minute challenge wins it.</p><div id="wlv"><p class="muted">Loading…</p></div>`);
-  let D=null,S=[],stop=null;const id=h[1]&&/^w\d{4}-\d\d-\d\d$/.test(h[1])?h[1]:win.open?win.id:prev.id;
+  let D=null,S=[],stop=null;const id=wildId(h[1])||(win.open?win.id:prev.id);
   const draw=()=>{const el=$('#wlv');if(!el||WILD_LOCK)return;const mine=(U.wild||{})[id],open=D&&D.st==='open'&&Date.now()>=D.opens&&Date.now()<D.closes,inT5=D&&(D.t5||[]).includes(ME.sid);
     if(mine&&!mine.done&&D&&D.items){if(Date.now()-mine.at<WILD_MS)return wildRun(D,mine);wildSubmit(D,mine).then(draw);return}
     const rank=wildRank(S),me=S.find(r=>r.id===ME.sid),won=D&&D.win;if(won===ME.sid&&award('wildwin:'+id,30,'6th spot won! 🎁'))countOnce('wildwin:'+id,'wildwins');
@@ -109,9 +110,9 @@ function wildReviewHTML(D,a){return D.items.map((id,i)=>{const it=wildItem(id),v
   return `<div class="wrv"><b>${i+1}. ${esc(it.q)}</b><p style="margin:4px 0">${v&&v.v===0?'✓':'✗'} ${esc(it.o[0])}</p>${it.why?`<p class="muted" style="margin:0;font-size:.85rem">${esc(it.why)}</p>`:''}</div>`}).join('')}
 
 /* ---------- the lecturer: live screen and history (#/wild/live) ---------- */
-async function wildLive(){if(ME.sid!==LECTURER)return ROUTES.wild(['wild']);
+async function wildLive(pick){if(ME.sid!==LECTURER)return ROUTES.wild(['wild']);
   if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>🎁 6th-spot challenge</h1><p class="muted">Publish the latest rules to switch the weekly challenge on.</p>`);
-  const win=wildWin(),prev=wildPrev();await wildDir();let id=win.open?win.id:prev.id,D=null,E=[],stopE=null;
+  const win=wildWin(),prev=wildPrev();await wildDir();let id=pick||(win.open?win.id:prev.id),D=null,E=[],stopE=null;
   shell('#/',`<div data-lect class="wlive"><div class="row" style="justify-content:space-between"><h1 style="margin:0">🎁 6th-spot challenge</h1><span class="row"><a class="btn ghost sm" href="#/lecturer" data-lgo="wildc">Topics and history</a></span></div><div id="wlv" style="margin-top:12px"><p class="muted">Loading…</p></div></div>`);
   const draw=()=>{const el=$('#wlv');if(!el)return;clearInterval(WILDT);
     if(!D||D.st==='plan'){el.innerHTML=`<div class="card"><h2 style="margin:0 0 6px">${win.open?'This week\'s challenge is not open yet':'Next challenge'}</h2><p>Opens <b>${esc(wildWhen(win.opens))}</b>, closes <b>${esc(wildWhen(win.closes))}</b> (class start).${D&&D.top?' Topics: '+esc((D.tl||D.top).join(' and '))+'.':''}</p>

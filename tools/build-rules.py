@@ -270,6 +270,45 @@ __EMAILS__
         allow delete: if isLecturer();
       }
     }
+
+    // The weekly 6th-spot challenge (engine/wild.js). Only the lecturer writes the week's document: topics, questions, the week's
+    // top 5 (t5), when it opens and closes, and later the results and the winner. Everyone on the class list can read it.
+    function wildDoc(id) { return get(/databases/$(database)/documents/wild/$(id)).data; }
+    function wildAtt(id, sid) { return get(/databases/$(database)/documents/wild/$(id)/e/$(sid)).data; }
+    match /wild/{id} {
+      allow read: if onRoster();
+      allow create, update: if isLecturer()
+        && request.resource.data.keys().hasOnly(['wk', 'top', 'tl', 'items', 't5', 't5x', 'opens', 'closes', 'st', 'res', 'win', 'by'])
+        && request.resource.data.st in ['plan', 'open', 'closed', 'done']
+        && (!('items' in request.resource.data) || (request.resource.data.items is list && request.resource.data.items.size() <= 20))
+        && (!('t5' in request.resource.data) || (request.resource.data.t5 is list && request.resource.data.t5.size() <= 5));
+      allow delete: if isLecturer();
+      // One attempt per student: started (st 'go') only while the challenge is open, by students outside the week's top 5
+      // (never the lecturer), then finished once within 30 minutes of the start with the score and every answer.
+      match /e/{sid} {
+        allow read: if isLecturer() || isOwner(sid);
+        allow create: if isOwner(sid) && sid != 'S000001'
+          && wildDoc(id).st == 'open' && request.time >= wildDoc(id).opens && request.time < wildDoc(id).closes
+          && !(sid in wildDoc(id).t5)
+          && request.resource.data.keys().hasOnly(['st', 'at']) && request.resource.data.st == 'go' && request.resource.data.at == request.time;
+        allow update: if isOwner(sid) && resource.data.st == 'go' && request.time < resource.data.at + duration.value(30, 'm')
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 's', 'mx', 'ms', 'a', 'fin'])
+          && request.resource.data.st == 'done' && request.resource.data.fin == request.time
+          && request.resource.data.s is int && request.resource.data.mx is int && request.resource.data.s >= 0 && request.resource.data.s <= request.resource.data.mx
+          && request.resource.data.mx <= 80 && request.resource.data.ms is int && request.resource.data.ms >= 0 && request.resource.data.ms <= 1500000
+          && request.resource.data.a is map && request.resource.data.a.size() <= 20;
+        allow delete: if isLecturer();
+      }
+      // The public score for the live "6th spot" table: written once, and it must match the finished attempt.
+      match /s/{sid} {
+        allow read: if onRoster();
+        allow create: if isOwner(sid) && wildAtt(id, sid).st == 'done'
+          && request.resource.data.keys().hasOnly(['n', 's', 'mx', 'ms', 'at'])
+          && request.resource.data.s == wildAtt(id, sid).s && request.resource.data.mx == wildAtt(id, sid).mx && request.resource.data.ms == wildAtt(id, sid).ms
+          && str(request.resource.data.n, 80) && validName(sid, request.resource.data.n) && request.resource.data.at == request.time;
+        allow delete: if isLecturer();
+      }
+    }
   }
 }
 """

@@ -392,6 +392,40 @@ async lectAvatar(){if(!R2)return;const l=await page({w:1280,h:900,allow:/400|Fai
   await fsPut('announcements','avtest',{t:'Hello class',b:'Avatar test',at:new Date(),exp:new Date(Date.now()+864e5)});await l.done();
   const s=await page();await signIn(s,A,PIN);await tourOff(s);await s.go('#/');await waitFor(s,()=>!!document.querySelector('.ann .lav svg'));
   ok(await s.evaluate(c=>lectAv()===c,code),'student does not see the lecturer\'s avatar');await s.done()},
+/* the weekly 6th-spot challenge: the window, the week's top 5 left out, one attempt, no lecturer entry, matching public score,
+   then a full run through the student page, the lecturer's live screen and the confirmed winner */
+async wild(){if(!R2)return;const al=/400|403|Failed to load resource|identitytoolkit|permission|PERMISSION/;
+  const l=await page({w:1280,h:900,allow:al});await ensure(l,L,PINL);await ensure(l,A,PIN);await ensure(l,B,PINB);await ensure(l,C,PINC);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+  const mk=(id,o)=>l.evaluate(([id,o])=>{const now=Date.now(),top=wildTopicList().slice(2,4).map(x=>String(x[0]));return CLOUD.put('wild/'+id,{wk:id,top,tl:wildTL(top),items:wildItems(top,id),t5:o.t5,t5x:o.t5.map(()=>40),
+    opens:CLOUD.when(now+o.o*1000),closes:CLOUD.when(now+o.c*1000),st:'open',by:'S000001'}).then(()=>'ok',e=>e.code||String(e))},[id,o]);
+  ok(await mk('wT1',{t5:[B],o:-60,c:3600})==='ok','the lecturer cannot write the week\'s challenge');ok(await mk('wT2',{t5:[],o:600,c:3600})==='ok','second doc');ok(await mk('wT3',{t5:[B],o:-60,c:3600})==='ok','third doc');
+  const try_=(p,path,data,merge)=>p.evaluate(([path,data,merge])=>{const fix=o=>{for(const k in o){if(o[k]==='$TS')o[k]=CLOUD.ts()}return o};return CLOUD.put(path,fix(data),merge).then(()=>'ok',e=>e.code||String(e))},[path,data,merge]);
+  ok(await try_(l,'wild/wT1/e/'+L,{st:'go',at:'$TS'})!=='ok','the lecturer could enter');await l.go('#/');await l.done();
+  const a=await page({allow:al});await signIn(a,A,PIN);await tourOff(a);
+  ok(await try_(a,'wild/wT9',{wk:'wT9',st:'open'})!=='ok','a student wrote a challenge document');
+  ok(await try_(a,'wild/wT2/e/'+A,{st:'go',at:'$TS'})!=='ok','entered before the window opened');
+  ok(await try_(a,'wild/wT1/e/'+A,{st:'go',at:'$TS'})==='ok','could not start inside the window');
+  ok(await try_(a,'wild/wT1/e/'+A,{st:'go',at:'$TS'})!=='ok','started a second attempt');
+  ok(await try_(a,'wild/wT1/s/'+A,{n:'',s:1,mx:10,ms:1000,at:'$TS'})!=='ok','a public score before finishing');
+  ok(await try_(a,'wild/wT1/e/'+A,{st:'done',s:3,mx:10,ms:60000,a:{0:{v:0,t:2000}},fin:'$TS'},true)==='ok','could not finish the attempt');
+  ok(await try_(a,'wild/wT1/e/'+A,{st:'done',s:9,mx:10,ms:60000,a:{},fin:'$TS'},true)!=='ok','changed a finished attempt');
+  const nm=await a.evaluate(()=>String(U.dn||''));
+  ok(await try_(a,'wild/wT1/s/'+A,{n:nm,s:9,mx:10,ms:60000,at:'$TS'})!=='ok','a public score that does not match the attempt');
+  ok(await try_(a,'wild/wT1/s/'+A,{n:nm,s:3,mx:10,ms:60000,at:'$TS'})==='ok','could not post the matching score');await a.done();
+  const b=await page({allow:al});await signIn(b,B,PINB);await tourOff(b);ok(await try_(b,'wild/wT1/e/'+B,{st:'go',at:'$TS'})!=='ok','a top-5 student could enter');
+  await b.go('#/wild/wT1');await waitFor(b,()=>!!document.querySelector('#wt5'));await b.done();
+  /* a full run as a student, through the page */
+  const c=await page({allow:al});await signIn(c,C,PINC,'Shifa Test');await tourOff(c);await c.go('#/wild/wT3');await waitFor(c,()=>!!document.querySelector('#wgo'));
+  await c.click('#wgo');await waitFor(c,()=>!!document.querySelector('.wrun'));ok(await c.evaluate(()=>wildBusy()&&document.body.classList.contains('wlock')),'notes are not locked during the attempt');
+  for(let i=0;i<20&&await c.$('.wrun');i++){if(await c.$('[data-wo]'))await c.click('[data-wo]');else{await c.click('[data-in]');await c.click('[data-ck]')}await c.waitForTimeout(150)}
+  await waitFor(c,()=>/You scored/.test(document.querySelector('#wlv').textContent));
+  const e=await waitDoc('wild/wT3/e',C,d=>d.st&&d.st.stringValue==='done');ok(e,'the attempt was not saved');ok(await waitDoc('wild/wT3/s',C),'the public score was not saved');
+  ok(await c.evaluate(()=>!!U.log['wild:wT3']&&!wildBusy()),'no XP for taking part, or still locked');
+  /* the lecturer: live screen, then confirm the winner after the close */
+  const l2=await page({w:1280,h:900,allow:al});await signIn(l2,L,PINL);await tourOff(l2);
+  await l2.evaluate(()=>CLOUD.put('wild/wT3',{closes:CLOUD.when(Date.now()-1000)},true));await l2.go('#/wild/wT3');await waitFor(l2,()=>!!document.querySelector('[data-win]'));
+  await l2.click('[data-win]');const d=await waitDoc('wild','wT3',x=>x.win);ok(d&&d.win.stringValue===C&&d.st.stringValue==='done','the winner was not saved');await l2.done();
+  await c.go('#/wild/wT3');await waitFor(c,()=>!!U.log['wildwin:wT3']);await c.done()},
 };
 async function waitFor(p,fn,arg,t=15000){const t0=Date.now();while(Date.now()-t0<t){if(await p.evaluate(fn,arg).catch(()=>false))return;await p.waitForTimeout(250)}throw new Error('timed out waiting for '+String(fn).slice(0,90))}
 async function waitDoc(col,id,test,t=15000){const t0=Date.now();let d=null;while(Date.now()-t0<t){d=await fsDoc(col,id);if(d&&(!test||test(d)))return d;await new Promise(r=>setTimeout(r,300))}return null}
