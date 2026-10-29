@@ -355,3 +355,15 @@ a.stat{color:inherit;text-decoration:none}
 .hud .avpill{display:inline-flex;border-radius:50%;line-height:0}
 .hud .avpill .avsvg{border-radius:50%}
 @media (max-width:360px){.hud .avpill{display:none}}
+/* practice paper */
+.pphead{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:14px;background:var(--card);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.pphead .timer{font-size:1.5rem;margin:0;letter-spacing:1px}
+.ppq{margin-top:12px}.ppq textarea{width:100%;margin-top:10px}
+.ppq .btn.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 16%,transparent)}
+.mopt.on{border-color:var(--teal);background:color-mix(in srgb,var(--teal) 18%,var(--card))}
+.ppchk{display:flex;flex-wrap:nowrap;gap:8px;align-items:flex-start;margin:6px 0;font-size:.92rem;cursor:pointer}.ppchk input{margin-top:3px;flex:none;width:18px;height:18px}
+.ppbrief{margin:6px 0;font-size:.92rem}.ppbrief>div{padding:8px 0;max-height:50vh;overflow:auto}
+.ppans{white-space:pre-wrap;background:var(--sunk,rgba(0,0,0,.15));border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:.92rem;overflow-wrap:anywhere}
+.ppck{margin-top:10px}
+#pplink{margin-top:10px}
+.ppsec{padding:10px 0;border-top:1px solid var(--line)}.ppsec:first-of-type{border-top:0}.ppsec .bar{margin-top:6px}

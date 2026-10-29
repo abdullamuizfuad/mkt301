@@ -8,8 +8,8 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 |---|---|---|
 | 0 | One shared engine (`engine/`, identical in both repos) | **live** (main: MKT301 `d244165`, MKT101 `7e9b233`) |
 | 1 | CI, XP audit, error reports, streak freeze, at-risk, problem reports, announcements, privacy page, wording fixes, backup export | **live** (main: MKT301 `cb6aa81`, MKT101 `ee22bf0`); site and cloud suites green on the combined rules and on the published rules |
-| 2 | Home dashboard, avatar builder, streak blocks, countdown grid, spaced review, readiness, flashcards, item analysis, name policy | code done on `night` (`engine/dash.js`, `engine/avatar.js`); `dash` test group added; suites running |
-| 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | not started |
+| 2 | Home dashboard, avatar builder, streak blocks, countdown grid, spaced review, readiness, flashcards, item analysis, name policy | **live** (main: MKT301 `b21a490`, MKT101 `11b0c18`) |
+| 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | code done on `night` (`engine/paper.js`, `paperSpec()` in both `course.js`); `paper` test group; suites running |
 | 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | not started |
 | 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | not started |
 | Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | not started |
@@ -61,7 +61,7 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 
 ## Next
 
-- Phase 2: full suites on `night`, backup, push to main. Then Phase 3.
+- Phase 3: full suites on `night`, backup, push to main. Then Phase 4.
 
 ## Phase 1 fixes found by the cloud suite
 
@@ -78,4 +78,15 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 
 ## Open questions
 
-- none yet
+- Practice paper section times (MKT301 70/50/60, MKT101 30/75/75) and sizes are placeholders; the lecturer may want them changed in `paperSpec()`.
+
+## Phase 3 notes (practice paper)
+
+- `#/paper`, `engine/paper.js`. Course hook `paperSpec(rng)` builds the sections from the practice banks (never from past papers):
+  - MKT301: one case (one question per slot, 70 min), four short answers from different weeks (50 min), one strategy essay (60 min).
+  - MKT101: 25 MCQs across Topics 8–14 (30 min), three short answers and one long answer (75 min), three case questions (75 min).
+- The questions come from a seed (course, student, paper number), so they match on every device; only answers and times are stored (`U.pp`).
+- The clock is wall-clock time: it keeps running if the page is closed. Leftover time carries to the next section; a section that runs out is submitted as it stands (buzzer, vibration, a modal). 5-minute warning toast. "End the paper now" submits everything left.
+- Typed answers use the same typing box as practice (paste blocked, voice typing allowed, integrity notes kept in the answer).
+- Self-check after the paper (not timed): tick the key ideas covered. XP `pp:<paper>:<question>` (2 + up to 8 for ideas, max 10) and `pp:<paper>:mcq` (half the MCQs right, max 15), only for the first 3 papers. Report: key ideas covered, MCQ %, time per section, carried minutes.
+- Section times are my choice (no lecturer decision yet): see Open questions.

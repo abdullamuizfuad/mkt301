@@ -32,7 +32,7 @@ function countdownHTML(u){u=u||U;const days=new Set(u.days),fz=(u.frz||{}).d||{}
   const left=Math.max(0,Math.ceil((Date.parse(EXAM_DAY+'T00:00:00+05:00')-Date.parse(t+'T00:00:00+05:00'))/864e5)),done=[...days].filter(d=>d>=st&&d<=t).length;
   return `<div class="card cdcard" id="cdcard"><h2 style="margin:0">⏳ Mon 14 Dec 2026 · 9:00 am</h2><p class="lex cdnum" id="cdnum" aria-live="off">${cdText()}</p>
   <div class="cdgrid" role="img" aria-label="Days from ${st} to 14 December 2026: ${done} practised so far, ${left} days to go"><div class="cdrow cdh"><span class="cdw"></span>${['S','M','T','W','T','F','S'].map(x=>`<b>${x}</b>`).join('')}</div>${rows.join('')}</div>
-  <p class="muted cdkey"><span><i class="k on"></i>practised</span><span><i class="k today"></i>today</span><span><i class="k we"></i>weekend</span><span>📝 week 14: practice paper</span><span>🎯 14 Dec</span></p></div>`}
+  <p class="muted cdkey"><span><i class="k on"></i>practised</span><span><i class="k today"></i>today</span><span><i class="k we"></i>weekend</span><span>📝 week 14: practice paper</span><span>🎯 14 Dec</span></p>${typeof ppLine==='function'?`<a class="btn ghost sm" href="#/paper" id="pplink">📝 Practice paper: ${esc(ppLine())}</a>`:''}</div>`}
 setInterval(()=>{const e=document.getElementById('cdnum');if(e)e.textContent=cdText()},30000);
 
 /* ---------- spaced review (1, 3, 7 and 14 days) and the confidence check ---------- */
@@ -82,7 +82,7 @@ function readyHTML(u,limit){const R=readiness(u).sort((a,b)=>a.pct-b.pct);if(!R.
 
 /* ---------- next action, weak spots, profile header ---------- */
 function weakHref(k){return k[0]===CRS.bPfx?(CRS.bHref||'#/short'):'#/case/'+k.split('|')[0]+'/practice'}
-function nextAction(){const due=srsDue();if(due.length)return ['🧠',`Review ${due.length} question${due.length===1?'':'s'}`,'Quick recall now makes it stick for later.','#/review'];
+function nextAction(){if(typeof ppBusy==='function'&&ppBusy())return ['📝','Practice paper: '+ppLine(),'Your paper is waiting for you.','#/paper'];const due=srsDue();if(due.length)return ['🧠',`Review ${due.length} question${due.length===1?'':'s'}`,'Quick recall now makes it stick for later.','#/review'];
   rollDay();const m=missions().find(m=>(U.day.c[m.k]||0)<m.n);if(m&&!U.day.done)return ['🎯','Today’s mission: '+m.x,'Complete all three for the bonus XP.',(CRS.missionGo||{})[m.k]||'#/'];
   const R=readiness().sort((a,b)=>a.pct-b.pct)[0];if(R&&R.pct<70)return ['📈','Build up: '+R.label,'Your least practised area right now.',R.href||'#/'];
   const w=weakTopics()[0];if(w)return ['🩹','Fix a weak spot: '+tkLabel(w),'Practise it again to clear it.',weakHref(w)];

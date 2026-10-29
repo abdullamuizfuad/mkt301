@@ -563,3 +563,14 @@ function readyAreas(u){const P=practised(u),W=((u.wk||{}).t)||{},acc=ks=>{let a=
 function flashDecks(){const D={};BANK_B.forEach(q=>q.chips.forEach(c=>{const m=c.g&&/^([^:]{2,40}): (.+)$/.exec(c.t);if(!m)return;const d=D[q.week]||(D[q.week]={k:'w'+q.week,label:'Week '+q.week,cards:[],seen:new Set()});
   if(!d.seen.has(m[1].toLowerCase())){d.seen.add(m[1].toLowerCase());d.cards.push([m[1],m[2]])}}));
   return Object.keys(D).sort((a,b)=>a-b).map(w=>({k:D[w].k,label:D[w].label+' · '+[...new Set(BANK_B.filter(q=>q.week===+w).map(q=>q.topic))].slice(0,2).join(', '),cards:D[w].cards})).filter(d=>d.cards.length>=3)}
+
+/* practice paper (engine/paper.js): a case, short answers and a strategy essay, 180 minutes in all */
+function paperSpec(rng){const pick=(a,n)=>{a=a.slice();const o=[];while(a.length&&o.length<n)o.push(a.splice(Math.floor(rng()*a.length),1)[0]);return o};
+  const ideas=q=>q.chips.filter(c=>c.g).map(c=>c.t);
+  const c=pick(CASES,1)[0],slots=[...new Set(c.questions.map(q=>q.slot))].sort();
+  const A=slots.map(s=>pick(c.questions.filter(q=>q.slot===s),1)[0]).map(q=>({id:q.id,kind:'written',q:q.q,ideas:ideas(q),label:c.title+': '+q.skill}));
+  const wk=pick([...new Set(BANK_B.map(q=>q.week))],4),B=wk.map(w=>pick(BANK_B.filter(q=>q.week===w),1)[0]).map(q=>({id:q.id,kind:'written',q:q.q,ideas:ideas(q),label:'Week '+q.week+' · '+q.topic}));
+  const e=pick(BANK_C.essays,1)[0],cap=t=>t[0].toUpperCase()+t.slice(1);
+  return [{k:'a',title:'Case study: '+c.title,mins:70,note:'Answer every question about the case. You can open the case in a new tab.',items:A.map((x,i)=>i?x:Object.assign(x,{html:`<p><a href="#/case/${c.id}/read" target="_blank" rel="noopener">📖 Open ${esc(c.title)} in a new tab</a></p>`}))},
+    {k:'b',title:'Short answers',mins:50,note:'Four short answers. Explain each idea and use an example.',items:B},
+    {k:'c',title:'Strategy essay: '+e.name,mins:60,note:'Read the brief, plan for a few minutes, then write.',items:[{id:'pc_'+e.id,kind:'written',q:'Write a strategy report for '+e.name+'. In it, '+e.tasks.join('; ')+'.',html:e.brief,ideas:e.tasks.map(cap).concat(['Used evidence from the brief','Ended with a clear recommendation and its main risk']),label:e.tag}]}]}

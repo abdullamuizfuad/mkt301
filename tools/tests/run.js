@@ -181,7 +181,36 @@ async dash(){const p=await page({sid:STUDENT});
   await p.click('#avsave');const av=await p.evaluate(()=>U.av);ok(/^f.{7}112$/.test(av),'avatar not saved: '+av);
   ok(await p.evaluate(()=>!!document.querySelector('#hud .avpill svg')),'avatar not in the top bar');await p.done()},
 
-async layout(){const pages=['#/','#/cases','#/case/iceto/read','#/case/cbtl/board','#/case/tuna/practice','#/case/tuna/exhibits','#/short','#/essay','#/essay/ca/manta','#/essay/coach/coco','#/badges','#/board'];
+async paper(){const p=await page({sid:STUDENT,clock:true});await p.clock.setSystemTime(new Date('2026-11-21T20:00:00+05:00'));
+  await p.go('#/paper');ok((await p.textContent('main')).includes('Unlocks Sun 22 Nov 2026')&&!await p.$('#ppgo'),'paper not locked before 22 Nov');
+  const l=await page({sid:LECT,clock:true});await l.clock.setSystemTime(new Date('2026-11-01T10:00:00+05:00'));await l.go('#/paper');ok(!!await l.$('#ppgo'),'lecturer cannot preview');await l.done();
+  await p.clock.setSystemTime(new Date('2026-11-22T09:00:00+05:00'));await p.go('#/');await p.go('#/paper');await p.click('#ppgo');await p.waitForSelector('#pptm');await shot(p,'paper-sitting');
+  const sec=async()=>p.evaluate(()=>U.pp.cur.si),answer=async()=>{const ta=await p.$('.ppq textarea');if(ta){await ta.click();await p.keyboard.type('My answer explains the idea with an example from the case and says why it matters.',{delay:5})}else await p.click('.ppq .mopt')};
+  ok(await sec()===0,'paper did not start at section 1');await answer();
+  /* paste is blocked in the paper too */
+  const ta=await p.$('.ppq textarea');if(ta){await p.evaluate(()=>navigator.clipboard.writeText('pasted text from somewhere'));await ta.focus();await p.keyboard.press('Control+V');ok(!(await ta.inputValue()).includes('pasted text'),'paste allowed in the paper')}
+  const m1=await p.evaluate(()=>ppSpec(U.pp.cur)[0].mins);await p.clock.fastForward('10:00');await p.click('#ppsub');await p.waitForTimeout(300);
+  ok(await sec()===1,'section not submitted');const carried=await p.evaluate(()=>U.pp.cur.bonus/60000);ok(Math.abs(carried-(m1-10))<=1,'leftover time not carried: '+carried);
+  ok((await p.textContent('#pphead')).includes('+'+Math.round(carried)+' min carried'),'carried minutes not shown');
+  /* the first section can't be edited any more */
+  const first=await p.evaluate(()=>ppSpec(U.pp.cur)[0].items[0].id);ok(!await p.$('#pq-'+first),'submitted section still on screen');
+  /* the second section runs out: buzzer modal, the third starts */
+  await answer();
+  const m2=await p.evaluate(()=>ppSpec(U.pp.cur)[1].mins);await p.clock.fastForward((m2+Math.round(carried)+1)*60*1000);await p.waitForTimeout(800);
+  ok(await sec()===2&&!!await p.$('.modal[aria-label="Time is up"]'),'time-out did not submit the section');await p.click('#ppok');
+  ok(await p.evaluate(()=>U.pp.cur.sub[1].auto===1&&U.pp.cur.bonus===0),'auto submit not recorded');
+  /* closing the page past the end: everything is submitted */
+  await p.clock.fastForward(4*3600*1000);await p.waitForTimeout(600);if(await p.$('#ppok'))await p.click('#ppok');await p.go('#/');await p.go('#/paper');ok(await p.evaluate(()=>!!U.pp.cur.end),'paper did not end after 3 hours');
+  /* self-check (XP only), then the report */
+  const x0=(await p.U()).xp;const n=await p.$$eval('[data-q][data-j]',a=>a.length);if(n)await p.locator('[data-q][data-j]').first().check({force:true});await shot(p,'paper-check');await p.click('#ppfin');await p.waitForTimeout(300);
+  const r=await p.evaluate(()=>({h:U.pp.hist,hash:location.hash,ck:U.pp.cur.ck}));ok(r.ck&&r.h.length===1&&/report/.test(r.hash),'report not shown: '+JSON.stringify(r));
+  ok((await p.U()).xp>x0,'no XP from the self-check');ok(/key ideas covered/.test(await p.textContent('main')),'report text');await shot(p,'paper-report',true);
+  ok(!/\bexam/i.test(await p.textContent('main')),'exam wording');
+  /* XP keys are stable: running the check again gives nothing */
+  const x1=(await p.U()).xp;await p.evaluate(()=>{U.pp.cur.ck=0;save()});await p.go('#/');await p.go('#/paper');await p.click('#ppfin');ok((await p.U()).xp===x1,'self-check XP farmed');
+  await p.done()},
+
+async layout(){const pages=['#/','#/paper','#/cases','#/case/iceto/read','#/case/cbtl/board','#/case/tuna/practice','#/case/tuna/exhibits','#/short','#/essay','#/essay/ca/manta','#/essay/coach/coco','#/badges','#/board'];
   for(const w of [320,390,1280])for(const theme of ['dark','light']){const p=await page({sid:STUDENT,w,theme});for(const h of pages){await p.go(h);const sw=await p.evaluate(()=>document.documentElement.scrollWidth);ok(sw<=w,`${h} at ${w}px ${theme}: scrollWidth ${sw}`)}
     ok(await p.evaluate(t=>document.documentElement.dataset.theme===t,theme),'theme not applied');await p.done()}},
 
