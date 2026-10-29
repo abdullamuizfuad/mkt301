@@ -157,13 +157,14 @@ async missions(){const p=await page({sid:STUDENT});const v=await p.evaluate(()=>
   ok(v.every((a,t)=>a.length===3&&a.every(x=>x===t||x===t-1)),'mission tiers wrong: '+JSON.stringify(v));
   const ms=await p.evaluate(()=>missions().map(m=>m.k));ok(new Set(ms).size===3,'missions track the same activity twice');await p.done()},
 
-async lecturer(){const p=await page({sid:LECT});await p.go('#/lecturer');ok(await p.$('#demo'),'demo panel missing');ok(await p.$$eval('#rvw [data-rv]',e=>e.length)>30,'content review list too short');
+async lecturer(){const p=await page({sid:LECT});await p.go('#/lecturer');await p.click('[data-lfall="1"]');await p.waitForTimeout(100);ok(await p.$('#demo'),'demo panel missing');ok(await p.$$eval('#rvw [data-rv]',e=>e.length)>30,'content review list too short');
   ok((await p.textContent('#rvw')).includes('Naver'),'Naver example not listed');await p.done();
   const s=await page({sid:STUDENT});await s.go('#/lecturer');ok(!await s.$('#demo'),'students can open the lecturer page');await s.done()},
 
 async dash(){const p=await page({sid:STUDENT});
-  ok(await p.$('#cdcard')&&await p.$('.sblocks')&&await p.$('#nextact')&&await p.$('#rdcard'),'dashboard parts missing');
-  ok(/Mon 14 Dec 2026 · 9:00 am/.test(await p.textContent('#cdcard'))&&!/exam/i.test(await p.textContent('main')),'countdown wording');await shot(p,'dash-home',true);
+  ok(await p.$('#thead')&&await p.$('.tstreak')&&await p.$('#tcd')&&await p.$('#nextact')&&await p.$('#trow')&&await p.$('#ttiles'),'home parts missing');
+  ok(/\d+ days? left/.test(await p.textContent('#tcd'))&&/Mon 14 Dec 2026 · 9:00 am/.test(await p.textContent('#tcd'))&&!/exam/i.test(await p.textContent('main')),'countdown wording');await shot(p,'dash-home',true);
+  await p.go('#/progress/cd');ok(await p.$('#sec-cd[open] #cdcard')&&await p.$('#rdcard'),'progress parts missing');ok(/Mon 14 Dec 2026 · 9:00 am/.test(await p.textContent('#cdcard')),'full countdown wording');await p.go('#/');
   /* spaced review with the confidence check */
   const id=await p.evaluate(()=>{const id=Object.keys(qIndex()).concat(typeof MCQ_BY!=='undefined'?Object.keys(MCQ_BY):[]).find(k=>revOf(k));U.srs={[id]:{s:0,due:today(),n:0}};save();return id});
   ok(id,'nothing reviewable');const x0=(await p.U()).xp;await p.go('#/review');await p.click('[data-sure="1"]');
@@ -238,7 +239,7 @@ async layout(){const pages=['#/','#/paper','#/cases','#/case/iceto/read','#/case
 
 async profileLocal(){const p=await page({sid:'S000001'});await p.go('#/student/S081441');await p.waitForTimeout(300);
   ok((await p.textContent('main')).includes('need the live connection'),'device-only profile note missing');
-  const s=await page({sid:STUDENT});await s.go('#/student/S081441');await s.waitForTimeout(300);ok(!(await s.textContent('main')).includes('live connection')&&!!await s.$('.hero'),'student reached a profile');await s.done();await p.done()},
+  const s=await page({sid:STUDENT});await s.go('#/student/S081441');await s.waitForTimeout(300);ok(!(await s.textContent('main')).includes('live connection')&&!!await s.$('#thead'),'student reached a profile');await s.done();await p.done()},
 
 async install(){const p=await page({sid:STUDENT,tour:false});await p.waitForTimeout(1200);ok(await p.$('#tn'),'tour should open for a new student');
   for(let n=0;n<8&&await p.$('#tn');n++){await p.click('#tn');await p.waitForTimeout(120)}
@@ -262,7 +263,8 @@ async screentime(){const p=await page({sid:STUDENT,clock:true});await p.evaluate
   await poke();await p.clock.runFor(30000);ok(await p.evaluate(()=>PR.pendx)<1&&await p.evaluate(()=>PR.pend)>0,'live-session time counted towards bonus blocks');
   await p.evaluate(()=>{PR.sess=null;PR.sessOn=false;PR.joined=false;presBar()});
   await p.evaluate(()=>{U.stArch=5*3600;stFlush(true)});ok((await p.U()).badges.includes('hrs5'),'5 Hours Logged badge missing');
-  await p.go('#/');ok((await p.textContent('#stcard')).includes('GOAL MET'),'Home card does not show the goal met');
+  await p.go('#/');ok((await p.textContent('#tst')).includes('Goal met'),'Home does not show the goal met');
+  await p.go('#/progress/screen');ok((await p.textContent('#stcard')).includes('GOAL MET'),'My progress does not show the goal met');
   await p.evaluate(()=>{document.querySelectorAll('.toast').forEach(t=>t.remove());document.querySelector('#stcard').scrollIntoView({block:'center'})});await shot(p,'st-card');
   await p.go('#/badges');ok((await p.textContent('main')).includes('every 20 active minutes'),'How to earn XP row missing');await p.done()},
 

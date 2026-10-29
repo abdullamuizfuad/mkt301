@@ -226,11 +226,13 @@ function sessionReport(id){if(ME.sid!==LECTURER)return home();if(!cloudOn())retu
 function presProfileWatch(cb){if(!cloudOn())return;CLOUD.watchSessions(list=>{PR.sessList=list;cb()},()=>{PR.sessList=[];cb()})}
 function presProfileHTML(u,sid,bare){const days=stDays(u,28),mx=Math.max(ST.GOAL,...days.map(x=>x[1])),goals=Object.keys(u.log||{}).filter(k=>k.startsWith('stgoal:')).length;
   const ss=(PR.sessList||[]).filter(s=>s.rep&&s.rep[sid]).slice(0,10),held=(PR.sessList||[]).filter(s=>s.rep).length;
+  if(bare===2)return `<h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${presSessRows(ss,held,sid)}`;
   return `${bare?'<div>':'<div class="card psec"><h2>Screen time & live sessions</h2>'}
   <div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>${stFmt(stToday(u))}</b><span>today</span></div><div class="stat"><b>${stFmt(stWeek(u))}</b><span>this week</span></div><div class="stat"><b>${stFmt(stTotal(u))}</b><span>total</span></div><div class="stat"><b>${goals}</b><span>daily goals met</span></div></div>
   <div class="stbars wide" aria-label="Minutes per day, last 4 weeks">${days.map(([k,s])=>`<div title="${k}: ${stFmt(s)}"><i style="height:${Math.max(2,Math.round(s/mx*100))}%" class="${s>=ST.GOAL?'goal':''}"></i></div>`).join('')}</div>
   <p class="muted" style="font-size:.78rem;margin:2px 0 10px">Active minutes per day, last 4 weeks (green = 20-minute goal met). Screen time is tracked from ${esc(Object.keys(u.st||{}).sort()[0]||'its first use')}.</p>
-  <h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${ss.length?`<div class="tablewrap"><table><tr><th>Session</th><th>On screen</th><th>Times left</th><th>Longest away</th></tr>${ss.map(s=>{const r=s.rep[sid];return `<tr><td><a href="#/session/${esc(s.id)}">${esc(s.name)}</a></td><td><b>${r.pct|0}%</b></td><td>${r.left|0}</td><td>${stFmt(r.lg|0)}</td></tr>`}).join('')}</table></div>`:`<p class="muted">${held?'Not joined any of the '+held+' sessions held.':'No sessions held yet.'}</p>`}</div>`}
+  <h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${presSessRows(ss,held,sid)}</div>`}
+const presSessRows=(ss,held,sid)=>ss.length?`<div class="tablewrap"><table><tr><th>Session</th><th>On screen</th><th>Times left</th><th>Longest away</th></tr>${ss.map(s=>{const r=s.rep[sid];return `<tr><td>${ME&&ME.sid===LECTURER?`<a href="#/session/${esc(s.id)}">${esc(s.name)}</a>`:esc(s.name)}</td><td><b>${r.pct|0}%</b></td><td>${r.left|0}</td><td>${stFmt(r.lg|0)}</td></tr>`}).join('')}</table></div>`:`<p class="muted">${held?'Not joined any of the '+held+' sessions held.':'No sessions held yet.'}</p>`;
 
 /* ---------- styles ---------- */
 (()=>{const s=document.createElement('style');s.textContent=`

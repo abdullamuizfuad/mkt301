@@ -466,7 +466,7 @@ function studentPage(sid){
       <div><h1 style="margin:0">${esc(X.name||sid)}</h1><p class="muted" style="margin:2px 0 0">🎓 ${esc(L.name)} · <b>${u.xp|0} XP</b>${L.to?' · '+(L.to-(u.xp|0))+' XP to '+esc(LEVELS[L.i+1][1]):' · top level'}</p>
       <div class="bar" style="margin-top:8px"><i style="width:${L.pct}%;background:var(--teal)"></i></div></div></div>
       <div class="kv"><div>ID<b>${esc(sid)}</b></div><div>Student email<b>${esc(CLOUD.email(sid))}</b></div><div>Name (class list)<b>${u.dn?esc(u.dn):'not added yet'}</b></div><div>Username<b>${u.un?esc(u.un):'not picked yet'}</b></div>
-      <div>Streak<b>🔥 ${streak(u)} day${streak(u)===1?'':'s'}</b></div><div>Last active<b>${ago(X.ts)}</b></div><div>First practised<b>${esc(first||'–')}</b></div></div>
+      <div>Section<b>${esc(secLabel(u.dg)||'–')}</b></div><div>Streak<b>🔥 ${streak(u)} day${streak(u)===1?'':'s'}</b></div><div>Last active<b>${ago(X.ts)}</b></div><div>First practised<b>${esc(first||'–')}</b></div></div>
       ${profSumHTML(u,{last:X.ts,risk:riskOf(X)})}<div class="row" style="margin-top:10px"><button type="button" class="btn sm" data-va="${esc(sid)}">👁 View as student</button></div></div>
     ${secsHTML(profSections(u,{sid,lect:1,marked}),OPEN)}${integSecHTML(u,OPEN)}
     ${secsHTML([{id:'ans',ico:'✍️',t:'Typed answers',sum:`${ans.length} answer${ans.length===1?'':'s'} · ${marked} marked`,html:(ans.length?ans.slice(0,30).map(ansItem).join(''):'<p class="muted">No typed answers yet.</p>')+(ans.length>30?'<p class="muted" style="font-size:.85rem">Showing the newest 30.</p>':'')},

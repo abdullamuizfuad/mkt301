@@ -115,21 +115,22 @@ ROUTES.challenge=async h=>{if(!(await rulesOK()))return shell('#/',`<p><a href="
 /* ---------- the weekend challenge (Friday and Saturday, GMT+5) ---------- */
 const wkFri=d=>{const w=dowOf(d);return w===5?d:w===6?addDays(d,-1):addDays(d,-((w+2)%7))};/* the Friday of this weekend, or of the last one */
 const wkOpen=()=>[5,6].includes(dowNow());
-function wkTeams(rows){const T={};rows.forEach(r=>{const g=r.g||'No section',t=T[g]||(T[g]={g,n:0,s:0});t.n++;t.s+=r.n?r.s/r.n:0});
+/* teams are class sections (directory g); with no sections at all, everyone plays as one class team */
+function wkTeams(rows){const T={},any=rows.some(r=>r.g);rows.forEach(r=>{const g=r.g||'',t=T[g]||(T[g]={g,label:any?secLabel(g)||'No section':'Whole class',n:0,s:0});t.n++;t.s+=r.n?r.s/r.n:0});
   return Object.values(T).map(t=>Object.assign(t,{avg:Math.round(t.s/t.n*100)})).sort((a,b)=>b.avg-a.avg||b.n-a.n)}
 ROUTES.weekend=async()=>{if(!(await rulesOK()))return shell('#/',`<p><a href="#/">← Home</a></p><h1>Weekend challenge</h1><p class="muted">The weekend challenge switches on soon.</p>`);await socDir();
   const w=wkFri(mvNow()),open=wkOpen(),myG=(SDIR[ME.sid]||{}).g||'';let rows=[],played=false;
-  shell('#/',`<p><a href="#/">← Home</a></p><h1>🏝️ Weekend challenge</h1><p class="muted">${open?`Open now until Saturday midnight. ${WK_N} questions, one try. Your team is your class section${myG?' ('+esc(myG)+')':''}.`:'Opens on Friday at 00:00 and closes on Saturday at midnight (Maldives time).'}</p>
+  shell('#/',`<p><a href="#/">← Home</a></p><h1>🏝️ Weekend challenge</h1><p class="muted">${open?`Open now until Saturday midnight. ${WK_N} questions, one try. ${myG?`Your team is your class section (${esc(secLabel(myG))}).`:'Everyone plays for one class team.'}`:'Opens on Friday at 00:00 and closes on Saturday at midnight (Maldives time).'}</p>
   <div id="wkp"></div><div class="grid g2" style="margin-top:12px"><div class="card"><h2 style="margin:0 0 6px">Teams</h2><div id="wkt"><p class="muted">Loading…</p></div></div><div class="card"><h2 style="margin:0 0 6px">Top players</h2><div id="wki"></div></div></div>`);
   const draw=()=>{const T=wkTeams(rows),me=rows.find(r=>r.sid===ME.sid);played=!!me;
-    $('#wkt').innerHTML=T.length?T.map((t,i)=>`<div class="rdrow"><span class="rdl">${i===0?'🏆 ':''}${esc(t.g)}${t.g===myG?' (your team)':''}</span><span class="muted">${t.n} player${t.n===1?'':'s'}</span><b>${t.avg}%</b></div>`).join(''):'<p class="muted" style="margin:0">Nobody has played yet.</p>';
-    $('#wki').innerHTML=rows.slice().sort((a,b)=>b.s-a.s||a.ms-b.ms).slice(0,10).map((r,i)=>`<div class="rdrow"><span class="rdl">${i+1}. ${esc(nameOf(r.sid))}</span><span class="muted">${esc(r.g||'')}</span><b>${r.s}/${r.n}</b></div>`).join('')||'<p class="muted" style="margin:0">–</p>';
+    $('#wkt').innerHTML=T.length?T.map((t,i)=>`<div class="rdrow"><span class="rdl">${i===0&&T.length>1?'🏆 ':''}${esc(t.label)}${T.length>1&&t.g===myG?' (your team)':''}</span><span class="muted">${t.n} player${t.n===1?'':'s'}</span><b>${t.avg}%</b></div>`).join(''):'<p class="muted" style="margin:0">Nobody has played yet.</p>';
+    $('#wki').innerHTML=rows.slice().sort((a,b)=>b.s-a.s||a.ms-b.ms).slice(0,10).map((r,i)=>`<div class="rdrow"><span class="rdl">${i+1}. ${esc(nameOf(r.sid))}</span><span class="muted">${esc(secLabel(r.g))}</span><b>${r.s}/${r.n}</b></div>`).join('')||'<p class="muted" style="margin:0">–</p>';
     $('#wkp').innerHTML=open&&!played?`<div class="card" style="text-align:center"><button class="btn gold" id="wkgo">▶ Play the weekend challenge</button></div>`:me?`<div class="callout">You scored <b>${me.s}/${me.n}</b> this weekend.</div>`:'';
     $('#wkgo')&&($('#wkgo').onclick=()=>{$('#wkp').innerHTML='<div class="card qcard" id="wkq"></div>';const ids=quizItems(seeded(CRS.id+'|weekend|'+w),WK_N).map(x=>x.id);
       quizRun($('#wkq'),ids,WK_N*30,async r=>{try{await CLOUD.put('weekend/'+w+'_'+ME.sid,{w,sid:ME.sid,g:myG,s:r.s,n:r.n,ms:r.ms,at:CLOUD.ts()});award('wk:'+w,15,'Weekend challenge');countOnce('wk:'+w,'weekend')}
         catch(e){toast('⚠️','Score not saved',CLOUD.say(e))}},w)});
     /* after the weekend: the top team's members get a bonus */
-    if(!open&&me&&T.length>1&&T[0].g===(me.g||'No section')&&T[0].n>=2)award('wkteam:'+w,20,'Top weekend team')};
+    if(!open&&me&&T.length>1&&T[0].g===(me.g||'')&&T[0].n>=2)award('wkteam:'+w,20,'Top weekend team')};
   CLOUD.watch('weekend',{where:[['w','==',w]],limit:300},d=>{rows=d;draw()},e=>{const el=$('#wkt');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})};
 
 /* ---------- live quiz battle (the lecturer runs it from #/battle) ---------- */

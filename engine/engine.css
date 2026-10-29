@@ -444,3 +444,14 @@ body.va main :is(textarea,input,select,.chip,.mopt,[data-a]){cursor:not-allowed}
   body.tb #toasts{bottom:calc(76px + env(safe-area-inset-bottom))}
   body.tb main{padding-top:12px}
 }
+.ttiles>.ttile:last-child:nth-child(odd){grid-column:1/-1}@media (min-width:900px){.ttiles>.ttile:last-child:nth-child(odd){grid-column:auto}}
+.ttile.locked{opacity:.75}
+.lfbar{margin:-4px 0 12px;font-size:.9rem}.linkbtn{background:none;border:0;padding:0;color:var(--teal);font:inherit;cursor:pointer;text-decoration:underline}
+.lfold{margin-bottom:10px;border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(180deg,var(--card),var(--bg2))}
+.lfh{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:var(--ink);padding:14px 16px;cursor:pointer;text-align:left;font:inherit}
+.lfh b{font-size:1.02rem}.lsum{color:var(--muted);font-size:.84rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.lsum:not(:empty)::before{content:"· "}
+.lfa{margin-left:auto;color:var(--muted);transition:transform .15s}.lfold.open .lfa{transform:rotate(180deg)}
+.lfb>.card{margin:0!important;border:0;box-shadow:none;background:none;padding-top:4px}
+.lfb>.card>h2:first-child,.lfb>.card>.row:first-child>h2:first-child{display:none}
+.lfb:has(>.card[hidden])::after{content:"Not available yet.";display:block;padding:0 16px 14px;color:var(--muted);font-size:.88rem}
+.t3{margin-top:8px}

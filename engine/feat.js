@@ -15,8 +15,36 @@ const isoNow=()=>new Date().toISOString();
 function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type||'application/json'}));a.download=name;a.click()}
 function modal(label,html){closeModal();const m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label',label);
   m.innerHTML=`<div class="card"><button class="x" aria-label="Close">✕</button>${html}</div>`;document.body.append(m);m.querySelector('.x').onclick=closeModal;m.onclick=e=>{if(e.target===m)closeModal()};return m}
-function lecturerCards(){LCARDS.forEach(c=>{const el=$('#'+c.id);if(el)try{c.init(el)}catch(e){console.error(e)}})}
-const lcardsHTML=()=>LCARDS.map(c=>`<div class="card" id="${c.id}" style="margin-bottom:22px" hidden></div>`).join('');
+const lcardInit=c=>()=>{const el=$('#'+c.id);if(el)try{c.init(el)}catch(e){console.error(e)}};
+/* which lecturer cards exist here, their titles and one-line summaries while folded */
+const LF_META={vaclc:['👁 View as student','See the portal as a student does'],errc:['🐞 Errors','Problems students\' browsers hit'],rptc:['🚩 Reports','Problems reported on questions'],annc:['📣 Announcements','Post a message to the class'],
+  xpac:['🧮 XP audit','XP against saved progress'],riskc:['⚠️ At risk','Students who may need a nudge'],bkc:['💾 Class backup','Download everything as one file'],dirc:['🪪 Class names','Official names and sections'],
+  qbc:['✏️ Question editor','Edit, add and publish questions',()=>typeof qbankKinds==='function'],wkrc:['📊 Weekly report','Who practised, week by week'],attc:['🗓️ Attendance','Live sessions as one spreadsheet'],
+  mic:['🎯 MCQ item analysis','Easy, hard and tricky questions',()=>typeof revItem==='function'&&typeof MCQ_BY!=='undefined']};
+const lcardsHTML=()=>LCARDS.filter(c=>!(LF_META[c.id]||[])[2]||LF_META[c.id][2]()).map(c=>lfBlock(c.id,(LF_META[c.id]||[c.id])[0],`<div class="card" id="${c.id}" hidden></div>`,(LF_META[c.id]||[])[1])).join('');
+const lcardInits=()=>Object.fromEntries(LCARDS.map(c=>[c.id,lcardInit(c)]));
+
+/* ---------- lecturer blocks: every card on the Lecturer tab folds to its title and a one-line summary ----------
+   A card's data loads the first time it is opened. Open blocks are remembered on this device; blocks with something waiting open by themselves.
+   Long tables and lists inside a block show their first 3 rows, with "Show all N". */
+const lfBlock=(id,title,html,sum)=>`<section class="lfold" data-f="${id}"><button type="button" class="lfh" aria-expanded="false" aria-controls="lfb-${id}"><b class="lex">${title}</b><span class="lsum" data-lsum="${id}">${esc(sum||'')}</span><span class="lfa" aria-hidden="true">▾</span></button><div class="lfb" id="lfb-${id}" hidden>${html}</div></section>`;
+const lfBar=()=>`<p class="lfbar"><button type="button" class="linkbtn" data-lfall="1">Expand all</button> · <button type="button" class="linkbtn" data-lfall="0">Collapse all</button></p>`;
+const LF_ALL=new Set();/* "Show all" tables and lists, kept while the page is open */
+function lfBind(inits){const st=LS.get('lfold',{});
+  document.querySelectorAll('.lfold').forEach(s=>{const id=s.dataset.f,b=s.querySelector('.lfh'),body=s.querySelector('.lfb');let done=false;
+    s._set=(o,keep)=>{body.hidden=!o;b.setAttribute('aria-expanded',o);s.classList.toggle('open',o);if(o&&!done){done=true;if(inits[id])try{inits[id]()}catch(e){console.error(e)}}
+      if(keep){const S=LS.get('lfold',{});S[id]=o?1:0;LS.set('lfold',S)}};
+    b.onclick=()=>s._set(body.hidden,true);
+    new MutationObserver(()=>lfTrim(body,id)).observe(body,{childList:true,subtree:true});
+    s._set(st[id]===1,false)});
+  document.querySelectorAll('[data-lfall]').forEach(b=>b.onclick=()=>document.querySelectorAll('.lfold').forEach(s=>s._set(b.dataset.lfall==='1',true)))}
+/* a summary for a folded block; act=true opens it when this device has no choice saved for it */
+function lfSum(id,text,act){const e=document.querySelector(`[data-lsum="${id}"]`);if(!e)return;e.textContent=text;const s=e.closest('.lfold');if(act&&s&&s._set&&LS.get('lfold',{})[id]===undefined)s._set(true,false)}
+function lfTrim(root,bid){const one=(key,items,after)=>{if(items.length<=3)return;const show=LF_ALL.has(key);items.slice(3).forEach(r=>r.hidden=!show);
+    const b=document.createElement('button');b.type='button';b.className='btn ghost sm t3';const lbl=o=>o?'Show fewer ▴':`Show all ${items.length} ▾`;b.textContent=lbl(show);
+    b.onclick=()=>{const o=!LF_ALL.has(key);if(o)LF_ALL.add(key);else LF_ALL.delete(key);items.slice(3).forEach(r=>r.hidden=!o);b.textContent=lbl(o)};after.after(b)};
+  root.querySelectorAll('table:not([data-t3])').forEach((t,i)=>{t.dataset.t3=1;one(bid+':t'+i,[...t.querySelectorAll('tr')].filter(r=>!r.querySelector('th')),t.closest('.tablewrap')||t)});
+  root.querySelectorAll('ol.sumlist:not([data-t3]),ul.sumlist:not([data-t3])').forEach((l,i)=>{l.dataset.t3=1;one(bid+':l'+i,[...l.children],l)})}
 /* shown only when the rules are published: put inside a lecturer card */
 const needRulesHTML='<p class="callout" style="font-size:.88rem">This switches on when the new Firestore rules are published (see docs/NIGHT-BUILD.md).</p>';
 

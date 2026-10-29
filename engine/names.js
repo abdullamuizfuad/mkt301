@@ -8,6 +8,8 @@ const unFor=(word,sid)=>'@'+word.charAt(0).toUpperCase()+word.slice(1)+String(si
 const unOK=(un,sid,name)=>{const m=String(un||'').match(/^@([A-Za-z]{2,20})(\d{3})$/);return !!m&&m[2]===String(sid).slice(-3)&&(!name||nameWords(name).some(w=>w.toLowerCase()===m[1].toLowerCase()))};
 /* what everyone sees for a student: official name (or their ID until the lecturer adds names) */
 const showName=(n,sid)=>n||sid||'';
+/* a section for display: "MKT301_H01 course" → "H01" (the stored value stays as it is: the rules compare it with the directory) */
+const secLabel=g=>String(g||'').trim().replace(/^[A-Za-z]{2,6}\d{2,4}_/,'').replace(/\s+course$/i,'').trim();
 const nameLine=(n,u,sid)=>esc(showName(n,sid))+(u?` <span class="muted uname">· ${esc(u)}</span>`:'');
 let DIR_ME=null;
 async function dirLoad(){if(!ME||ME.sid===LECTURER||!(await rulesOK()))return;
@@ -49,13 +51,13 @@ lcard('dirc',el=>{rulesOK().then(ok=>{if(!ok)return;el.hidden=false;
   el.innerHTML=`<h2 style="margin:0">Class names</h2><p class="muted" style="font-size:.88rem;margin:6px 0 8px">Paste the Moodle participants export (CSV with "First name", "Last name", "Email address" and Groups). Students then appear under their official name, and pick an @username from it. Names live only in the class database, never in the site's code.</p>
   <textarea id="dirtx" style="min-height:90px" placeholder='"First name","Last name","Email address",Groups'></textarea><div class="row" style="margin-top:8px"><input type="file" id="dirf" accept=".csv,text/csv" style="max-width:100%;color:var(--ink2)"><button class="btn ghost" id="dirchk">Check</button><button class="btn" id="dirgo" disabled>Save names</button></div>
   <div id="dirout" style="margin-top:10px"></div><div id="dirlist" style="margin-top:10px"></div>`;
-  let parsed=[];const show=()=>{parsed=dirFromCSV($('#dirtx').value);const secs={};parsed.forEach(p=>secs[p.g||'(no group)']=(secs[p.g||'(no group)']||0)+1);
+  let parsed=[];const show=()=>{parsed=dirFromCSV($('#dirtx').value);const secs={};parsed.forEach(p=>{const k=secLabel(p.g)||'no section';secs[k]=(secs[k]||0)+1});
     $('#dirout').innerHTML=parsed.length?`<p><b>${parsed.length}</b> students found${Object.keys(secs).length?' · '+Object.entries(secs).map(([g,n])=>esc(g)+' '+n).join(' · '):''}.</p>`:'<p class="err">No students found. Paste the CSV with its header row.</p>';$('#dirgo').disabled=!parsed.length};
   $('#dirchk').onclick=show;$('#dirtx').oninput=()=>{$('#dirgo').disabled=true};
   $('#dirf').onchange=async e=>{const f=e.target.files[0];if(f){$('#dirtx').value=await f.text();show()}};
   $('#dirgo').onclick=async()=>{$('#dirgo').disabled=true;let n=0,bad=0;for(const p of parsed){try{await CLOUD.put('directory/'+p.sid,{n:p.n,g:p.g,t:CLOUD.ts()},true);n++}catch(e){bad++}}
     $('#dirout').innerHTML=`<p>✓ Saved ${n} names${bad?` · ${bad} failed`:''}.</p>`;$('#dirtx').value=''};
-  CLOUD.watch('directory',{},list=>{const l=$('#dirlist');if(!l)return;l.innerHTML=list.length?`<details><summary class="click"><b>${list.length}</b> names saved</summary><div class="tablewrap"><table><tr><th>ID</th><th>Name</th><th>Section</th><th>Username set by you</th></tr>${list.sort((a,b)=>a.n<b.n?-1:1).map(d=>`<tr class="click" data-sid="${esc(d.id)}"><td>${esc(d.id)}</td><td>${esc(d.n)}</td><td>${esc(d.g||'')}</td><td>${esc(d.u||'')}</td></tr>`).join('')}</table></div></details>`:'<p class="muted">No names saved yet.</p>';
+  CLOUD.watch('directory',{},list=>{const l=$('#dirlist');if(!l)return;l.innerHTML=list.length?`<details><summary class="click"><b>${list.length}</b> names saved</summary><div class="tablewrap"><table><tr><th>ID</th><th>Name</th><th>Section</th><th>Username set by you</th></tr>${list.sort((a,b)=>a.n<b.n?-1:1).map(d=>`<tr class="click" data-sid="${esc(d.id)}"><td>${esc(d.id)}</td><td>${esc(d.n)}</td><td>${esc(secLabel(d.g))}</td><td>${esc(d.u||'')}</td></tr>`).join('')}</table></div></details>`:'<p class="muted">No names saved yet.</p>';
     l.querySelectorAll('tr[data-sid]').forEach(r=>r.onclick=()=>openStudent(r.dataset.sid))},()=>{})})});
 /* lecturer: change one student's name or username (from their profile) */
 function nameEditHTML(sid,u){return `<div class="card psec" id="nme" data-need="rules"><h2>Name and username</h2><p class="muted" style="font-size:.85rem;margin:0 0 6px">Overrides the class list for this student. The username must be one word of the name plus ${esc(String(sid).slice(-3))}.</p>

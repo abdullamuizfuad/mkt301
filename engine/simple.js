@@ -37,8 +37,11 @@ function todayRowHTML(){rollDay();const t=stToday(U),ms=missions(),done=ms.filte
   <div id="tml" class="tml" hidden><p class="muted" style="font-size:.85rem;margin:10px 0 0">${U.day.done?'✅ Done for today. New missions tomorrow.':`Complete all three for +${MBONUS[U.day.t]} XP (${TIERS[U.day.t]}). New missions every day.`}</p>${missionRowsHTML()}</div></div>`}
 function inviteHTML(){const n=typeof NOTE!=='undefined'?NOTE.filter(x=>!x.seen).length:0;
   return n?`<a class="card zone tinv" href="#/notifs" id="tinv"><span class="em">🔔</span><span style="flex:1"><b class="lex">${n} new notification${n===1?'':'s'}</b><br><span class="muted" style="font-size:.85rem">Challenge invites and results</span></span><span class="btn sm">Open</span></a>`:''}
-function tilesHTML(){const T=typeof homeTiles==='function'?homeTiles():[];
-  return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile" href="${x[3]}"><span class="em">${x[0]}</span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></a>`).join('')}</div>`}
+/* the course's tiles, then the practice paper: locked for students until Sun 22 Nov 2026, 00:00 (GMT+5); the lecturer can always preview it */
+function paperTile(){if(typeof ppLine!=='function')return null;const L=ME&&ME.sid===LECTURER,open=Date.now()>=PAPER_AT;
+  return ['📝','Practice paper',L?'Preview':open?ppLine():'🔒 Opens Sun 22 Nov','#/paper',!L&&!open]}
+function tilesHTML(){const T=(typeof homeTiles==='function'?homeTiles():[]).concat([paperTile()].filter(Boolean));
+  return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile${x[4]?' locked':''}" href="${x[3]}"${x[3]==='#/paper'?' id="tpaper"':''}><span class="em">${x[0]}</span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></a>`).join('')}</div>`}
 function home(){if(!U)return;rollDay();if(ME.sid===LECTURER)return lectHome();
   shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}${inboxHTML()}${inviteHTML()}${tilesHTML()}`);
   const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)}}
@@ -58,7 +61,7 @@ function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
    <a class="tchip" href="#/lecturer"><span class="tico">🚩</span><span><b data-ln="reports">…</b><small>open reports</small></span></a>
    <a class="tchip" href="#/lecturer"><span class="tico">⚠️</span><span><b data-ln="risk">…</b><small>at risk</small></span></a></div><p class="err" id="lderr"></p></div>`
    :'<div class="callout">Sign in with your PIN while online to see the class.</div>'}
-  <div class="lbtns"><button type="button" class="btn" id="lhva"${c?'':' disabled'}>👁 View as student</button><a class="btn ghost" href="#/lecturer">🧑‍🏫 Lecturer tools</a><a class="btn ghost" href="#/board">🏆 Leaderboard</a><button type="button" class="btn ghost" id="lhann"${c?'':' disabled'}>📣 Post announcement</button></div>
+  <div class="lbtns"><button type="button" class="btn" id="lhva"${c?'':' disabled'}>👁 View as student</button><a class="btn ghost" href="#/lecturer">🧑‍🏫 Lecturer tools</a><a class="btn ghost" href="#/board">🏆 Leaderboard</a><a class="btn ghost" href="#/paper" id="lhpaper">📝 Practice paper</a><button type="button" class="btn ghost" id="lhann"${c?'':' disabled'}>📣 Post announcement</button></div>
   <div id="lhvap"></div>
   <h2 style="margin-top:22px">Practice</h2><p class="muted" style="margin-top:-4px;font-size:.9rem">Try any question yourself. Your answers are never on the leaderboard.</p>${tilesHTML()}`);
   $('#lhva').onclick=()=>{const p=$('#lhvap');if(p.innerHTML)return;p.innerHTML=vaCardHTML();vaCardInit()};
@@ -67,9 +70,9 @@ function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
     .catch(e=>{const er=$('#lderr');if(er)er.textContent=CLOUD.say(e)})}
 
 /* ---------- Practice, backup ---------- */
-ROUTES.practice=()=>{const pp=typeof ppLine==='function';
+ROUTES.practice=()=>{
   shell('#/practice',`<h1>Practice</h1>${tilesHTML()}
-  <h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><b class="lex">Flashcards</b><small class="muted">Key terms</small></a>${pp?`<a class="card zone ttile" href="#/paper"><span class="em">📝</span><b class="lex">Practice paper</b><small class="muted">${esc(ppLine())}</small></a>`:''}</div>
+  <h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><b class="lex">Flashcards</b><small class="muted">Key terms</small></a></div>
   ${typeof socialCardHTML==='function'?socialCardHTML():''}`)};
 ROUTES.backup=()=>{shell('#/backup',`<p><a href="#/">← Home</a></p><div class="card" id="bk"><div class="row" style="justify-content:space-between"><h1 style="margin:0;font-size:1.4rem">💾 Save my progress</h1><span class="tag" id="bkl"></span></div>
   <p class="muted" style="font-size:.9rem;margin:8px 0 12px">${cloudOn()?'Your progress saves to your account. A backup copy is an extra safety net.':'Your progress lives on this device only. Save a backup to move it to another phone or laptop, or to keep it safe before clearing your browser.'}</p>
@@ -99,7 +102,7 @@ function profSections(u,ctx){u=Object.assign({log:{},days:[],badges:{},n:{}},u);
   (C.secs||[]).forEach(s=>S.push(s));
   S.push({id:'act',ico:'📅',t:'Activity',sum:last?`Last practised ${esc(last)} · ${days.length} day${days.length===1?'':'s'} in all`:'Not started yet',
     html:`${heatHTML(days)}<div class="stats" style="grid-template-columns:repeat(3,1fr)">${(C.stats||[]).map(x=>`<div class="stat"><b>${x[0]}</b><span>${esc(x[1])}</span></div>`).join('')}</div><h3 style="margin-top:14px">Recent activity</h3>${recentHTML(u)}`});
-  S.push({id:'screen',ico:'⏱️',t:'Screen time & live sessions',sum:`${stFmt(stToday(u))} today · ${stFmt(stWeek(u))} this week`,html:presProfileHTML(u,ctx.sid,1)});
+  S.push({id:'screen',ico:'⏱️',t:'Screen time & live sessions',sum:`${stFmt(stToday(u))} today · ${stFmt(stWeek(u))} this week`,html:ctx.self?stCardHTML()+presProfileHTML(u,ctx.sid,2):presProfileHTML(u,ctx.sid,1)});
   S.push({id:'badges',ico:'🏅',t:'Badges',sum:`${got}/${BADGES.length} earned`,html:badgeListHTML(u)+(C.badgesX||'')});
   if(C.cases)S.push(Object.assign({id:'cases',ico:'📚',t:'Cases'},C.cases));
   return S}

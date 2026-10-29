@@ -426,16 +426,17 @@ function recentHTML(u){const by={};Object.keys(u.log||{}).forEach(k=>{const m=k.
   <p class="muted" style="font-size:.8rem">From the dated records the portal keeps (${CRS.recentWhat}). Reading and Boardroom calls are counted below but aren't dated.</p>`}
 function lecturer(){
   if(ME.sid!==LECTURER)return home();
-  shell('#/lecturer',`<h1>Lecturer</h1>
-  ${liveCardHTML()}${cloudOn()?'<div class="card" id="cdash" style="margin-bottom:22px"></div><div class="card" id="mq" style="margin-bottom:22px"></div><div class="card" id="cov" style="margin-bottom:22px"></div>'+lcardsHTML():'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
-  <div class="card" id="demo" style="margin-bottom:22px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Show the class</h2><button class="btn ghost sm" id="fs">⛶ Full screen</button></div>
+  shell('#/lecturer',`<h1>Lecturer</h1>${lfBar()}
+  ${cloudOn()?lfBlock('lsess','🔴 Live tutorial session',liveCardHTML(),'Start, watch and end a session')+lfBlock('cdash','👥 Class dashboard','<div class="card" id="cdash"></div>','Every student, sortable')+lfBlock('mq','✍️ Marking','<div class="card" id="mq"></div>','Typed answers to mark')+lfBlock('cov','🧭 Question coverage','<div class="card" id="cov"></div>','Which questions the class has tried')+lcardsHTML():'<div class="callout" style="margin-bottom:18px">Sign in with your PIN to see the live class dashboard. In device-only mode, use the score-code tools at the bottom of this page.</div>'}
+  ${lfBlock('demo','🏆 Show the class',`<div class="card" id="demo"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Show the class</h2><button class="btn ghost sm" id="fs">⛶ Full screen</button></div>
   <p class="muted" style="font-size:.9rem;margin:6px 0 12px">Example students only, made up to explain how scoring works. Real scores appear on the Leaderboard tab.</p>
-  <div class="subnav"><button data-dm="board" class="on">🏆 Example leaderboard</button><button data-dm="vs">⚔️ Student 1 vs Student 2</button><button data-dm="tips">💡 How to climb</button></div><div id="dm"></div></div>
-  <h2>Content review</h2><div class="card" id="rvw" style="margin-bottom:22px"></div>
+  <div class="subnav"><button data-dm="board" class="on">🏆 Example leaderboard</button><button data-dm="vs">⚔️ Student 1 vs Student 2</button><button data-dm="tips">💡 How to climb</button></div><div id="dm"></div></div>`,'Example students explain scoring')}
+  ${lfBlock('rvw','🔍 Content review','<div class="card" id="rvw"></div>','Check what was invented for practice')}
   <details class="card"${cloudOn()?'':' open'}><summary class="lex" style="cursor:pointer;font-weight:700">Offline fallback: update the leaderboard from score codes</summary><p class="muted" style="font-size:.88rem">Only needed if the live leaderboard is unavailable.</p><ol style="padding-left:1.2em;margin-top:0"><li>Paste all the score emails or codes below (everything at once is fine).</li><li>Check the preview, then <b>Download leaderboard.js</b>.</li><li>On GitHub, open the <b>${CRS.repo}</b> repo → <b>Add file → Upload files</b> → drop in <code>leaderboard.js</code> → <b>Commit changes</b>.</li></ol>
   <textarea id="tx" placeholder="Paste score emails or codes here"></textarea><div class="row" style="margin-top:12px"><button class="btn" id="go">Read codes</button></div><div id="out" style="margin-top:16px"></div></details>`);
-  if(cloudOn()){liveCardInit();classDash();markQueue();covCard();lecturerCards()}
-  demo();$('#rvw').innerHTML=reviewHTML();$('#rvw').querySelectorAll('[data-rv]').forEach(b=>b.onchange=()=>{const r=LS.get('review',{});r[b.dataset.rv]=b.checked;LS.set('review',r)});
+  lfBind(Object.assign(cloudOn()?Object.assign({lsess:liveCardInit,cdash:classDash,mq:markQueue,cov:covCard},lcardInits()):{},{demo,rvw:()=>{$('#rvw').innerHTML=reviewHTML();$('#rvw').querySelectorAll('[data-rv]').forEach(b=>b.onchange=()=>{const r=LS.get('review',{});r[b.dataset.rv]=b.checked;LS.set('review',r)})}}));
+  if(cloudOn()&&typeof lectNums==='function')lectNums().then(N=>{lfSum('cdash',N.active+' active today');lfSum('mq',N.mark?N.mark+' waiting':'Nothing waiting',N.mark>0);
+    if(N.reports!=null)lfSum('rptc',N.reports?N.reports+' open':'None open',N.reports>0);lfSum('riskc',N.risk?N.risk+' at risk':'No one at risk',N.risk>0)}).catch(()=>{});
   $('#go').onclick=async()=>{const found=$('#tx').value.match(new RegExp(CRS.CODE+'-[A-Za-z0-9_-]+-[0-9a-f]{8}','g'))||[];const best={};let bad=0,off=0;
     for(const code of found){const m=code.match(new RegExp('^'+CRS.CODE+'-(.+)-([0-9a-f]{8})$'));if((await sha(CRS.id+'-score|'+m[1])).slice(0,8)!==m[2]){bad++;continue}
       let p;try{p=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,'+').replace(/_/g,'/')))))}catch(e){bad++;continue}
