@@ -20,3 +20,6 @@ __pycache__/
 
 # phone notifications: which messages were sent
 tools/push/sent.json
+
+# Claude question drafts before upload
+tools/qgen/drafts.json

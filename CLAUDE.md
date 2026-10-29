@@ -39,6 +39,10 @@ Students can type (or speak) answers to practice questions. Each submitted answe
 
 If there is a lot to mark, work in batches of about 20: write `marks.json`, apply, then continue with the rest.
 
+## New practice questions ("write new MKT301 practice questions")
+
+Follow `docs/QGEN.md`: draft them in `tools/qgen/drafts.json`, check and upload them with `node tools/qgen/upload.mjs`, and the lecturer publishes them from the Question editor. Practice questions only, never anything from a paper.
+
 ## Setup (once, by the lecturer)
 
 1. Sign in to the live site as `S000001` and create the lecturer PIN.

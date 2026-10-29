@@ -582,3 +582,11 @@ function qzAdd(q,label){const good=q.chips.filter(c=>c.g);q.chips.forEach((c,j)=
   QZ[q.id+'~'+j]={id:q.id+'~'+j,q:label+'. Which of these is NOT right?',o:[c.t].concat(gs.slice(0,3).map(x=>x.t)),why:c.why||'',label}})}
 function quizItem(id){return quizAll()[id]||null}
 function quizItems(rng,n){const all=Object.values(quizAll()),o=[],used=new Set();while(o.length<n&&o.length<all.length){const x=all[Math.floor(rng()*all.length)],k=x.id.split('~')[0];if(used.has(x.id)||used.has(k)&&o.length<all.length/2)continue;used.add(x.id);used.add(k);o.push(x)}return o}
+
+/* question editor (engine/qbank.js): Section B short answers */
+const qbChips=d=>!Array.isArray(d.chips)?'chips must be a list.':d.chips.some(c=>!c||typeof c.t!=='string'||!c.t.trim())?'Every chip needs its text (t).':d.chips.filter(c=>c.g).length<3?'Give at least 3 key ideas (g: 1).':d.chips.filter(c=>!c.g).length<1?'Give at least one decoy (g: 0, with why).':d.chips.some(c=>!c.g&&!c.why)?'Every decoy needs a why.':'';
+const qbText=(d,n)=>typeof d.q!=='string'||d.q.trim().length<n?'Write the question (q).':/\bexams?\b|\bmidterms?\b|\bresits?\b/i.test(JSON.stringify(d))?'Practice questions must not mention exams, midterms or resits.':'';
+function qbPut(arr,L,kind,fix){L.filter(x=>x.kind===kind).forEach(x=>{const i=arr.findIndex(q=>q.id===x.id);if(x.st==='hidden'){if(i>=0)arr.splice(i,1);return}const q=fix?fix(x.data):x.data;if(i>=0)arr[i]=Object.assign({},arr[i],q);else arr.push(q)})}
+function qbankKinds(){return {short:{label:'Section B short answer',template:{id:'',week:1,topic:'',skill:'',q:'',chips:[{t:'Define: …',g:1},{t:'Apply: …',g:1},{t:'Evaluate: …',g:1},{t:'A common mistake …',g:0,why:'Why it is wrong'}],checks:['I defined the key idea','I applied it to the example','I evaluated']},
+  check:d=>qbText(d,20)||(!(d.week>=1&&d.week<=14)?'week must be 1 to 14.':typeof d.topic!=='string'||!d.topic?'Give the topic.':'')||qbChips(d),find:id=>BANK_B.find(q=>q.id===id)||null}}}
+function qbankApply(L){qbPut(BANK_B,L,'short',d=>Object.assign({skill:d.topic,checks:[]},d));QZ=null}

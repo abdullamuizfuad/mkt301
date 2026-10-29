@@ -248,6 +248,14 @@ __EMAILS__
       allow delete: if isOwner(sid) || isLecturer();
     }
 
+    // Question updates from the lecturer's editor (and Claude's drafts, uploaded as the lecturer). Students read only live and hidden ones.
+    match /qbank/{id} {
+      allow read: if isLecturer() || (onRoster() && resource.data.st in ['live', 'hidden']);
+      allow create, update: if isLecturer() && request.resource.data.keys().hasOnly(['kind', 'data', 'st', 'by', 't', 'note'])
+        && str(request.resource.data.data, 20000) && request.resource.data.st in ['draft', 'live', 'hidden'];
+      allow delete: if isLecturer();
+    }
+
     // Live quiz battles: the lecturer runs them; each player writes only their own answers.
     match /battles/{id} {
       allow read: if onRoster();

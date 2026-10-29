@@ -54,3 +54,5 @@ export const BANDS=['0: Off topic or missing','1: Lists a term or two','2: Lists
   '4: Explains clearly and applies it to the example','5: Applies well and starts to evaluate','6: Applies to the case or example throughout and evaluates with a clear judgement'];
 export const readJSON=(f,d)=>existsSync(f)?JSON.parse(readFileSync(f,'utf8')):d;
 export const writeJSON=(f,x)=>writeFileSync(f,JSON.stringify(x,null,1)+'\n',{mode:0o600});
+/* write one document (replaces it) */
+export async function putDoc(token,p,obj){return req('PATCH',`${FS}/${p.split('/').map(encodeURIComponent).join('/')}`,token,{fields:Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,v instanceof Date?{timestampValue:v.toISOString()}:enc(v)]))})}
