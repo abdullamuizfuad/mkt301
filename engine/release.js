@@ -18,7 +18,7 @@ onHook('afterLoad',()=>{if(LS.get('ver','')===APP_VERSION)return;const sid=ME&&M
       try{save();await CLOUD.flush()}catch(e){return}if(CLOUD.state!=='synced')return}
     LS.set('ver',APP_VERSION);LS.set('vermsg',1);closeModal();await signOut();verBanner()},1500)});
 /* What's new: once per student, after their progress is loaded (from the cloud when they use a PIN) */
-function whatsNew(){if(LS.get('ver','')!==APP_VERSION)return;verClose();if(!U||U.seen21||!ME||ME.sid===LECTURER)return;
+function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)return;/* tests turn it off like the break reminders */verClose();if(!U||U.seen21||!ME||ME.sid===LECTURER)return;
   if(!(U.days||[]).length&&!U.xp)return;/* brand-new students get the tour instead */
   const sid=ME.sid,show=()=>{if(!U||U.seen21||!ME||ME.sid!==sid)return;if(document.querySelector('.modal'))return setTimeout(show,1500);U.seen21=1;save();
     const m=modal("What's new",`<div style="text-align:center"><div style="font-size:2.4rem">✨</div><h2 style="margin:4px 0">What's new in Version ${APP_VERSION}</h2></div>
