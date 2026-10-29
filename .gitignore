@@ -17,3 +17,6 @@ tools/marking/marked-log.json
 
 # Python cache from the tools scripts
 __pycache__/
+
+# phone notifications: which messages were sent
+tools/push/sent.json

@@ -180,6 +180,88 @@ __EMAILS__
         && str(request.resource.data.t, 80) && str(request.resource.data.b, 600);
       allow delete: if isLecturer();
     }
+
+    // In-app notifications between classmates (challenge invites and results). Each student reads and clears only their own.
+    match /notifs/{id} {
+      allow create: if onRoster() && request.resource.data.fr == me()
+        && request.resource.data.keys().hasOnly(['to', 'fr', 'k', 'ref', 'tx', 't', 'seen'])
+        && request.resource.data.to is string && request.resource.data.to.matches('^S0[0-9]{5}$') && request.resource.data.to != me()
+        && request.resource.data.k in ['invite', 'result'] && str(request.resource.data.ref, 40) && str(request.resource.data.tx, 200)
+        && request.resource.data.t == request.time && request.resource.data.seen == false;
+      allow read: if isLecturer() || (onRoster() && resource.data.to == me());
+      allow update: if onRoster() && resource.data.to == me() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seen']);
+      allow delete: if isLecturer() || (onRoster() && resource.data.to == me());
+    }
+
+    // "Studying now", only for students who switch it on: their official name and the time.
+    match /studying/{sid} {
+      allow read: if onRoster();
+      allow create, update: if isOwner(sid) && request.resource.data.keys().hasOnly(['n', 'at'])
+        && str(request.resource.data.n, 80) && request.resource.data.at == request.time;
+      allow delete: if isOwner(sid) || isLecturer();
+    }
+
+    // Challenges between up to 6 classmates. Only the players (and the lecturer) see them; only the challenger starts a live one.
+    // Each player writes their own score once (r/{SID}), before the challenge expires.
+    function chDoc(id) { return get(/databases/$(database)/documents/challenges/$(id)).data; }
+    match /challenges/{id} {
+      allow create: if onRoster() && request.resource.data.by == me()
+        && request.resource.data.keys().hasOnly(['by', 'p', 'mode', 'items', 't', 'exp', 'st'])
+        && request.resource.data.p is list && request.resource.data.p.size() >= 2 && request.resource.data.p.size() <= 6
+        && me() in request.resource.data.p && request.resource.data.mode in ['live', 'open']
+        && request.resource.data.items is list && request.resource.data.items.size() <= 15
+        && request.resource.data.t == request.time && request.resource.data.st == 'wait'
+        && request.resource.data.exp is timestamp && request.resource.data.exp <= request.time + duration.value(25, 'h');
+      allow read: if isLecturer() || (onRoster() && me() in resource.data.p);
+      allow update: if onRoster() && resource.data.by == me()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'go'])
+        && request.resource.data.st in ['live', 'done'] && (!('go' in request.resource.data) || request.resource.data.go == request.time);
+      allow delete: if isLecturer();
+      match /r/{sid} {
+        allow read: if isLecturer() || (onRoster() && me() in chDoc(id).p);
+        allow create: if isOwner(sid) && sid in chDoc(id).p && request.time < chDoc(id).exp
+          && request.resource.data.keys().hasOnly(['s', 'n', 'ms', 'at'])
+          && request.resource.data.s is int && request.resource.data.n is int && request.resource.data.s >= 0 && request.resource.data.s <= request.resource.data.n
+          && request.resource.data.n <= 15 && request.resource.data.ms is int && request.resource.data.at == request.time;
+        allow delete: if isLecturer();
+      }
+    }
+
+    // The weekend challenge: one score per student per weekend, only on Friday and Saturday (Maldives time). g = their section (team).
+    match /weekend/{id} {
+      allow read: if onRoster();
+      allow create: if onRoster() && request.resource.data.sid == me() && id == request.resource.data.w + '_' + me()
+        && request.resource.data.keys().hasOnly(['w', 'sid', 'g', 's', 'n', 'ms', 'at'])
+        && request.resource.data.w is string && request.resource.data.w.matches('^20[0-9]{2}-[0-9]{2}-[0-9]{2}$')
+        && (request.time + duration.value(5, 'h')).dayOfWeek() in [5, 6]
+        && ((hasDir(me()) && request.resource.data.g == get(/databases/$(database)/documents/directory/$(me())).data.get('g', '')) || (!hasDir(me()) && request.resource.data.g == ''))
+        && request.resource.data.s is int && request.resource.data.n is int && request.resource.data.s >= 0 && request.resource.data.s <= request.resource.data.n
+        && request.resource.data.n <= 20 && request.resource.data.ms is int && request.resource.data.at == request.time;
+      allow delete: if isLecturer();
+    }
+
+    // Phone notifications (docs/PUSH.md): each student's Web Push subscription; only the lecturer's send task reads them.
+    match /push/{sid} {
+      allow read: if isOwner(sid) || isLecturer();
+      allow create, update: if isOwner(sid) && request.resource.data.keys().hasOnly(['s', 't'])
+        && str(request.resource.data.s, 2000) && request.resource.data.t == request.time;
+      allow delete: if isOwner(sid) || isLecturer();
+    }
+
+    // Live quiz battles: the lecturer runs them; each player writes only their own answers.
+    match /battles/{id} {
+      allow read: if onRoster();
+      allow create, update: if isLecturer() && request.resource.data.keys().hasOnly(['name', 'items', 'i', 'st', 'qt', 't'])
+        && str(request.resource.data.name, 80) && request.resource.data.st in ['lobby', 'q', 'rev', 'end'];
+      allow delete: if isLecturer();
+      match /a/{sid} {
+        allow read: if onRoster();
+        allow create, update: if isOwner(sid) && request.resource.data.keys().hasOnly(['n', 'a', 't'])
+          && str(request.resource.data.n, 80) && request.resource.data.a is map && request.resource.data.a.size() <= 20
+          && request.resource.data.t == request.time;
+        allow delete: if isLecturer();
+      }
+    }
   }
 }
 """

@@ -11,9 +11,10 @@ const course=(fs.readFileSync(path.join(ROOT,'course-config.js'),'utf8').match(/
 const OUT=arg.out||process.env.BACKUP_DIR||'/tmp/claude-0/-home-user/0a7e29b4-6b73-5b93-9c5a-c9bb320c0870/scratchpad/backups';
 if(path.resolve(OUT).startsWith(ROOT+path.sep)){console.error('✗ Refusing to write a backup inside the repo.');process.exit(1)}
 /* top-level collections (new ones are listed here as features add them); sessions have a p/{SID} subcollection */
-const COLS=['users','board','reviews','sessions','directory','announcements','reports','errors','challenges','notifs','qbank','battles','weekend'];
+const COLS=['users','board','reviews','sessions','directory','announcements','reports','errors','challenges','notifs','qbank','battles','weekend','studying'];
 const token=await signIn(),data={},counts={},skipped={};
 for(const c of COLS){try{data[c]=await list(token,c);counts[c]=Object.keys(data[c]).length}catch(e){skipped[c]=String(e.message).split(':')[0];delete data[c]}}
+for(const [c,sub] of [['challenges','r'],['battles','a']])if(data[c])for(const id of Object.keys(data[c])){try{const p=await list(token,c+'/'+id+'/'+sub);data[c+'/'+id+'/'+sub]=p;counts[c+'/*/'+sub]=(counts[c+'/*/'+sub]||0)+Object.keys(p).length}catch(e){skipped[c+'/'+id+'/'+sub]=String(e.message).split(':')[0]}}
 if(data.sessions)for(const id of Object.keys(data.sessions)){try{const p=await list(token,'sessions/'+id+'/p');data['sessions/'+id+'/p']=p;counts['sessions/*/p']=(counts['sessions/*/p']||0)+Object.keys(p).length}catch(e){skipped['sessions/'+id+'/p']=String(e.message).split(':')[0]}}
 const students=Object.keys(data.users||{}).filter(s=>s!=='S000001').length;
 const at=new Date().toISOString().replace(/[:.]/g,'-');fs.mkdirSync(OUT,{recursive:true,mode:0o700});

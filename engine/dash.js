@@ -100,7 +100,7 @@ function badgesMiniHTML(){const got=BADGES.filter(b=>U.badges[b.id]).sort((a,b)=
 /* the top of every student's home page */
 function dashHTML(){if(!U)return '';if(ME.sid===LECTURER)return `<div class="card"><h1 style="margin:0">Welcome back, ${esc(String(ME.name).split(' ')[0])}</h1><p class="muted" style="margin:4px 0 0">Students see their own dashboard here. Your tools are on the <a href="#/lecturer">Lecturer</a> tab.</p></div>`;
   return `${dashHeadHTML()}<div class="grid g2" style="margin-top:16px">${countdownHTML()}<div>${readyHTML()}<div style="margin-top:16px">${weakHTML()}</div></div></div>
-  <div class="grid g2" style="margin-top:16px"><div class="card"><h2 style="margin:0 0 6px">📅 Activity</h2>${heatHTML(U.days)}<h3 style="margin:12px 0 4px">Recent activity</h3>${recentHTML(U)}</div>${badgesMiniHTML()}</div>`}
+  ${typeof socialCardHTML==='function'?socialCardHTML():''}<div class="grid g2" style="margin-top:16px"><div class="card"><h2 style="margin:0 0 6px">📅 Activity</h2>${heatHTML(U.days)}<h3 style="margin:12px 0 4px">Recent activity</h3>${recentHTML(U)}</div>${badgesMiniHTML()}</div>`}
 
 /* ---------- flashcards (#/cards) ---------- */
 const fcId=(k,front)=>{let h=0;for(const c of k+'|'+front)h=(h*31+c.charCodeAt(0))>>>0;return k+'_'+h.toString(36)};

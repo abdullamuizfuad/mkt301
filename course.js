@@ -574,3 +574,11 @@ function paperSpec(rng){const pick=(a,n)=>{a=a.slice();const o=[];while(a.length
   return [{k:'a',title:'Case study: '+c.title,mins:70,note:'Answer every question about the case. You can open the case in a new tab.',items:A.map((x,i)=>i?x:Object.assign(x,{html:`<p><a href="#/case/${c.id}/read" target="_blank" rel="noopener">📖 Open ${esc(c.title)} in a new tab</a></p>`}))},
     {k:'b',title:'Short answers',mins:50,note:'Four short answers. Explain each idea and use an example.',items:B},
     {k:'c',title:'Strategy essay: '+e.name,mins:60,note:'Read the brief, plan for a few minutes, then write.',items:[{id:'pc_'+e.id,kind:'written',q:'Write a strategy report for '+e.name+'. In it, '+e.tasks.join('; ')+'.',html:e.brief,ideas:e.tasks.map(cap).concat(['Used evidence from the brief','Ended with a clear recommendation and its main risk']),label:e.tag}]}]}
+
+/* quick quiz items (engine/social.js: challenges, the weekend challenge, quiz battles): "which of these is NOT right?" from each plan's decoys */
+let QZ=null;
+function quizAll(){if(QZ)return QZ;QZ={};CASES.forEach(c=>c.questions.forEach(q=>qzAdd(q,c.title+': '+q.skill)));BANK_B.forEach(q=>qzAdd(q,'Week '+q.week+' · '+q.topic));return QZ}
+function qzAdd(q,label){const good=q.chips.filter(c=>c.g);q.chips.forEach((c,j)=>{if(c.g||good.length<3)return;const r=seeded(q.id+'~'+j),gs=good.slice();for(let i=gs.length-1;i>0;i--){const k=Math.floor(r()*(i+1));[gs[i],gs[k]]=[gs[k],gs[i]]}
+  QZ[q.id+'~'+j]={id:q.id+'~'+j,q:label+'. Which of these is NOT right?',o:[c.t].concat(gs.slice(0,3).map(x=>x.t)),why:c.why||'',label}})}
+function quizItem(id){return quizAll()[id]||null}
+function quizItems(rng,n){const all=Object.values(quizAll()),o=[],used=new Set();while(o.length<n&&o.length<all.length){const x=all[Math.floor(rng()*all.length)],k=x.id.split('~')[0];if(used.has(x.id)||used.has(k)&&o.length<all.length/2)continue;used.add(x.id);used.add(k);o.push(x)}return o}

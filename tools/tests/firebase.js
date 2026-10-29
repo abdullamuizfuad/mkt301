@@ -297,6 +297,42 @@ async errors(){if(!R2)return;const s=await page({allow:/boom-test/});await signI
   await s.evaluate(()=>setTimeout(()=>{throw new Error('boom-test')},0));await s.waitForTimeout(1500);
   const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#errb')||{}).textContent?.includes('boom-test'));
   await s.done();await l.done()},
+async social(){if(!R2)return;await fsPut('directory',A,{n:'Hawwa Uyoon Ali',g:'H01'});await fsPut('directory',B,{n:'Mariyam Test Ali',g:'H02'});
+  const play=async(p,right)=>{for(let k=0;k<20;k++){const b=await p.$(right?'[data-qo="0"]:not([disabled])':'[data-qo]:not([data-qo="0"]):not([disabled])');if(!b){if(!await p.$('[data-qo]'))return;await p.waitForTimeout(300);continue}await b.click();await p.waitForTimeout(right?800:1700)}};
+  const a=await page();await signIn(a,A,PIN);await tourOff(a);await a.go('#/challenges/new');await a.waitForSelector('#chp [data-s="'+B+'"]');
+  await a.click('#chp [data-s="'+B+'"]');await a.click('#chgo');await a.waitForFunction(()=>/^#\/challenge\/\w+/.test(location.hash),null,{timeout:15000});
+  const id=await a.evaluate(()=>location.hash.split('/')[2]);await a.waitForSelector('#chplay');await a.click('#chplay');await play(a,true);
+  await waitFor(a,()=>(document.querySelector('#chv')||{}).textContent?.includes('not played yet'));const ax0=await a.evaluate(()=>U.xp);
+  /* B: the bell, the invite, then playing (all wrong) */
+  const b=await page();await signIn(b,B,PINB);await tourOff(b);await waitFor(b,()=>!!document.querySelector('#bell b'));await b.click('#bell');await b.waitForTimeout(600);
+  ok((await b.textContent('main')).includes('challenged you'),'invite not in notifications');await shot(b,'fb-notifs');
+  const bx0=await b.evaluate(()=>U.xp);await b.go('#/challenge/'+id);await b.waitForSelector('#chplay');await b.click('#chplay');await play(b,false);
+  await waitFor(b,()=>(document.querySelector('#chv')||{}).textContent?.includes('Final results'));ok((await b.evaluate(()=>U.xp))-bx0>=15,'challengee XP missing');
+  /* A won: +50 */
+  await a.go('#/');await a.go('#/challenge/'+id);await waitFor(a,()=>(document.querySelector('#chv')||{}).textContent?.includes('won'));await a.waitForTimeout(500);
+  ok((await a.evaluate(()=>U.xp))-ax0===50,'challenger win XP wrong: '+((await a.evaluate(()=>U.xp))-ax0));await shot(a,'fb-challenge');
+  /* rules: no second score, no reading other people's notifications or challenges */
+  const r=await b.evaluate(async([id,A])=>{const o={};try{await CLOUD.put('challenges/'+id+'/r/'+ME.sid,{s:10,n:10,ms:1,at:CLOUD.ts()});o.again='allowed'}catch(e){o.again='refused'}
+    try{await CLOUD.docs('notifs');o.allNotes='allowed'}catch(e){o.allNotes='refused'}
+    try{await CLOUD.put('challenges/'+id,{st:'done'},true);o.notBy='allowed'}catch(e){o.notBy='refused'}
+    try{await CLOUD.add('notifs',{to:A,fr:'S099999',k:'invite',ref:'',tx:'x',t:CLOUD.ts(),seen:false});o.spoof='allowed'}catch(e){o.spoof='refused'}return o},[id,A]);
+  ok(Object.values(r).every(v=>v==='refused'),'challenge rules: '+JSON.stringify(r));
+  /* weekend: the rules accept a score only on Friday and Saturday (Maldives time) */
+  const dow=new Date(Date.now()+5*3600e3).getUTCDay(),wk=await b.evaluate(async()=>{const w=mvDay();try{await CLOUD.put('weekend/'+w+'_'+ME.sid,{w,sid:ME.sid,g:'H02',s:3,n:15,ms:1000,at:CLOUD.ts()});return 'allowed'}catch(e){return 'refused'}});
+  ok(wk===([5,6].includes(dow)?'allowed':'refused'),'weekend rule on day '+dow+': '+wk);
+  const wg=await b.evaluate(async()=>{const w=mvDay();try{await CLOUD.put('weekend/'+w+'_'+ME.sid+'x',{w,sid:ME.sid,g:'H01',s:3,n:15,ms:1000,at:CLOUD.ts()});return 'allowed'}catch(e){return 'refused'}});ok(wg==='refused','weekend: wrong team or id accepted');
+  await b.go('#/weekend');await b.waitForTimeout(800);ok((await b.textContent('main')).includes('Teams'),'weekend page');
+  /* studying now: shared only when switched on */
+  await b.go('#/notifs');await b.check('#seest');await a.go('#/notifs');await a.check('#shst');await a.evaluate(()=>{award('test:study:'+Date.now(),1,'x',1)});
+  await waitFor(b,()=>(document.querySelector('main')||{}).textContent?.includes('is studying now'));
+  /* live quiz battle */
+  const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/battle');await l.waitForSelector('#btnew');await l.fill('#btn','Test battle');await l.click('#btnew');
+  await a.go('#/battle');await a.waitForSelector('#btjoin');await a.click('#btjoin');await waitFor(l,()=>(document.querySelector('#btv')||{}).textContent?.includes('1 joined'));
+  await l.click('#btnext');await a.waitForSelector('[data-bo="0"]:not([disabled])');await a.click('[data-bo="0"]');await waitFor(l,()=>(document.querySelector('#btv')||{}).textContent?.includes('1/1 answered'));
+  await l.click('#btrev');await waitFor(a,()=>!!document.querySelector('.fb.ok'));await shot(a,'fb-battle');
+  const x0=await a.evaluate(()=>U.xp);await l.click('#btend');await waitFor(a,()=>(document.querySelector('#btv')||{}).textContent?.includes('You came 1'));await a.waitForTimeout(500);
+  ok((await a.evaluate(()=>U.xp))-x0===30,'battle XP wrong: '+((await a.evaluate(()=>U.xp))-x0));
+  await a.done();await b.done();await l.done()},
 async xpAudit(){if(!R2)return;const u=await fsDoc('users',B);const U2=JSON.parse(u.u.stringValue);U2.xp=(U2.xp|0)+5000;await fsPut('users',B,{name:u.name.stringValue,u:JSON.stringify(U2),xp:U2.xp,ts:new Date()});
   const l=await page({w:1280,h:900});await signIn(l,L,PINL);await tourOff(l);await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#xpab')||{}).textContent?.includes('S085542'));
   ok((await l.textContent('#xpab')).includes('not explained'),'inflated XP not flagged');
