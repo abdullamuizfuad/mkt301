@@ -89,7 +89,7 @@ function gate(msg){
   $('#f').onsubmit=e=>{e.preventDefault();if(!ok){check();return}const name=nmIn.value.trim();if(name.length<2){$('#er').textContent='Please type your full name.';nmIn.focus();return}
     const sid='S'+sidIn.value;if(CLOUD.ok)return pinStep(sid,name,mt);
     clearInterval(mt);LS.set('session',{sid,name});start()}}
-const NAV=[['#/','Home'],['#/cases','Section A · Cases'],['#/short','Section B · Short answers'],['#/essay','Section C · Strategy & essay'],['#/badges','Badges'],['#/board','Leaderboard']];
+const NAV=[['#/','Home'],['#/cases','Section A · Cases'],['#/short','Section B · Short answers'],['#/essay','Section C · Strategy & essay'],['#/notes','Study notes'],['#/badges','Badges'],['#/board','Leaderboard']];
 const XP_DEFAULT={typed:20,plan:15,perfect:10,timed:30,check:0,ca:15,catimed:30,cacheck:0,cadone:40,ess:5,eplan:40,script:10,essay:60,emark:20};
 const partKeys=(sid,p)=>k=>['ca:','catimed:','cacheck:'].some(x=>k.startsWith(x+sid+':'+p+':'))||k==='cadone:'+sid;
 const essKeys=sid=>k=>(k.startsWith('ess:')&&k.split(':')[2]===sid)||k==='eplan:'+sid||k==='script:'+sid||k.startsWith('essay:'+sid+':')||k.startsWith('emark:'+sid+':');
@@ -150,7 +150,7 @@ function qCard(q,i,o={}){
   const good=q.chips.map((c,j)=>c.g?j:-1).filter(j=>j>=0),planHTML=`<div class="plan"><b class="lex" style="font-size:.85rem">Your plan</b><ol>${st.sel.filter(j=>q.chips[j].g).map(j=>`<li>${esc(q.chips[j].t)}</li>`).join('')||'<li class="muted">No key ideas picked</li>'}</ol></div>`;
   const steps=st.route==='typed'?['1 · Plan','2 · Type','3 · Mark']:st.route==='plan'?['1 · Plan','✓ Plan only']:['1 · Plan','2 · Write','3 · Check'];
   const nextBtn=`<div class="row" style="margin-top:12px"><button class="btn" data-a="next">${o.last?'See set summary 🏁':'Next question →'}</button></div>`;
-  let h=`<div class="qmeta"><span class="tag">Question ${i+1}</span><span class="tag">${esc(q.skill||q.topic)}</span>${o.week?`<span class="tag">Week ${o.week}</span>`:''}<span class="tag">${q.marks||6} marks</span><button class="btn ghost sm rst" data-a="restart" title="Restart this question">↺ Restart</button>${rptBtn(q.id,(qIndex()[q.id]||{}).label||q.skill||q.topic)}</div>
+  let h=`<div class="qmeta"><span class="tag">Question ${i+1}</span><span class="tag">${esc(q.skill||q.topic)}</span>${o.week?`<span class="tag">Week ${o.week}</span>`:''}<span class="tag">${q.marks||6} marks</span><button class="btn ghost sm rst" data-a="restart" title="Restart this question">↺ Restart</button>${notesBtn(q,o)}${rptBtn(q.id,(qIndex()[q.id]||{}).label||q.skill||q.topic)}</div>
   <h3 style="font-weight:600">${esc(q.q)}</h3><div class="steps">${steps.map((s,j)=>`<span class="${st.done&&j===steps.length-1||j===st.step?'on':j<st.step||st.done?'done':''}">${j<st.step||st.done&&j<steps.length-1?'✓ ':''}${s}</span>`).join('')}</div>`;
   if(st.step===0&&!(st.done&&st.route==='plan')){
     h+=`<p class="muted" style="font-size:.9rem">Tap the ideas you would use in your answer. Some are decoys.</p><div class="chips">${st.order.map(j=>{const ch=q.chips[j],s=st.sel.includes(j);
@@ -524,7 +524,7 @@ const CASE_ALL=CASES,BANK_B_ALL=BANK_B;
 const caseName=c=>c.title,caseNames=c=>[c.title];
 const isB=o=>!!o.week,bArea=q=>'w'+q.week,bQLabel=q=>'Week '+q.week+': '+q.topic,bLabel=k=>{const w=+k.slice(1);return 'Week '+w+': '+[...new Set(BANK_B.filter(q=>q.week===w).map(q=>q.topic))].join(', ')};
 ROUTES.case=h=>caseView(h[1],h[2]||'read');
-ROUTES.short=()=>shortPage();
+ROUTES.short=h=>{if(h[1]==='w'&&+h[2]){U.bweek=+h[2];save()}shortPage()};
 ROUTES.essay=h=>h[1]==='ca'?caView(h[2]):h[1]==='coach'?coachView(h[2]):essayPage();
 
 /* ---------- dashboard hooks (engine/dash.js): readiness areas and flashcard decks ---------- */
@@ -563,3 +563,18 @@ function qbPut(arr,L,kind,fix){L.filter(x=>x.kind===kind).forEach(x=>{const i=ar
 function qbankKinds(){return {short:{label:'Section B short answer',template:{id:'',week:1,topic:'',skill:'',q:'',chips:[{t:'Define: …',g:1},{t:'Apply: …',g:1},{t:'Evaluate: …',g:1},{t:'A common mistake …',g:0,why:'Why it is wrong'}],checks:['I defined the key idea','I applied it to the example','I evaluated']},
   check:d=>qbText(d,20)||(!(d.week>=1&&d.week<=14)?'week must be 1 to 14.':typeof d.topic!=='string'||!d.topic?'Give the topic.':'')||qbChips(d),find:id=>BANK_B.find(q=>q.id===id)||null}}}
 function qbankApply(L){qbPut(BANK_B,L,'short',d=>Object.assign({skill:d.topic,checks:[]},d));QZ=null}
+
+/* ---------- study notes (engine/notes.js): weeks 1 to 14 from notes301.js, folded so a week stays short on a phone ---------- */
+const WEEKS=[1,2,3,4,5,6,7,8,9,10,11,12,13,14];
+const weekTitle=w=>((typeof NOTES301!=='undefined'&&NOTES301.weeks[w])||{}).title||'Week '+w;
+function notesCfg(){const N=typeof NOTES301!=='undefined'?NOTES301:{intro:'',how:[],weeks:{},review:[]};
+  return {N,keys:WEEKS,get:k=>N.weeks[k]||null,word:'Week',ico:()=>'📘',title:weekTitle,egLabel:'Example',fold:true,review:N.review||[],
+    practice:k=>[['🧩 Short answers: Week '+k,'#/short/w/'+k],['🧱 Build a paragraph','#/chips/'+k]],last:['Practise short answers','#/short']}}
+/* "📖 Refer to notes": short answers and paragraph questions go to their week */
+function notesFor(q,o){const w=+(q.week||o.week||(q.kind==='chips'?q.topic:0)||o.topic||0);return WEEKS.includes(w)?'#/notes/'+w:''}
+/* ---------- the weekly 6th-spot challenge (engine/wild.js) and paragraph practice (engine/chips.js) ---------- */
+function wildTopicList(){return WEEKS.map(w=>[w,'Week '+w+': '+weekTitle(w)])}
+const chipTopics=wildTopicList;
+const wildArea=k=>'w'+k;
+function wildItems(top,seed){return wildPick(top,seed)}
+function wildItem(id){if(CHIPS_BY[id])return CHIPS_BY[id];const x=quizItem(id);return x?Object.assign({kind:'mcq'},x):null}

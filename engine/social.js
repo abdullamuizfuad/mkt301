@@ -54,7 +54,7 @@ ROUTES.notifs=async()=>{if(notPlayer('Notifications'))return;if(!(await rulesOK(
   U.stSeen=U.stSeen||{};const row=(ic,tx,href,when,unseen)=>`<a class="rdrow note${unseen?' new':''}" href="${href}"><span class="em" style="font-size:1.3rem">${ic}</span><span class="rdl">${esc(tx)}</span><span class="muted" style="font-size:.78rem">${when?ago(when):''}</span></a>`;
   shell('#/',`<p><a href="#/">← Home</a></p><div class="row" style="justify-content:space-between"><h1 style="margin:0">🔔 Notifications</h1>${NOTE.some(x=>!x.seen)?'<button class="btn ghost sm" id="nall">Mark all as read</button>':''}</div>
   <div class="card" style="margin-top:12px">${STUDY.map(x=>row('📚',`${x.n||nameOf(x.id)} is studying now. Challenge them?`,'#/challenges/new/'+x.id,x.at,!U.stSeen[x.id+':'+x.at])).join('')}
-   ${NOTE.map(x=>row(x.k==='invite'?'⚔️':x.k==='result'?'🏁':'🔔',x.tx||'',x.ref?'#/challenge/'+x.ref:'#/notifs',x.t,!x.seen)).join('')||(!STUDY.length?'<p class="muted" style="margin:0">Nothing new.</p>':'')}</div>
+   ${NOTE.map(x=>row(String(x.ref||'').startsWith('wild:')?'🎁':x.k==='invite'?'⚔️':x.k==='result'?'🏁':'🔔',x.tx||'',x.ref?(String(x.ref).startsWith('wild:')?'#/wild/'+x.ref.slice(5):'#/challenge/'+x.ref):'#/notifs',x.t,!x.seen)).join('')||(!STUDY.length?'<p class="muted" style="margin:0">Nothing new.</p>':'')}</div>
   <div class="card" style="margin-top:12px"><h2 style="margin:0 0 6px">Studying now</h2>
    <label class="row ppchk"><input type="checkbox" id="shst" ${U.shSt?'checked':''}> Let classmates know when I'm studying</label>
    <label class="row ppchk"><input type="checkbox" id="seest" ${U.seeSt?'checked':''}> Tell me when classmates are studying</label>

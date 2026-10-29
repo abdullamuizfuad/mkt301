@@ -43,8 +43,8 @@ function paperTile(){if(typeof ppLine!=='function')return null;const L=ME&&ME.si
 function tilesHTML(){const T=(typeof homeTiles==='function'?homeTiles():[]).concat([paperTile()].filter(Boolean));
   return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile${x[4]?' locked':''}" href="${x[3]}"${x[3]==='#/paper'?' id="tpaper"':''}><span class="em">${x[0]}</span><span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></span></a>`).join('')}</div>`}
 function home(){if(!U)return;rollDay();if(ME.sid===LECTURER)return lectHome();
-  shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}${inboxHTML()}${inviteHTML()}${tilesHTML()}`);
-  const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)}}
+  shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}${inboxHTML()}<div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
+  const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)};if(typeof wildHome==='function')wildHome()}
 
 /* ---------- the lecturer's home: lecturer essentials only (the lecturer is never a player) ---------- */
 let LH=null;/* one read of users, reviews and reports, kept for 5 minutes: counts, the at-risk list and who was active recently */
@@ -65,10 +65,10 @@ function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
    <a class="tchip" ${lgo('riskc')}><span class="tico">⚠️</span><span><b data-ln="risk">…</b><small>at risk</small></span></a></div><p class="err" id="lderr"></p></div>`
    :'<div class="callout">Sign in with your PIN while online to see the class.</div>'}
   <div class="lbtns"><button type="button" class="btn" id="lhva"${c?'':' disabled'}>👁 View as student</button><a class="btn ghost" ${lgo('mq')}>✍️ Marking</a><a class="btn ghost" ${lgo('annc')}>📣 Post announcement</a><a class="btn ghost" ${lgo('lsess')}>🎓 Start live session</a><a class="btn ghost" href="#/board">🏆 Leaderboard</a><a class="btn ghost" href="#/lecturer">🧑‍🏫 Lecturer tools</a></div>
-  <div id="lhvap"></div>
+  <div id="lhvap"></div><div id="twild" style="margin-top:12px"></div>
   ${c?`<div class="grid g2" style="margin-top:12px"><div class="card"><h2 style="margin:0 0 6px;font-size:1.05rem">⚠️ At risk</h2><div id="lhrisk"><p class="muted">Loading…</p></div></div><div class="card"><h2 style="margin:0 0 6px;font-size:1.05rem">🟢 Recently active</h2><div id="lhrecent"><p class="muted">Loading…</p></div></div></div>`:''}
   <h2 style="margin-top:22px">Previews</h2><p class="muted" style="margin-top:-4px;font-size:.9rem">Try the practice paper and any question yourself. Nothing you do here earns XP or reaches the class.</p></div>${tilesHTML()}`);
-  $('#lhva').onclick=()=>{const p=$('#lhvap');if(p.innerHTML)return;p.innerHTML=vaCardHTML();vaCardInit();setTimeout(()=>{const i=$('#vaq');if(i)i.focus()},50)};
+  if(typeof wildHome==='function')wildHome();$('#lhva').onclick=()=>{const p=$('#lhvap');if(p.innerHTML)return;p.innerHTML=vaCardHTML();vaCardInit();setTimeout(()=>{const i=$('#vaq');if(i)i.focus()},50)};
   if(!c)return;lectNums().then(N=>{const el=$('#lday');if(!el)return;['active','mark','reports','risk'].forEach(k=>{const b=el.querySelector(`[data-ln="${k}"]`);if(b)b.textContent=N[k]==null?'–':N[k]});
     const list=(rows,sub)=>rows.length?`<ol class="sumlist">${rows.map(r=>`<li><a href="#/student/${esc(r.id)}" data-sid="${esc(r.id)}">${esc(r.n)}</a> <span class="muted" style="font-size:.82rem">${esc(sub(r))}</span></li>`).join('')}</ol>`:'<p class="muted" style="margin:0">None.</p>';
     $('#lhrisk').innerHTML=list(N.riskL,r=>r.why);$('#lhrecent').innerHTML=list(N.recent,r=>ago(r.ts));
@@ -78,7 +78,7 @@ function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
 /* ---------- Practice, backup ---------- */
 ROUTES.practice=()=>{
   const L=ME.sid===LECTURER;shell('#/practice',`<h1>Practice</h1>${L?'<p class="muted" data-lect>Try any question yourself. Nothing you do here earns XP or reaches the class.</p>':''}${tilesHTML()}
-  ${L?'':`<h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></span></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><span><b class="lex">Flashcards</b><small class="muted">Key terms</small></span></a></div>
+  ${L?'':`<h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></span></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><span><b class="lex">Flashcards</b><small class="muted">Key terms</small></span></a>${typeof CHIPS!=='undefined'&&CHIPS.length?`<a class="card zone ttile" href="#/chips"><span class="em">🧱</span><span><b class="lex">Build a paragraph</b><small class="muted">${CHIPS.length} questions</small></span></a>`:''}${wildCfg()?`<a class="card zone ttile" href="#/wild"><span class="em">🎁</span><span><b class="lex">6th-spot challenge</b><small class="muted">${wildWin().open?'Open now':'Opens '+esc(wildWhen(wildWin().opens))}</small></span></a>`:''}</div>
   ${typeof socialCardHTML==='function'?socialCardHTML():''}`}`)};
 ROUTES.backup=()=>{shell('#/backup',`<p><a href="#/">← Home</a></p><div class="card" id="bk"><div class="row" style="justify-content:space-between"><h1 style="margin:0;font-size:1.4rem">💾 Save my progress</h1><span class="tag" id="bkl"></span></div>
   <p class="muted" style="font-size:.9rem;margin:8px 0 12px">${cloudOn()?'Your progress saves to your account. A backup copy is an extra safety net.':'Your progress lives on this device only. Save a backup to move it to another phone or laptop, or to keep it safe before clearing your browser.'}</p>
@@ -129,7 +129,7 @@ ROUTES.progress=h=>{if(ME.sid===LECTURER){shell('#/progress',`<h1>My progress</h
 /* ---------- More menu, and the phone tab bar (remove with CRS.tabbar=false) ---------- */
 function moreMenu(){const st=ME&&ME.sid!==LECTURER,N=NAV.map(n=>n[0]);
   const items=[['#/avatar','🧑‍🎨','My profile'],st&&['#/progress','📈','My progress'],st&&['#/badges','🏅','Badges'],N.includes('#/notes')&&['#/notes','📖','Study notes'],st&&['#/cards','🃏','Flashcards'],st&&['#/review','🧠','Review'],
-    typeof ppLine==='function'&&['#/paper','📝','Practice paper'],st&&['#/backup','💾','Save my progress'],['help','❔','How it works'],['#/whatsnew','✨',"What's new"],['inst','📲','Install the app'],['#/privacy','🔒','Privacy'],['so','🚪','Sign out']].filter(Boolean);
+    typeof ppLine==='function'&&['#/paper','📝','Practice paper'],typeof wildCfg==='function'&&wildCfg()&&['#/wild','🎁','6th-spot challenge'],typeof CHIPS!=='undefined'&&CHIPS.length&&['#/chips','🧱','Build a paragraph'],st&&['#/backup','💾','Save my progress'],['help','❔','How it works'],['#/whatsnew','✨',"What's new"],['inst','📲','Install the app'],['#/privacy','🔒','Privacy'],['so','🚪','Sign out']].filter(Boolean);
   const m=modal('More',`<h2 style="margin:0 0 10px">More</h2><div class="morelist">${items.map(x=>x[0][0]==='#'?`<a href="${x[0]}" data-mi="1"><span>${x[1]}</span>${x[2]}</a>`:`<button type="button" data-mi="${x[0]}"><span>${x[1]}</span>${x[2]}</button>`).join('')}</div>`);
   m.querySelectorAll('[data-mi]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.mi;closeModal();if(k==='help')tour(0);else if(k==='inst')installPop(0);else if(k==='so')signOut()}))}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-more]');if(b&&ME){e.preventDefault();moreMenu()}});

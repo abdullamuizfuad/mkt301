@@ -1,7 +1,7 @@
 /* MKT301 Arena service worker (scope: /mkt301/): works offline, but always tries the network first so updates arrive.
    Bump CACHE when the list of files changes; old MKT301 caches are deleted on activate (other sites' caches, such as MKT101's on the same origin, are left alone). */
-const CACHE='mkt301-v12';
-const CORE=['./','index.html','engine/engine.css','engine/concepts.js','engine/cloud.js','engine/install.js','engine/coverage.js','engine/presence.js','engine/core.js','engine/feat.js','engine/avatar.js','engine/names.js','engine/dash.js','engine/paper.js','engine/social.js','engine/qbank.js','engine/reports.js','engine/release.js','engine/simple.js','engine/boot.js','course-config.js','course.js','course.css','cloud-config.js','cases.js','case-cbtl.js','case-tuna.js','bank-b.js','bank-c.js',
+const CACHE='mkt301-v13';
+const CORE=['./','index.html','engine/engine.css','engine/concepts.js','engine/cloud.js','engine/install.js','engine/coverage.js','engine/presence.js','engine/core.js','engine/feat.js','engine/avatar.js','engine/names.js','engine/dash.js','engine/paper.js','engine/social.js','engine/notes.js','engine/chips.js','engine/wild.js','engine/qbank.js','engine/reports.js','engine/release.js','engine/simple.js','engine/boot.js','course-config.js','course.js','course.css','cloud-config.js','cases.js','case-cbtl.js','case-tuna.js','bank-b.js','bank-c.js','notes301.js','bank-chips.js',
   'roster.js','leaderboard.js','vendor/firebase.js','manifest.webmanifest','assets/favicon.svg','assets/icon-192.png','assets/icon-512.png','assets/apple-touch-icon.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('mkt301-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
