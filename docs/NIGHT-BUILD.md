@@ -11,7 +11,7 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 | 2 | Home dashboard, avatar builder, streak blocks, countdown grid, spaced review, readiness, flashcards, item analysis, name policy | **live** (main: MKT301 `b21a490`, MKT101 `11b0c18`) |
 | 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | **live** (main: MKT301 `c2593f1`, MKT101 `de16579`) |
 | 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | **live** (main: MKT301 `2fca700`, MKT101 `bfa3fbd`); switches on when the combined rules are published |
-| 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | not started |
+| 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | **live** (see Phase 5 notes) |
 | Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | not started |
 
 ## Engine layout (Phase 0)
@@ -61,14 +61,16 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 
 ## Next
 
-Phase 5, in this order (WIP commit to `night` after each):
-1. Question bank overlay `qbank/{id}` + lecturer editor card + `tools/qgen/` (Claude drafts → lecturer approves). Course hook `qbankApply(list)`.
-2. Weekly report card (lecturer): active students, XP, screen time, practice per week; CSV.
-3. Attendance export from live-session reports (CSV: SID × session).
-4. Hints on practice plans (💡, records U.hint, no XP change).
-5. Accessibility and performance pass (focus, reduced motion, skip link).
-6. New-term rollover: `docs/NEW-TERM.md`, `CRS.termStart` filter on the board.
-Then suites, backup, push to main; then Release 2.1 (APP_VERSION '2.1', one-time sign-out without losing progress, What's new #/whatsnew, name confirmation).
+- Release 2.1: `APP_VERSION='2.1'`; a one-time sign-out after the update (progress is saved to the cloud first and never deleted); then the What's new popup (`#/whatsnew`, linked from "? How it works"); then the confirm-name/username prompt (names.js). Tests, backup, push to main.
+- Then the final report: combined rules files in the scratchpad (`rules/mkt301-FINAL.rules`, `rules/mkt101-FINAL.rules`).
+
+## Phase 5 notes
+
+- `engine/qbank.js`: the question overlay `qbank/{id}` (draft/live/hidden) and the Lecturer → Question editor card. Course hooks `qbankKinds()`, `qbankApply()`. Claude drafts with `tools/qgen/upload.mjs` (`docs/QGEN.md`); the lecturer publishes them.
+- `engine/reports.js`: Weekly report (8 weeks; per-student CSV; weekly XP from the new `U.xpd`) and Attendance CSV (all ended live sessions).
+- Hints (`hintHTML()` in dash.js): 💡 shows the start of an unpicked key idea; stored as `st.hints` and `U.hints`; no XP change.
+- Accessibility: skip link, focus ring, focus moves to the new page's content, nav label.
+- New term: `docs/NEW-TERM.md`; `CRS.termStart` hides old leaderboard rows. Class backup button: Phase 1 (`bkc`).
 
 ## Phase 4 notes
 
