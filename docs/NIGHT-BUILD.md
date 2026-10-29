@@ -14,6 +14,7 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 | 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | **live** (see Phase 5 notes) |
 | Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | **live** (`engine/release.js`) |
 | Simple home | Today home, My progress, tab bar, View as student, lecturer home and blocks | see "Simple home" below |
+| Weekly challenge | 6th-spot challenge, paragraph builder, Refer to notes, MKT301 notes | see "Weekly challenge" below |
 
 ## Engine layout (Phase 0)
 
@@ -169,3 +170,14 @@ Status: **live** (main: MKT301 `32b2cb5`, MKT101 `62625c1`). Site suites MKT301 
 - **Sections**: `secLabel(g)` shows "MKT301_H01 course" as "H01" (stored values unchanged). With no sections (MKT101), the weekend challenge has one "Whole class" team and no team bonus.
 - What's new: "A simpler home" is the first entry. Service worker caches: mkt301-v12, mkt101-arena-v10.
 - Tests: `simplehome`, `progress`, `tabbar`, `lecthome`, `lectonly`, `viewas`, `lfold`, `sections` (site); `viewAs`, `lectAvatar` (cloud). Screenshots: `scratchpad/night/simple/`, made with `scratchpad/sh/shots.js`.
+
+## Weekly challenge (6th spot), paragraph builder, notes
+
+- `engine/wild.js`: the weekly 6th-spot challenge (docs/WILD.md). The window is `CRS.wild` (class start, GMT+5) minus 24 hours. The top 5 come from XP earned that week (`U.xph`, added here: XP per hour, GMT+5, kept 21 days; `U.xpd` before it existed). One 20-minute attempt, notes locked during it (`wildBusy()`, `body.wlock`). Includes the lecturer's live screen `#/wild/live`, the Lecturer tab card `wildc` and the home cards (`#twild`). XP keys: `wild:<id>` (+20) and `wildwin:<id>` (+30).
+- `engine/chips.js`: the paragraph builder (kind `chips`): `chipsScore`, `chipsUI`, practice `#/chips/<topic>` (XP `chip:<id>:<day>`, 2 per point).
+- `engine/notes.js`: the notes renderer, moved out of MKT101's course.js and now shared. Course hook `notesCfg()`; `fold:true` (MKT301) gives the short folded week page with a sticky "Jump to" row and week picker; `#/notes/<key>/<section>` opens a section. `notesBtn(q, o)` is the "📖 Refer to notes" button (course hook `notesFor`). Lecturer card `nrevc` lists `notesCfg().review`.
+- Data: `bank-chips.js` in each repo (CHIPS plus `wildPick`, loadable in Node); `notes301.js` (MKT301, from branch `notes`).
+- Tools: `tools/wild/open.mjs`, `close.mjs` and `core.mjs`, plus `commitDocs` and `getDoc` added to `tools/marking/lib.mjs`.
+- Rules: the `wild` blocks in `tools/build-rules.py`. The lecturer must publish the new FINAL rules before the first window opens (MKT301: Mon 2 Nov, 16:00).
+- Tests: site groups in `tools/tests/wild-site.js` (wildwin, wildtop5, wildxph, chipscore, wilditems, wildlock, notesref, notesfold, wildpage); cloud groups `wild` and `wildTools`.
+- MKT301's first week, w2026-11-03, uses weeks 10 and 11 (the lecturer's choice, `CRS.wildPlan`).
