@@ -9,8 +9,8 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 | 0 | One shared engine (`engine/`, identical in both repos) | **live** (main: MKT301 `d244165`, MKT101 `7e9b233`) |
 | 1 | CI, XP audit, error reports, streak freeze, at-risk, problem reports, announcements, privacy page, wording fixes, backup export | **live** (main: MKT301 `cb6aa81`, MKT101 `ee22bf0`); site and cloud suites green on the combined rules and on the published rules |
 | 2 | Home dashboard, avatar builder, streak blocks, countdown grid, spaced review, readiness, flashcards, item analysis, name policy | **live** (main: MKT301 `b21a490`, MKT101 `11b0c18`) |
-| 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | code done on `night` (`engine/paper.js`, `paperSpec()` in both `course.js`); `paper` test group; suites running |
-| 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | not started |
+| 3 | Practice paper (unlocks 22 Nov 2026 00:00 GMT+5) | **live** (main: MKT301 `c2593f1`, MKT101 `de16579`) |
+| 4 | Class directory, challenges, weekend teams, notifications, push, quiz battle | code done on `night` (`engine/social.js`, rules blocks, `tools/push/`, `docs/PUSH.md`); site suites green; cloud suites next |
 | 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | not started |
 | Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | not started |
 
@@ -61,7 +61,16 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 
 ## Next
 
-- Phase 3: full suites on `night`, backup, push to main. Then Phase 4.
+- Phase 4: run the cloud suites one at a time (MKT301 new rules, old rules; MKT101 new, old), regenerating the rules first (`python3 tools/build-rules.py <ids csv> -o <scratchpad>/rules/<course>.rules`); then backups and push `night` to main.
+- Then Phase 5 (question generation and editor, weekly report, backup button, attendance export, hints, a11y and performance, new-term rollover), then Release 2.1.
+
+## Phase 4 notes
+
+- `engine/social.js`. Course hooks `quizItems(rng, n)` and `quizItem(id)`: MKT101 uses the MCQ bank; MKT301 makes "which of these is NOT right?" items from each plan's decoys.
+- New collections (combined rules): `notifs`, `studying`, `challenges` (+ `r/{SID}`), `weekend`, `battles` (+ `a/{SID}`), `push`. The weekend rule uses `(request.time + 5h).dayOfWeek() in [5, 6]` (Mon = 1, checked in the emulator).
+- Queries avoid composite indexes: notifications and challenges are sorted on the device.
+- XP keys: `ch:<id>` (at most 5 challenge rewards a day), `wk:<Friday>`, `wkteam:<Friday>`, `bt:<id>`, `btp:<id>`.
+- Phone notifications are off (`PUSH_ON=false` in cloud-config.js). The lecturer sets them up from `docs/PUSH.md`.
 
 ## Phase 1 fixes found by the cloud suite
 
