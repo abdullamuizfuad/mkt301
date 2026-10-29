@@ -334,11 +334,12 @@ async viewas(){const p=await page({sid:LECT});await p.go('#/');const snap=()=>p.
   ok((await p.textContent('#vabar')).includes('Viewing as Aminath Test (S081441)')&&(await p.textContent('#vabar')).includes('read-only'),'view-as banner');
   for(const s of ['#thead','#tcd','#nextact','#trow','#ttiles'])ok(await p.$(s),'view-as home part missing: '+s);ok(!await p.$('main [data-lect]')&&!await p.$('#lhome'),'lecturer parts while viewing');
   ok((await p.textContent('#thead')).includes('Aminath Test'),'not the student\'s home');
-  const st=()=>p.evaluate(()=>JSON.stringify([U.xp,U.log,U.n,U.badges,U.plansSaved||null]));const u0=await st();
+  /* pages may set up a blank plan in memory; nothing may be picked, checked, earned or counted */
+  const st=()=>p.evaluate(()=>JSON.stringify([U.xp,U.log,U.n,U.badges,U.cnt||null,Object.values(U.plansSaved||{}).filter(x=>(x.sel||[]).length||x.checked).length]));const u0=await st();
   await p.evaluate(()=>{location.hash='#/short'});await p.waitForTimeout(250);await p.locator('.qcard .chip').first().click();await p.waitForSelector('.toast:has-text("Read-only")');
   ok(await p.evaluate(()=>award('t:va',50,'x')===false),'award while viewing');await p.evaluate(()=>{save();countOnce('t:va','plans');LS.set('x',1)});
   for(const h of ['#/progress','#/badges','#/avatar','#/practice','#/paper','#/challenges']){await p.evaluate(h=>{location.hash=h},h);await p.waitForTimeout(200);ok(!await p.$('main [data-lect]'),'lecturer-only part while viewing '+h)}
-  ok(await st()===u0,'the student\'s progress changed while viewing');
+  {const u1=await st();ok(u1===u0,'the student\'s progress changed while viewing: '+u0+' → '+u1)}
   await p.click('#vax');await p.waitForTimeout(200);ok(!await p.$('#vabar')&&await p.evaluate(()=>ME.sid)==='S000001'&&!!await p.$('#lhome'),'Exit does not restore the lecturer');
   ok(await snap()===before,'the lecturer\'s localStorage changed while viewing');await p.done()},
 

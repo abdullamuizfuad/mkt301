@@ -13,7 +13,7 @@
 function cdLeft(){return Math.max(0,Math.round((Date.parse(EXAM_DAY+'T00:00:00Z')-Date.parse(mvDay()+'T00:00:00Z'))/864e5))}
 function streakMiniHTML(u){const n=streak(u),F=u.frz||{},fz=F.d||{},days=new Set(u.days),t=today(),cells=[];
   for(let i=6;i>=0;i--){const d=addDays(t,-i),f=fz[d]&&!days.has(d);cells.push(`<i class="sb ${days.has(d)?'on':f?'fz':d===t?'today':''}" title="${d}${days.has(d)?' · practised':f?' · ❄️ freeze used':''}">${f?'❄️':''}</i>`)}
-  return `<div class="tstreak" aria-label="${n} day streak, ${F.b|0} freezes banked"><b class="lex">🔥 ${n} day${n===1?'':'s'}</b><span class="sbrow" aria-hidden="true">${cells.join('')}</span><span class="tag" title="Every 4 days in a row earns a freeze (up to ${FRZ_MAX})">❄️ ${F.b|0}/${FRZ_MAX}</span></div>`}
+  return `<div class="tstreak" aria-label="${n} day streak, ${F.b|0} freezes banked"><b class="lex" title="${n} day${n===1?'':'s'} in a row">🔥 ${n}</b><span class="sbrow" aria-hidden="true">${cells.join('')}</span><span class="tag" title="Streak freezes: every 4 days in a row earns one (up to ${FRZ_MAX})">❄️ ${F.b|0}/${FRZ_MAX}</span></div>`}
 function todayHeadHTML(){const L=level(U.xp),nm=U.dn||ME.name;
   return `<div class="card thead" id="thead"><a class="tav" href="#/avatar" aria-label="My profile">${avatarSVG(myAv(),64,'')}</a>
   <div class="tmain"><div class="tnm"><a class="tname" href="#/avatar"><b class="lex">${esc(nm)}</b>${U.un?` <span class="muted">${esc(U.un)}</span>`:''}</a><a class="tag tedit" href="#/avatar" id="tedit">✏️ Edit profile</a></div>
@@ -31,7 +31,7 @@ function missionRowsHTML(){const GO=CRS.missionGo||{};return missions().map(m=>{
   return `<div class="mission"><span class="tick ${v>=m.n?'on':''}">${v>=m.n?'✓':''}</span><div style="flex:1">${esc(m.x)}<div class="bar" style="margin-top:6px"><i style="width:${v/m.n*100}%"></i></div></div><span class="muted">${v}/${m.n}</span>${v<m.n?`<a class="btn ghost sm" href="${GO[m.k]||'#/'}" style="min-height:32px;padding:4px 10px">Go</a>`:''}</div>`}).join('')}
 function todayRowHTML(){rollDay();const t=stToday(U),ms=missions(),done=ms.filter(m=>(U.day.c[m.k]||0)>=m.n).length,due=srsDue().length;
   return `<div class="card trow" id="trow"><div class="tchips">
-  <a class="tchip" href="#/progress/screen" id="tst"><span class="tring" style="--p:${Math.min(100,t/ST.GOAL*100)}"><b>${Math.floor(t/60)}</b></span><span><b>${t>=ST.GOAL?'Goal met ✓':'of 20 min'}</b><small>screen time</small></span></a>
+  <a class="tchip" href="#/progress/screen" id="tst"><span class="tring" style="--p:${Math.min(100,t/ST.GOAL*100)}"></span><span><b>${t>=ST.GOAL?'Goal met ✓':Math.floor(t/60)+'/20'}</b><small>min today</small></span></a>
   <button type="button" class="tchip" id="tmb" aria-expanded="false" aria-controls="tml" data-va-ok><span class="tico">🎯</span><span><b>${U.day.done?'Done ✓':done+'/3'}</b><small>missions ▾</small></span></button>
   <a class="tchip" href="#/review" id="trv"><span class="tico">🧠</span><span><b>${due}</b><small>to review</small></span></a></div>
   <div id="tml" class="tml" hidden><p class="muted" style="font-size:.85rem;margin:10px 0 0">${U.day.done?'✅ Done for today. New missions tomorrow.':`Complete all three for +${MBONUS[U.day.t]} XP (${TIERS[U.day.t]}). New missions every day.`}</p>${missionRowsHTML()}</div></div>`}
@@ -41,7 +41,7 @@ function inviteHTML(){const n=typeof NOTE!=='undefined'?NOTE.filter(x=>!x.seen).
 function paperTile(){if(typeof ppLine!=='function')return null;const L=ME&&ME.sid===LECTURER,open=Date.now()>=PAPER_AT;
   return ['📝','Practice paper',L?'Preview':open?ppLine():'🔒 Opens Sun 22 Nov','#/paper',!L&&!open]}
 function tilesHTML(){const T=(typeof homeTiles==='function'?homeTiles():[]).concat([paperTile()].filter(Boolean));
-  return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile${x[4]?' locked':''}" href="${x[3]}"${x[3]==='#/paper'?' id="tpaper"':''}><span class="em">${x[0]}</span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></a>`).join('')}</div>`}
+  return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile${x[4]?' locked':''}" href="${x[3]}"${x[3]==='#/paper'?' id="tpaper"':''}><span class="em">${x[0]}</span><span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></span></a>`).join('')}</div>`}
 function home(){if(!U)return;rollDay();if(ME.sid===LECTURER)return lectHome();
   shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}${inboxHTML()}${inviteHTML()}${tilesHTML()}`);
   const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)}}
@@ -78,7 +78,7 @@ function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
 /* ---------- Practice, backup ---------- */
 ROUTES.practice=()=>{
   const L=ME.sid===LECTURER;shell('#/practice',`<h1>Practice</h1>${L?'<p class="muted" data-lect>Try any question yourself. Nothing you do here earns XP or reaches the class.</p>':''}${tilesHTML()}
-  ${L?'':`<h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><b class="lex">Flashcards</b><small class="muted">Key terms</small></a></div>
+  ${L?'':`<h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></span></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><span><b class="lex">Flashcards</b><small class="muted">Key terms</small></span></a></div>
   ${typeof socialCardHTML==='function'?socialCardHTML():''}`}`)};
 ROUTES.backup=()=>{shell('#/backup',`<p><a href="#/">← Home</a></p><div class="card" id="bk"><div class="row" style="justify-content:space-between"><h1 style="margin:0;font-size:1.4rem">💾 Save my progress</h1><span class="tag" id="bkl"></span></div>
   <p class="muted" style="font-size:.9rem;margin:8px 0 12px">${cloudOn()?'Your progress saves to your account. A backup copy is an extra safety net.':'Your progress lives on this device only. Save a backup to move it to another phone or laptop, or to keep it safe before clearing your browser.'}</p>
