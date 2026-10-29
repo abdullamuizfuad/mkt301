@@ -24,7 +24,7 @@ async function page(o={}){const ctx=await browser.newContext({viewport:{width:o.
     /* the Lecturer tab's blocks and a profile's sections start folded: open them all for the tests */
     if(/^#\/lecturer/.test(h)&&await p.$('[data-lfall="1"]')){await p.click('[data-lfall="1"]');await p.waitForTimeout(300)}
     if(/^#\/student\//.test(h)){for(let i=0;i<25&&!await p.$('#prof details.sec');i++)await p.waitForTimeout(200);await p.evaluate(()=>document.querySelectorAll('#prof details.sec').forEach(d=>d.open=true));await p.waitForTimeout(100)}};
-  p.done=async()=>{const w=await p.evaluate(()=>[document.documentElement.scrollWidth,innerWidth]);ok(w[0]<=w[1],`horizontal scroll ${w[0]}>${w[1]}`);ok(!p.errs.length,p.errs.join('\n'));await ctx.close()};
+  p.done=async()=>{const w=await p.evaluate(()=>[document.documentElement.scrollWidth,innerWidth,[...document.querySelectorAll('body *')].filter(e=>e.getBoundingClientRect().right>innerWidth+.5).slice(-3).map(e=>e.tagName+'.'+e.className+'#'+e.id).join(' ')]);ok(w[0]<=w[1],`horizontal scroll ${w[0]}>${w[1]} (${w[2]}) at ${await p.evaluate(()=>location.hash)}`);ok(!p.errs.length,p.errs.join('\n'));await ctx.close()};
   return p}
 /* sign-in screen → PIN step */
 async function toPin(p,sid,name){await p.fill('#nm',name||'Test Student');await p.type('#sid',sid.slice(1));await p.waitForTimeout(300);await p.click('#go');await p.waitForSelector('#pin')}
@@ -425,7 +425,7 @@ async wild(){if(!R2)return;const al=/400|403|Failed to load resource|identitytoo
   const l2=await page({w:1280,h:900,allow:al});await signIn(l2,L,PINL);await tourOff(l2);
   await l2.evaluate(()=>CLOUD.put('wild/wT3',{closes:CLOUD.when(Date.now()-1000)},true));await l2.go('#/wild/wT3');await waitFor(l2,()=>!!document.querySelector('[data-win]'));await shot(l2,'wild-live',true);
   await l2.click('[data-win]');const d=await waitDoc('wild','wT3',x=>x.win);ok(d&&d.win.stringValue===C&&d.st.stringValue==='done','the winner was not saved');await l2.done();
-  await c.go('#/wild/wT3');await waitFor(c,()=>!!U.log['wildwin:wT3']);await c.done()},
+  await c.go('#/wild/wT3');await waitFor(c,()=>!!U.log['wildwin:wT3']);await c.waitForTimeout(900);await c.done()},
 /* tools/wild/open.mjs and close.mjs against the emulators: the week's top 5, the document, the invites, then ranked results */
 async wildTools(){if(!R2)return;const P='mkt301'.toUpperCase(),run=(f,a)=>spawnSync(process.execPath,[path.join(ROOT,'tools/wild',f)].concat(a),{encoding:'utf8',
     env:Object.assign({},process.env,{[P+'_EMU']:'1',[P+'_LECTURER_PIN']:PINL})});

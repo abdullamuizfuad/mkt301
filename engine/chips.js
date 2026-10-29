@@ -20,7 +20,7 @@ function chipsUI(host,it,o){o=o||{};const sel=(o.sel||[]).slice(),ord=(()=>{cons
     <div class="chips cpool">${ord.filter(j=>!sel.includes(j)).map(j=>`<button type="button" class="chip" data-in="${j}" ${done?'disabled':''}>${esc(it.chips[j].t)}</button>`).join('')}</div>
     ${done&&o.fb!==false?`<div class="fb ${R.s===R.max?'ok':'no'}" style="margin-top:10px"><b>${R.s}/${R.max} points</b>${R.dec?` · ${R.dec} decoy${R.dec===1?'':'s'} used (−${R.dec})`:''}
       <div style="margin-top:6px"><b>A strong paragraph:</b> ${esc(chipPara(it,R.best))}</div>
-      ${it.chips.map((c,j)=>!c.ok&&(sel.includes(j)||o.fb==='all')?`<div>✗ <i>${esc(c.t)}</i>: ${esc(c.w||'')}</div>`:'').join('')}</div>`:''}
+      ${it.chips.map((c,j)=>!c.ok&&(sel.includes(j)||o.fb==='all')?`<div style="margin-top:6px">✗ <i>${esc(c.t)}</i><br><span class="muted">Why not: ${esc(c.w||'')}</span></div>`:'').join('')}</div>`:''}
     <div class="row" style="margin-top:10px">${done?'':`<button type="button" class="btn" data-ck ${sel.length?'':'disabled'}>${esc(o.btn||'Check my paragraph')}</button>`}</div>`;
     host.querySelectorAll('[data-in]').forEach(b=>b.onclick=()=>{sel.push(+b.dataset.in);o.onChange&&o.onChange(sel.slice());draw()});
     host.querySelectorAll('[data-out]').forEach(b=>b.onclick=()=>{sel.splice(+b.dataset.out,1);o.onChange&&o.onChange(sel.slice());draw()});
