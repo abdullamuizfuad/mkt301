@@ -123,7 +123,7 @@ Extension points: `ROUTES[name]=h=>…` adds a page at `#/name/...`; `onHook('be
 
 ## Simple home (after Version 2.1)
 
-Status: **built on `night`**, site and cloud suites green; merged to `main` once backed up (see the commits in git log).
+Status: **live** (main: MKT301 `32b2cb5`, MKT101 `62625c1`). Site suites MKT301 32/32, MKT101 40/40; cloud suites 28/28 each on the FINAL rules. Backed up first (MKT101 40 students, MKT301 0).
 
 - **Home ("Today")**, `engine/simple.js` `home()` replaces the course `home()` functions:
   - a header strip: avatar, name and @username, ✏️ Edit profile (→ `#/avatar`), level bar, 7 streak blocks, freezes
