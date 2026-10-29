@@ -14,7 +14,7 @@ Shared by MKT101 (`abdullamuizfuad/mkt101-cases`) and MKT301 (`abdullamuizfuad/m
 | 5 | Question generation and editor, weekly report, backups, attendance, hints, a11y and performance, new-term rollover | **live** (see Phase 5 notes) |
 | Release | Version 2.1: one-time sign-out, What's new popup, name confirmation | **live** (`engine/release.js`) |
 | Simple home | Today home, My progress, tab bar, View as student, lecturer home and blocks | see "Simple home" below |
-| Weekly challenge | 6th-spot challenge, paragraph builder, Refer to notes, MKT301 notes | see "Weekly challenge" below |
+| Weekly challenge | 6th-spot challenge, paragraph builder, Refer to notes, MKT301 notes | **live**; needs the new FINAL rules published before Mon 2 Nov, 16:00 |
 
 ## Engine layout (Phase 0)
 
