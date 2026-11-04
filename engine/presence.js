@@ -544,5 +544,5 @@ const presSessRows=(ss,held,sid,u)=>ss.length?`<div class="tablewrap"><table><tr
 #livebar .btn.sm{min-height:34px}#livebar .lbfb{flex-basis:100%;font-size:.86rem;background:color-mix(in srgb,var(--teal) 14%,transparent);border-radius:8px;padding:4px 8px}
 .sxq{margin:4px 0 10px;padding-left:1.2em}.sxq li{margin:6px 0}.sxq .muted{font-size:.82rem}.sxq .ok{color:var(--teal)}.sxfb{margin:8px 0 0;padding-left:1.1em;font-size:.88rem}
 body.tut nav.tabs,body.tut .tabbar,body.tut .tabmore{display:none!important}
-body.proj #lvmain,body.proj #lvfc,body.proj .tabbar,body.proj header.top,body.proj #livebar{display:none!important}body.proj .sxpanel{font-size:1.3rem}body.proj .sxpanel h2{font-size:2rem}body.proj .sxpanel h3{font-size:1.5rem;margin-top:22px}body.proj .sxpanel .stat b{font-size:2.2rem}
+body.proj #lvmain,body.proj #lvfc,body.proj #lvac,body.proj nav.tabs,body.proj .tabbar,body.proj header.top,body.proj #livebar{display:none!important}body.proj .sxpanel{font-size:1.3rem}body.proj .sxpanel h2{font-size:2rem}body.proj .sxpanel h3{font-size:1.5rem;margin-top:22px}body.proj .sxpanel .stat b{font-size:2.2rem}
 .sxtl summary{cursor:pointer;font-size:.78rem;color:var(--muted);margin-top:4px}.sxtl ol{margin:4px 0 0;padding-left:1.1em;font-size:.78rem;max-height:220px;overflow:auto}.sxtl li{margin:1px 0}`;document.head.append(s)})();
