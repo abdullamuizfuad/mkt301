@@ -90,6 +90,19 @@ async sxatt(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>{
   ok(/Partial/.test(r.before[3]),'partial: '+r.before[3]);ok(/Absent/.test(r.before[4]),'absent: '+r.before[4]);ok(/Present/.test(r.after)&&r.W.length===1&&r.W[0][1].m.S000006==='p','override not saved: '+r.after+JSON.stringify(r.W));
   ok(r.csv.split('\n')[0].includes('"Status","Set by lecturer","Joined","Minutes present","On screen %"')&&r.csv.includes('"Dee NoPhone","S000004"'),'CSV: '+r.csv.slice(0,200));
   await shot(l,'sx-attendance',true);await l.done()},
+/* sessions before the answer log: the session day's MCQs and plans (≈); then "Create reflection" on an ended report */
+async sxday(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>{const T=Date.parse('2026-11-04T15:00:00+05:00'),d='2026-11-04',W=[];ME.cloud=true;CLOUD.ok=true;PR.r3=true;
+    const st=sessStats([{id:'S000002',u:{mday:{d,ids:{'t9-5':1,'t8-23':1,'t9-12':1}},log:{'mcq:t8-23:2026-11-04':1,'mcq:t9-12:2026-11-04':1,'plan:s9a:2026-11-04':1}}},{id:'S000003',u:{mday:{d,ids:{'t9-5':1,'t8-23':1}},log:{'mcq:t8-23:2026-11-04':1}}},{id:'S000004',u:{mday:{d:'2026-11-03',ids:{'t9-5':1}},log:{}}}],{id:'D1',startedAt:T,endedAt:T+90*60e3});
+    CLOUD.noField=()=>'DEL';CLOUD.put=(p,x)=>{W.push([p,JSON.parse(JSON.stringify(x))]);return Promise.resolve()};CLOUD.get=async p=>p.endsWith('/lect/rep')?{rows:{S000002:{n:'Bee',pct:90,on:4000},S000003:{n:'Cee',pct:70,on:3000}}}:null;CLOUD.docs=async()=>[];
+    const S={id:'D1',name:'Week 11 tutorial',active:false,startedAt:T,endedAt:T+90*60e3,endsAt:T+180*60e3,fb:[],rep:{S000002:{n:'Bee',pct:90,on:4000},S000003:{n:'Cee',pct:70,on:3000}}};
+    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S000002',name:'Bee',u:{mday:{d,ids:{'t9-5':1,'t8-23':1}},log:{'mcq:t8-23:2026-11-04':1}}},{id:'S000003',name:'Cee',u:{mday:{d,ids:{'t9-5':1}},log:{}}}]),0);
+    CLOUD.watchSessionDoc=(id,cb)=>setTimeout(()=>cb(S),0);CLOUD.watchPresence=()=>{};location.hash='#/session/D1';await new Promise(r=>setTimeout(r,500));
+    const t=document.querySelector('#srp').textContent;document.querySelector('#srrb').click();await new Promise(r=>setTimeout(r,300));
+    return {avg:st.avg,est:st.est,miss:st.missed.map(e=>e.id+':'+e.pw).join(),cover:st.cover+'/'+st.miss,t,W:W.map(x=>[x[0],x[1]])}});
+  ok(r.avg===60&&r.est&&r.miss==='t9-5:100','day fallback: '+JSON.stringify(r).slice(0,300));ok(r.cover==='2/1','coverage: '+r.cover);
+  ok(r.t.includes("Based on the day's practice"),'≈ day note missing');const P=r.W.map(x=>x[0]);
+  ok(P.includes('sessions/D1/me/S000002')&&P.includes('sessions/D1/lect/rep'),'reflection writes: '+P.join());const rf=r.W.find(x=>x[0]==='sessions/D1'&&x[1].refl);ok(rf&&rf[1].refl.est===1&&rf[1].refl.ar[0].id==='t9-5'&&rf[1].nj===2,'reflection: '+JSON.stringify(rf));
+  ok(r.W.some(x=>x[0]==='sessions/D1'&&x[1].rep==='DEL'&&x[1].nj===2),'old rows not moved off the session doc');await l.done()},
 /* the lecturer's report: XP and activity columns, class totals, a timeline, the CSV; a student's progress shows their own XP and nothing lecturer-only */
 async sxreport(){const T0=Date.now()-3*3600e3;
   const mk=(T,m)=>({S:{id:'R1',name:'Week 12 tutorial',active:false,startedAt:T,endedAt:T+100*m,endsAt:T+180*m,rep:{S081441:{n:'Aminath Test',on:5000,idle:200,away:100,left:2,lg:60,pct:94,pr:'Section A',j:T+5*m},

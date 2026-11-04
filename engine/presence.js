@@ -298,21 +298,28 @@ function qInfo(id){id=String(id);const num=s=>{const m=/(?:Topic|Week)\s*(\d+)/i
   const e=typeof qIndex==='function'?qIndex()[id]:null;if(e&&e.q){const n=+(e.q.t||e.q.week)||num(e.label);return fin(e.q.q,(e.q.chips||[]).filter(c=>c.g).map(c=>c.t).slice(0,4).join('; '),n?wd+' '+n:(e.label||'').split(':')[0],n)}
   return fin(id,'','Other practice')}
 /* one student's answers inside their session window, or null if their device wasn't logging answers yet */
-function sxAns(u,S,join){u=u||{};join=join||(u.sess&&u.sess[S.id]&&u.sess[S.id].j)||0;const w=sxWin(S,join);if(!u.qaSince||u.qaSince>w.a)return null;
+function sxAns(u,S,join){u=u||{};join=join||(u.sess&&u.sess[S.id]&&u.sess[S.id].j)||0;const w=sxWin(S,join);if(!u.qaSince||u.qaSince>w.a)return sxDay(u,w);
   return (u.qa||[]).filter(x=>{const t=x[0]*1000;return t>=w.a&&t<=w.b})}
+/* before the answer log: the session day's practice (≈). MCQs from U.mday (that day's question ids; right = an mcq:<id>:<day> award, so
+   rushed right answers count as wrong), plans from plan:<id>:<day> awards (topics only, no score). Null if nothing from that day. */
+function sxDay(u,w){const d=new Date(w.a+5*36e5).toISOString().slice(0,10),L=u.log||{},o=[],t=Math.round(w.a/1000);
+  if(u.mday&&u.mday.d===d)Object.keys(u.mday.ids||{}).forEach(id=>o.push([t,id,L['mcq:'+id+':'+d]?1:0,'']));
+  Object.keys(L).forEach(k=>{const m=/^plan:(.+):(\d{4}-\d{2}-\d{2})$/.exec(k);if(m&&m[2]===d)o.push([t,m[1],null,'plan'])});
+  if(!o.length)return null;o.est=true;return o}
 /* rows: [{id, u, join}] → class figures for the session */
 function sessStats(rows,S){const Q={},per={},top={};let tot=0,sum=0,cover=0,miss=0;
-  rows.forEach(r=>{const a=sxAns(r.u,S,r.join);if(!a){miss++;return}cover++;const seen=new Set();let s=0;
-    a.forEach(([t,q,ok,p])=>{s+=ok;tot++;sum+=ok;const I=qInfo(q);top[I.top]=(top[I.top]|0)+1;if(seen.has(q))return;seen.add(q);
+  let est=false;rows.forEach(r=>{const a=sxAns(r.u,S,r.join);if(!a){miss++;return}cover++;if(a.est)est=true;const seen=new Set();let s=0,ns=0;
+    a.forEach(([t,q,ok,p])=>{const I=qInfo(q);top[I.top]=(top[I.top]|0)+1;if(ok==null)return;s+=ok;ns++;tot++;sum+=ok;if(seen.has(q))return;seen.add(q);
       const e=Q[q]||(Q[q]={id:q,n:0,w:0,picks:{}});e.n++;if(ok<.5){e.w++;if(p!==''&&p!=null&&typeof p==='number')e.picks[p]=(e.picks[p]|0)+1}});
-    per[r.id]={n:a.length,sc:a.length?Math.round(s/a.length*100):null,miss:[...new Set(a.filter(x=>x[2]<.5).map(x=>x[1]))]}});
+    per[r.id]={n:ns,sc:ns?Math.round(s/ns*100):null,miss:[...new Set(a.filter(x=>x[2]!=null&&x[2]<.5).map(x=>x[1]))],est:!!a.est}});
   const qs=Object.values(Q).map(e=>Object.assign(e,{pw:Math.round(e.w/e.n*100)})),need=Math.min(2,cover);
-  return {avg:tot?Math.round(sum/tot*100):null,n:tot,per,cover,miss,missed:qs.filter(e=>e.w).sort((a,b)=>b.pw-a.pw||b.n-a.n),
+  return {avg:tot?Math.round(sum/tot*100):null,n:tot,per,cover,miss,est,missed:qs.filter(e=>e.w).sort((a,b)=>b.pw-a.pw||b.n-a.n),
     right:qs.filter(e=>e.n>=need&&e.pw<=20).sort((a,b)=>b.n-a.n||a.pw-b.pw),topics:Object.entries(top).sort((a,b)=>b[1]-a[1])}}
 const sxPick=e=>{const k=Object.entries(e.picks||{}).sort((a,b)=>b[1]-a[1])[0];return k?qInfo(e.id).opt(+k[0]):''};
 /* the live feedback panel (lecturer, #/live): figures, most missed, mostly right, topics */
 function sxPanelHTML(st,all){if(!st)return '<p class="muted">Loading answers…</p>';const M=st.missed,top=all?M:M.slice(0,5);
-  return `<div class="stats" style="margin:8px 0"><div class="stat"><b>${st.avg==null?'–':st.avg+'%'}</b><span>average score</span></div><div class="stat"><b>${st.n}</b><span>answers</span></div><div class="stat"><b>${M.length}</b><span>questions missed</span></div></div>
+  return `<div class="stats" style="margin:8px 0"><div class="stat"><b>${st.avg==null?'–':(st.est?'≈ ':'')+st.avg+'%'}</b><span>average score</span></div><div class="stat"><b>${st.n}</b><span>answers</span></div><div class="stat"><b>${M.length}</b><span>questions missed</span></div></div>
+  ${st.est?'<p class="muted" style="font-size:.8rem;margin:0 0 8px"><b>≈ Based on the day\'s practice:</b> some students\' devices weren\'t logging single answers yet, so their MCQs of that day count (a right answer given too fast counts as wrong) and their plans count towards topics.</p>':''}
   ${st.miss?`<p class="muted" style="font-size:.8rem;margin:0 0 8px">Answer details from ${st.cover} of ${st.cover+st.miss} joined students: the others haven't opened the updated site since this session started (their XP is an estimate, ≈).</p>`:''}
   <h3>❌ Most missed</h3>${top.length?`<ol class="sxq">${top.map(e=>{const I=qInfo(e.id),p=sxPick(e);return `<li><b>${esc(I.q)}</b><div class="muted">${e.pw}% wrong · ${e.n} tried${I.ans?` · <span class="ok">Correct: ${esc(I.ans)}</span>`:''}${p?` · most common wrong pick: “${esc(p)}”`:''}</div></li>`}).join('')}</ol>${M.length>5?`<button class="btn ghost sm" id="sxall">${all?'Show fewer ▴':'Show all '+M.length+' ▾'}</button>`:''}`:'<p class="muted">Nothing missed yet.</p>'}
   <h3>✅ Most got right (80%+)</h3>${st.right.length?`<ul class="sxq">${st.right.slice(0,6).map(e=>`<li>${esc(qInfo(e.id).q)} <span class="muted">· ${100-e.pw}% right of ${e.n}</span></li>`).join('')}</ul>`:'<p class="muted">Not enough answers yet.</p>'}
@@ -329,11 +336,11 @@ function sxFbSeen(s){if(!s||!ME||ME.sid===LECTURER||VIEWAS)return;const fb=s.fb|
 /* the reflection and each student's own stats, built when the session ends (or later from the report) */
 function sxReflect(S,st,xps){const ar=(st?st.missed:[]).slice(0,5).map(e=>{const I=qInfo(e.id);return {id:e.id,q:I.q.slice(0,200),a:I.ans.slice(0,200),p:e.pw,h:I.href}}),
   sr=(st?st.right:[]).slice(0,5).map(e=>({id:e.id,q:qInfo(e.id).q.slice(0,200),p:100-e.pw}));
-  return {cov:(st?st.topics:[]).slice(0,8),avg:st?st.avg:null,xp:xps.length?Math.round(xps.reduce((t,x)=>t+x,0)/xps.length):null,nj:xps.length,str:sr,ar,note:(S.refl&&S.refl.note)||'',at:Date.now()}}
+  return {est:st&&st.est?1:0,cov:(st?st.topics:[]).slice(0,8),avg:st?st.avg:null,xp:xps.length?Math.round(xps.reduce((t,x)=>t+x,0)/xps.length):null,nj:xps.length,str:sr,ar,note:(S.refl&&S.refl.note)||'',at:Date.now()}}
 async function sxPublish(S,rep,users,ps){const jn={};(ps||[]).forEach(p=>jn[p.id]=p.joinedAt);const by={};(users||[]).forEach(x=>by[x.id]=x.u);
   const ids=Object.keys(rep),st=sessStats(ids.map(id=>({id,u:by[id],join:jn[id]||rep[id].j})),S),xps=[];
   const me={};ids.forEach(id=>{const r=rep[id],x=sessXP(by[id],S,jn[id]||r.j,r),p=st.per[id];if(x)xps.push(x.xp);
-    me[id]={j:jn[id]||r.j||null,on:r.on|0,pct:r.pct|0,xp:x?x.xp:null,est:x&&x.est?1:0,sc:p?p.sc:null,n:p?p.n:0,miss:p?p.miss.slice(0,12):[]}});
+    me[id]={j:jn[id]||r.j||null,on:r.on|0,pct:r.pct|0,xp:x?x.xp:null,est:x&&x.est?1:0,sest:p&&p.est?1:0,sc:p?p.sc:null,n:p?p.n:0,miss:p?p.miss.slice(0,12):[]}});
   const refl=sxReflect(S,st,xps);
   await CLOUD.put('sessions/'+S.id+'/lect/rep',{rows:rep},true);
   await Promise.all(ids.map(id=>CLOUD.put('sessions/'+S.id+'/me/'+id,me[id]).catch(()=>{})));
@@ -366,13 +373,13 @@ function presRoutes(){ROUTES.sessions=h=>{if(!cloudOn())return shell('#/progress
 async function sxSessPage(id){shell('#/progress',`<p><a href="#/sessions">← Past tutorial sessions</a></p><div id="sxsp"><p class="muted">Loading…</p></div>`);
   let S=null,me=null;try{S=await CLOUD.getSession(id)}catch(e){}const el=$('#sxsp');if(!el)return;if(!S){el.innerHTML='<div class="card"><p class="muted">Session not found.</p></div>';return}
   if(ME.sid!==LECTURER&&await sessR3())try{me=await CLOUD.get('sessions/'+id+'/me/'+ME.sid)}catch(e){}
-  const own=U&&U.sess&&U.sess[id],x=sessXP(U,S),a=sxAns(U,S),R=S.refl,mine=me||(own?{j:own.j,pct:presFocus(own).pct,on:own.on|0,xp:x?x.xp:null,est:x&&x.est,sc:a&&a.length?Math.round(a.reduce((t,v)=>t+v[2],0)/a.length*100):null,n:a?a.length:0,miss:a?[...new Set(a.filter(v=>v[2]<.5).map(v=>v[1]))]:[]}:null);
+  const own=U&&U.sess&&U.sess[id],x=sessXP(U,S),a=sxAns(U,S),R=S.refl,mine=me||(own?{j:own.j,pct:presFocus(own).pct,on:own.on|0,xp:x?x.xp:null,est:x&&x.est,sest:a&&a.est?1:0,...(b=>({sc:b.length?Math.round(b.reduce((t,v)=>t+v[2],0)/b.length*100):null,n:b.length}))((a||[]).filter(v=>v[2]!=null)),miss:a?[...new Set(a.filter(v=>v[2]!=null&&v[2]<.5).map(v=>v[1]))]:[]}:null);
   const qli=ids=>`<ul class="sxq">${ids.map(q=>{const I=qInfo(q);return `<li>${esc(I.q)}${I.ans?`<div class="muted"><span class="ok">Correct idea: ${esc(I.ans)}</span></div>`:''}${I.href?` <a class="btn ghost sm" href="${I.href}">📖 Refer to notes</a>`:''}</li>`}).join('')}</ul>`;
   el.innerHTML=`<div class="card"><h1 style="margin:0">${esc(S.name)}</h1><p class="muted">${S.startedAt?new Date(S.startedAt).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Indian/Maldives'}):''}</p>
-  ${ME.sid===LECTURER?'':`<h2>Your session</h2>${mine?`<div class="stats"><div class="stat"><b>✓</b><span>joined${mine.j?' '+sxTime(mine.j):''}</span></div><div class="stat"><b>${Math.round((mine.on|0)/60)} min</b><span>on screen (${mine.pct|0}%)</span></div><div class="stat"><b>${mine.xp==null?'–':(mine.est?'≈ ':'')+mine.xp}</b><span>XP in session</span></div><div class="stat"><b>${mine.sc==null?'–':mine.sc+'%'}</b><span>your score${mine.n?' ('+mine.n+' answers)':''}</span></div></div>
+  ${ME.sid===LECTURER?'':`<h2>Your session</h2>${mine?`<div class="stats"><div class="stat"><b>✓</b><span>joined${mine.j?' '+sxTime(mine.j):''}</span></div><div class="stat"><b>${Math.round((mine.on|0)/60)} min</b><span>on screen (${mine.pct|0}%)</span></div><div class="stat"><b>${mine.xp==null?'–':(mine.est?'≈ ':'')+mine.xp}</b><span>XP in session</span></div><div class="stat"><b>${mine.sc==null?'–':(mine.sest?'≈ ':'')+mine.sc+'%'}</b><span>your score${mine.n?' ('+mine.n+' answers)':''}</span></div></div>${mine.sest||mine.est?'<p class="muted" style="font-size:.78rem">≈ = based on the day\'s practice (before single answers were recorded).</p>':''}
     ${(mine.miss||[]).length?`<h3>Questions you missed</h3>${qli(mine.miss)}`:mine.n?'<p>You got everything right. 🎉</p>':''}`:'<p class="muted">You didn\'t join this session.</p>'}`}
   <h2>Session reflection</h2>${R?`${R.note?`<div class="callout"><b>From your lecturer:</b> ${esc(R.note)}</div>`:''}<p><b>Covered:</b> ${(R.cov||[]).map(([t,n])=>esc(t)).join(' · ')||'–'}</p>
-    <p><b>Class:</b> ${R.nj|0} joined · average score ${R.avg==null?'–':R.avg+'%'} · ${R.xp==null?'–':R.xp} XP each on average</p>
+    <p><b>Class:</b> ${R.nj|0} joined · average score ${R.avg==null?'–':(R.est?'≈ ':'')+R.avg+'%'} · ${R.xp==null?'–':R.xp} XP each on average</p>
     ${(R.str||[]).length?`<h3>✅ Strengths</h3><ul class="sxq">${R.str.map(e=>`<li>${esc(e.q)} <span class="muted">· ${e.p}% right</span></li>`).join('')}</ul>`:''}
     ${(R.ar||[]).length?`<h3>🤔 Areas to reflect on</h3><ul class="sxq">${R.ar.map(e=>`<li><b>${esc(e.q)}</b>${e.a?`<div class="muted"><span class="ok">Correct idea: ${esc(e.a)}</span></div>`:''}${e.h?` <a class="btn ghost sm" href="${esc(e.h)}">📖 Refer to notes</a>`:''}</li>`).join('')}</ul>`:''}
     ${(S.fb||[]).length?`<h3>💬 Feedback during the session</h3><ul class="sxfb">${sxFbList(S.fb)}</ul>`:''}`:'<p class="muted">Your lecturer hasn\'t published a reflection for this session yet.</p>'}</div>`}
@@ -411,7 +418,7 @@ function sessionReport(id){if(ME.sid!==LECTURER)return home();if(!cloudOn())retu
       <p><b>Covered:</b> ${(R.cov||[]).map(([t])=>esc(t)).join(' · ')||'–'} · <b>Average score:</b> ${R.avg==null?'–':R.avg+'%'} · <b>XP each:</b> ${R.xp==null?'–':R.xp}</p>
       <p style="font-size:.88rem">${(R.ar||[]).length} areas to reflect on · ${(R.str||[]).length} strengths · ${(S.fb||[]).length} feedback messages</p>
       <label for="srnote"><b>Your note to the class</b> (optional)</label><textarea id="srnote" maxlength="600" style="min-height:70px">${esc(R.note||'')}</textarea><div class="row" style="margin-top:6px"><button class="btn sm" id="srns">Save note</button><button class="btn ghost sm" id="srrb">↻ Rebuild from the latest answers</button></div>`
-      :'<p>No reflection yet for this session (it ended before reflections existed, or on the older rules).</p><button class="btn sm" id="srrb">Build and publish the reflection</button>'}`;
+      :'<p>No reflection yet for this session (it ended before reflections existed, or on the older rules). Create one from the answers and practice students did during the session; you can add a note and rebuild it later.</p><button class="btn sm" id="srrb">🪞 Create reflection</button>'}`;
     const ns=$('#srns');if(ns)ns.onclick=async()=>{const note=$('#srnote').value.trim().slice(0,600);try{await CLOUD.put('sessions/'+S.id,{refl:{note}},true);toast('🪞','Note saved','Students see it now')}catch(e){toast('⚠️','Not saved',CLOUD.say(e))}};
     const rb=$('#srrb');if(rb)rb.onclick=async()=>{rb.disabled=true;try{const users=USERS||await usersOnce(),ps=(P||[]),o=await sxPublish(S,rep,users,ps);if(S.refl&&S.refl.note)o.refl.note=S.refl.note;
       await CLOUD.put('sessions/'+S.id,{refl:o.refl,nj:o.nj},true);if(S.rep)await sxMigrate([S]);toast('🪞','Reflection published','Students can see it now')}catch(e){toast('⚠️','Not published',CLOUD.say(e));rb.disabled=false}}};
