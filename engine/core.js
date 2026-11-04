@@ -359,11 +359,11 @@ function award(key,xp,label,quiet){
   if(VIEWAS||ME.sid===LECTURER||key&&U.log[key])return false;/* the lecturer is never a player: no XP */
   if(key){U.log[key]=1;U.gain=U.gain||{};U.gain[key]=xp}
   rollDay();
-  if(!U.days.includes(today())){U.days.push(today());U.days=U.days.slice(-60);U.xp+=10;toast('📅','Daily check-in','+10 XP · streak '+streak(U))}
+  if(!U.days.includes(today())){U.days.push(today());U.days=U.days.slice(-60);U.xp+=10;toast('📅','Daily check-in','+10 XP · streak '+streak(U));hook('checkin',10)}
   const before=level(U.xp).i;U.xp+=xp;
   if(xp&&!quiet)toast('✨',label,'+'+xp+' XP');
   if(level(U.xp).i>before)toast('🚀','Level up!','You are now '+level(U.xp).name);
-  checkBadges();save();hud();hook('award',key,xp);return true}
+  checkBadges();hook('award',key,xp);save();hud();return true}
 function pinStep(sid,name,mt,mode){mode=mode||'in';const card=document.querySelector('.signcard'),em=CLOUD.email(sid);
   card.innerHTML=`<h2 style="margin-top:6px">${mode==='in'?'Enter your PIN':'Create your PIN'}</h2>
   <p class="muted" style="font-size:.88rem;margin:0 0 10px">${esc(sid)} · ${esc(sid===LECTURER?'Lecturer access':em)} · <a href="javascript:void 0" id="chg">Change</a></p>

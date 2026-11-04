@@ -47,7 +47,7 @@ function presStart(){if(PR.started)return;PR.started=true;const poke=()=>{PR.las
   PR.iv=setInterval(presTick,1000)}
 
 /* called by the page after sign-in (start) and sign-out */
-function presOn(){PR.last=PR.lt=Date.now();PR.pend=PR.pendx=0;PR.fc=0;PR.gap=0;PR.next=ST.BRK;presStart();presBar()}
+function presOn(){alHooks();alStart();PR.last=PR.lt=Date.now();PR.pend=PR.pendx=0;PR.fc=0;PR.gap=0;PR.next=ST.BRK;presStart();presBar()}
 /* called once the cloud account is ready (after the first sync): live sessions; quietly off if the rules don't allow them yet */
 function presCloud(){if(!cloudOn()||!CLOUD.watchLatestSession)return;
   CLOUD.watchLatestSession(s=>{presSession(s)},()=>{PR.sess=null;PR.sessOn=false;PR.joined=false;presBar()});presClaimOld()}
@@ -115,7 +115,7 @@ function presBar(){let b=document.getElementById('livebar');const show=typeof ME
   if(!show){if(b)b.remove();return}
   if(!b){b=document.createElement('div');b.id='livebar';b.setAttribute('role','status');const app=document.getElementById('app');app.parentNode.insertBefore(b,app)}
   const S=PR.sess,lect=ME.sid===LECTURER,dot={on:'🟢 On screen',idle:'🟡 Idle',away:'🔴 Away'}[PR.st]||'🟢 On screen';
-  b.innerHTML=`<div class="wrap lbin"><span class="live"><i></i>LIVE</span>${!lect&&typeof lectAvHTML==='function'?lectAvHTML(26):''}<b>${esc(S.name)}</b>${lect?`<a class="btn sm" href="#/live">Open live board</a>`:PR.joined?`<span class="muted">You're joined · ${dot}</span><button class="btn ghost sm" id="lbinfo" aria-label="What is shared">ⓘ</button>`:`<button class="btn sm" id="lbjoin">Join</button>`}</div>`;
+  b.innerHTML=`<div class="wrap lbin"><span class="live"><i></i>LIVE</span>${!lect&&typeof lectAvHTML==='function'?lectAvHTML(26):''}<b>${esc(S.name)}</b>${lect?`<a class="btn sm" href="#/live">Open live board</a>`:PR.joined?`<span class="muted">You're joined · ${dot}</span>${(x=>x?`<span class="tag" id="lbxp">+${x.xp} XP this session</span>`:'')(sxMine())}<button class="btn ghost sm" id="lbinfo" aria-label="What is shared">ⓘ</button>`:`<button class="btn sm" id="lbjoin">Join</button>`}</div>`;
   const j=$('#lbjoin');if(j)j.onclick=presJoinAsk;const i=$('#lbinfo');if(i)i.onclick=()=>presNote(false)}
 function presNote(join){closeModal();const m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.setAttribute('aria-label','Live session');
   m.innerHTML=`<div class="card"><button class="x" aria-label="Close">✕</button><div style="font-size:2.4rem;text-align:center">🔴</div><h2 style="text-align:center;margin:4px 0 8px">${esc(PR.sess?PR.sess.name:'Live session')}</h2>
@@ -179,9 +179,11 @@ function liveRow(p,now){const off=!p.t||now-p.t>ST.OFF*1000,st=off&&p.st!=='off'
   return Object.assign({},p,{s:st,pct:tot?Math.round((p.on|0)/tot*100):0,chAt:p.joinedAt!=null?p.joinedAt+(p.ch|0)*1000:p.t})}
 async function liveFinish(id){if(liveFinish.busy)return;liveFinish.busy=1;try{const ps=await CLOUD.presenceOnce(id),now=Date.now(),names=await liveNames();const rep={};
   ps.forEach(p=>{const r=liveRow(p,now);rep[p.id]={n:(names[p.id]||'').slice(0,60),on:r.on|0,idle:r.idle|0,away:r.away|0,left:r.left|0,lg:r.longest|0,pct:r.pct,pr:String(r.pr||'').slice(0,200)}});
+  const S=(PR.sessList||[]).find(s=>s.id===id)||(PR.sess&&PR.sess.id===id?PR.sess:null);try{if(S)sxRepAdd(rep,Object.assign({},S,{endedAt:now}),await usersOnce(),ps)}catch(e){console.warn('Session XP not added',e)}
   await CLOUD.endSession(id,rep);toast('■','Session ended','Report saved: '+Object.keys(rep).length+' joined')}catch(e){toast('⚠️','Could not end the session',CLOUD.say(e))}finally{liveFinish.busy=0}}
-let LIVE_NAMES=null;
-function liveNames(){return new Promise(res=>{if(LIVE_NAMES)return res(LIVE_NAMES);let done=false;CLOUD.watchUsers(list=>{LIVE_NAMES={};list.forEach(x=>LIVE_NAMES[x.id]=x.name||'');if(!done){done=true;res(LIVE_NAMES)}},()=>{if(!done){done=true;res({})}})})}
+let LIVE_NAMES=null,LIVE_USERS=null;
+const usersOnce=()=>new Promise(res=>{let d=0;CLOUD.watchUsers(l=>{if(!d){d=1;res(l)}},()=>{if(!d){d=1;res([])}})});
+function liveNames(){return new Promise(res=>{if(LIVE_NAMES)return res(LIVE_NAMES);let done=false;CLOUD.watchUsers(list=>{LIVE_NAMES={};LIVE_USERS=list;list.forEach(x=>LIVE_NAMES[x.id]=x.name||'');if(!done){done=true;res(LIVE_NAMES)}},()=>{if(!done){done=true;res({})}})})}
 const csvDownload=(rows,name)=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download=name;a.click()};
 function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shell('#/lecturer','<div class="callout">Live sessions need the live connection.</div>');
   shell('#/lecturer',`<p><a href="#/lecturer">← Lecturer</a></p><div id="lvb"><p class="muted">Loading…</p></div>`);
@@ -207,32 +209,93 @@ function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shel
     const e=$('#lvend');if(e)e.onclick=()=>{if(confirm('End "'+S.name+'" now?'))liveFinish(S.id)}};
   const watch=()=>{if(!PR.sess)return draw();CLOUD.watchPresence(PR.sess.id,ps=>{P=ps;draw()},err=>{const el=$('#lvb');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(err))}</p>`})};
   watch();const iv=setInterval(()=>{if(!document.getElementById('lvb'))return clearInterval(iv);draw()},15000)}
+/* ---------- XP and activity per live session ----------
+   U.al: a timestamped log of every award from this version on: [seconds, key, xp]; 45 days and at most 2,500 entries kept
+   (about 100 KB). U.alSince = when this device started logging, so older sessions are known to need the estimate.
+   A student's session window runs from the later of the session start and their join time to the end (or now, while live).
+   XP in session = the XP logged inside that window plus the session's focus bonus (claimed after the end, so found by key).
+   Sessions from before U.al fall back to U.xph (XP per hour, kept 21 days): marked "≈" (estimate, whole hours) with no breakdown. */
+const AL={KEEP:45*864e5,MAX:2500};
+function alAdd(key,xp){if(typeof U==='undefined'||!U||!xp||VIEWAS)return;const now=Date.now();U.al=U.al||[];U.alSince=U.alSince||now;
+  U.al.push([Math.round(now/1000),key==null?'mission':String(key).slice(0,60),xp|0]);
+  const cut=Math.round((now-AL.KEEP)/1000);let i=0;while(i<U.al.length&&U.al[i][0]<cut)i++;if(i)U.al.splice(0,i);if(U.al.length>AL.MAX)U.al.splice(0,U.al.length-AL.MAX)}
+const alStart=()=>{if(typeof U!=='undefined'&&U&&!VIEWAS&&ME&&ME.sid!==LECTURER&&!U.alSince)U.alSince=Date.now()};
+/* registered from presOn(): this file loads before core.js defines onHook */
+function alHooks(){if(alHooks.done)return;alHooks.done=1;onHook('award',(key,xp)=>{alAdd(key,xp);if(PR.joined)setTimeout(presBar,0)});
+  onHook('checkin',xp=>alAdd('checkin:'+today(),xp));onHook('cloud',alStart)}
+/* award key prefix → activity category; * = a bonus on top of an activity already counted (XP only, not counted again) */
+const SX_MAP={mcq:'mcq',mcqr:'mcq',mqs:'mset',plan:'plan',perfect:'plan*',chip:'chip',typed:'typed',timed:'timed',ltimed:'timed',catimed:'timed',essay:'timed',
+  check:'check',lmark:'check',cacheck:'check',emark:'check',fc:'fc',rev:'rev',notes:'notes',read:'case',readall:'case*',casedone:'case*',actdone:'case',argue:'case',
+  verdict:'case',ca:'case',cadone:'case*',ess:'essay',eplan:'essay*',script:'essay',pp:'paper',ch:'chal',wk:'chal',wkteam:'chal*',bt:'chal',btp:'chal*',
+  wild:'wild',wildwin:'wild*',review:'marked',stgoal:'st',stblock:'st',sessfocus:'focus',checkin:'daily',mission:'daily',avatar:'other'};
+const SX_CAT={mcq:['MCQ','MCQs'],mset:['MCQ set','MCQ sets'],plan:['plan','plans'],chip:['paragraph','paragraphs'],typed:['typed answer','typed answers'],
+  timed:['timed answer','timed answers'],check:['self-check','self-checks'],fc:['flashcard','flashcards'],rev:['review','reviews'],notes:['notes topic','notes topics'],
+  case:['case task','case tasks'],essay:['essay step','essay steps'],paper:['practice paper answer','practice paper answers'],chal:['challenge','challenges'],
+  wild:['weekly challenge','weekly challenges'],marked:['marked answer','marked answers'],st:['screen-time bonus','screen-time bonuses'],
+  daily:['daily bonus','daily bonuses'],focus:['focus bonus','focus bonus'],other:['other','other']};
+const SX_BONUS=new Set(['st','daily','marked','focus']);/* XP that isn't practice done in the session */
+function sxCat(key){const m=SX_MAP[String(key).split(':')[0]]||'other';return {c:m.replace('*',''),n:!m.endsWith('*')}}
+/* the window [a, b] in ms for one student and one session (join = their join time, if known) */
+function sxWin(S,join,now){now=now||Date.now();const a=Math.max(S.startedAt||0,join||0),live=S.active&&(!S.endsAt||now<S.endsAt);
+  return {a,b:S.endedAt||(live?now:Math.min(now,S.endsAt||now)),live}}
+/* one student's XP and activity in a session: {xp, fx, acts:{cat:n}, cx:{cat:xp}, tl:[[ms,key,xp]], est, src} or null when unknown.
+   rep = the row saved when the session ended (its xp/acts are used when the log no longer covers the window) */
+function sessXP(u,S,join,rep){u=u||{};join=join||(u.sess&&u.sess[S.id]&&u.sess[S.id].j)||(rep&&rep.j)||0;const w=sxWin(S,join),fk='sessfocus:'+S.id,fx=((u.gain||{})[fk])|0;
+  if(u.alSince&&u.alSince<=w.a&&w.a>=Date.now()-AL.KEEP){const acts={},cx={},tl=[];let xp=0;
+    (u.al||[]).forEach(([t,k,x])=>{t*=1000;if(t<w.a||t>w.b||k===fk)return;const c=sxCat(k);xp+=x;cx[c.c]=(cx[c.c]|0)+x;if(c.n)acts[c.c]=(acts[c.c]|0)+1;tl.push([t,k,x])});
+    return {xp:xp+fx,fx,acts,cx,tl,est:false,src:'log'}}
+  if(rep&&rep.xp!=null){const f=Math.max(rep.fx|0,fx);return {xp:(rep.xp|0)+f,fx:f,acts:rep.acts||{},cx:{},tl:[],est:!!rep.est,src:'saved'}}
+  const H=u.xph||{};if(!Object.keys(H).length||typeof mvHour!=='function')return null;
+  const ha=mvHour(w.a),hb=mvHour(w.b),oldest=Object.keys(H).sort()[0];if(oldest>hb)return null;
+  let xp=0;Object.entries(H).forEach(([h,x])=>{if(h>=ha&&h<=hb)xp+=x|0});
+  return {xp:Math.max(xp,fx),fx,acts:{},cx:{},tl:[],est:true,src:'hourly'}}
+/* "12 MCQs · 2 plans · 1 paragraph" (practice only; bonuses are shown on their own) */
+function sxActs(acts,max){const e=Object.entries(acts||{}).filter(([c,n])=>n&&!SX_BONUS.has(c)).sort((a,b)=>b[1]-a[1]);
+  return e.slice(0,max||9).map(([c,n])=>n+' '+(SX_CAT[c]||SX_CAT.other)[n===1?0:1]).join(' · ')}
+const sxXP=r=>r?(r.est?'≈ ':'')+r.xp+' XP':'–';
+const sxTime=t=>new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Indian/Maldives'});
+function sxTimeline(r){if(!r||!r.tl.length)return '';return `<details class="sxtl" data-lect=""><summary>Timeline (${r.tl.length})</summary><ol>${r.tl.map(([t,k,x])=>{const c=sxCat(k).c;
+  return `<li><span class="muted">${sxTime(t)}</span> ${esc((SX_CAT[c]||SX_CAT.other)[0])} <span class="muted">${esc(String(k).split(':').slice(1,2).join(''))}</span> <b>+${x}</b></li>`}).join('')}</ol></details>`}
+/* the joined student's own bar counter, from their own log */
+function sxMine(){if(!PR.joined||!PR.sess||!U||!U.sess||!U.sess[PR.sess.id])return null;return sessXP(U,PR.sess,U.sess[PR.sess.id].j)}
+/* rows saved at the end of a session: add xp / fx / acts / j from the users docs the lecturer can read */
+function sxRepAdd(rep,S,users,ps){const by={};(users||[]).forEach(x=>by[x.id]=x.u);const jn={};(ps||[]).forEach(p=>jn[p.id]=p.joinedAt);
+  Object.keys(rep).forEach(sid=>{const r=sessXP(by[sid],Object.assign({},S,{endedAt:S.endedAt||Date.now()}),jn[sid]);if(jn[sid])rep[sid].j=jn[sid];
+    if(r){rep[sid].xp=r.xp-r.fx;rep[sid].fx=r.fx;rep[sid].acts=Object.fromEntries(Object.entries(r.acts).slice(0,20));if(r.est)rep[sid].est=1}});return rep}
+
 function sessionReport(id){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shell('#/lecturer','<div class="callout">Session reports need the live connection.</div>');
   shell('#/lecturer',`<p><a href="#/lecturer">← Lecturer</a></p><div id="srp"><p class="muted">Loading…</p></div>`);
-  let S=null,P=null;const draw=()=>{const el=$('#srp');if(!el||!S)return;const now=Date.now(),live=S.active&&(!S.endsAt||now<S.endsAt);
-    const rep=S.rep||Object.fromEntries((P||[]).map(p=>{const r=liveRow(p,now);return [p.id,{n:'',on:r.on|0,idle:r.idle|0,away:r.away|0,left:r.left|0,lg:r.longest|0,pct:r.pct,pr:r.pr||''}]}));
-    const rows=Object.entries(rep).map(([sid,r])=>Object.assign({sid},r)).sort((a,b)=>b.pct-a.pct),avg=rows.length?Math.round(rows.reduce((t,r)=>t+r.pct,0)/rows.length):0;
+  let S=null,P=null,USERS=null,drawn=0;const draw=()=>{const el=$('#srp');if(!el||!S)return;drawn=Date.now();const now=Date.now(),live=S.active&&(!S.endsAt||now<S.endsAt);
+    const rep=S.rep||Object.fromEntries((P||[]).map(p=>{const r=liveRow(p,now);return [p.id,{n:'',on:r.on|0,idle:r.idle|0,away:r.away|0,left:r.left|0,lg:r.longest|0,pct:r.pct,pr:r.pr||'',j:p.joinedAt}]}));
+    const UB={},NB={};(USERS||[]).forEach(x=>{UB[x.id]=x.u;NB[x.id]=x.name});const JN={};(P||[]).forEach(p=>JN[p.id]=p.joinedAt);
+    const rows=Object.entries(rep).map(([sid,r])=>Object.assign({sid},r,{n:r.n||NB[sid]||'',sx:USERS||r.xp!=null?sessXP(UB[sid],S,JN[sid]||r.j,r):null})).sort((a,b)=>b.pct-a.pct),avg=rows.length?Math.round(rows.reduce((t,r)=>t+r.pct,0)/rows.length):0;
     const total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:rows.length),dur=S.startedAt?Math.round(((S.endedAt||(live?now:S.endsAt))-S.startedAt)/60000):0;
+    const kn=rows.filter(r=>r.sx),xpT=kn.reduce((t,r)=>t+r.sx.xp,0),est=kn.some(r=>r.sx.est),A={};kn.forEach(r=>Object.entries(r.sx.acts).forEach(([c,n])=>A[c]=(A[c]|0)+n));
     el.innerHTML=`<div class="card"><h1 style="margin:0">${esc(S.name)}</h1><p class="muted">${S.startedAt?new Date(S.startedAt).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''} · ${dur} min${live?' · still running':''}</p>
-    <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>attended</span></div><div class="stat"><b>${avg}%</b><span>average on screen</span></div><div class="stat"><b>${rows.filter(r=>r.pct>=ST.FOCUS*100).length}</b><span>85%+ focused</span></div><div class="stat"><b>${rows.reduce((t,r)=>t+(r.left|0),0)}</b><span>switches in total</span></div></div>
-    <div class="tablewrap"><table class="wide"><tr><th>Student</th><th>On screen</th><th>Idle</th><th>Away</th><th>Times left</th><th>Longest away</th><th>Practised</th></tr>
-    ${rows.map(r=>`<tr class="click" data-sid="${esc(r.sid)}"><td>${esc(r.n||r.sid)}<div class="muted" style="font-size:.78rem">${esc(r.sid)}</div></td><td><b>${r.pct}%</b></td><td>${stFmt(r.idle|0)}</td><td>${stFmt(r.away|0)}</td><td>${r.left|0}</td><td>${stFmt(r.lg|0)}</td><td style="font-size:.82rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">Nobody joined.</td></tr>'}</table></div>
+    <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>attended</span></div><div class="stat"><b>${avg}%</b><span>average on screen</span></div><div class="stat"><b>${rows.filter(r=>r.pct>=ST.FOCUS*100).length}</b><span>85%+ focused</span></div><div class="stat"><b>${rows.reduce((t,r)=>t+(r.left|0),0)}</b><span>switches in total</span></div>
+    <div class="stat" id="srxt"><b>${kn.length?(est?'≈ ':'')+xpT:'–'}</b><span>XP earned in session</span></div><div class="stat" id="srxa"><b>${kn.length?(est?'≈ ':'')+Math.round(xpT/kn.length):'–'}</b><span>XP per student</span></div></div>
+    ${Object.keys(A).length?`<p style="font-size:.9rem;margin:0 0 10px"><b>Class activity:</b> ${esc(sxActs(A,12))||'–'}</p>`:''}
+    <div class="row" style="margin:0 0 8px;align-items:center"><button class="btn ghost sm" id="srrf">↻ Refresh</button><span class="muted" style="font-size:.8rem">${live?'XP updates as students sync; refreshed at most once a minute. ':''}${est?'≈ = estimate from whole hours (before exact session tracking started).':''}</span></div>
+    <div class="tablewrap"><table class="wide"><tr><th>Student</th><th>On screen</th><th>XP in session</th><th>Focus bonus</th><th>Activity</th><th>Idle</th><th>Away</th><th>Times left</th><th>Longest away</th><th>Practised</th></tr>
+    ${rows.map(r=>`<tr data-sid="${esc(r.sid)}"><td class="click" data-open="${esc(r.sid)}">${esc(r.n||r.sid)}<div class="muted" style="font-size:.78rem">${esc(r.sid)}</div></td><td><b>${r.pct}%</b></td><td class="sxx"><b>${sxXP(r.sx)}</b>${r.sx&&r.sx.est?'<div class="muted" style="font-size:.72rem">estimate (hourly)</div>':''}</td><td>${r.sx&&r.sx.fx?'+'+r.sx.fx:'–'}</td><td class="sxa" style="font-size:.82rem;min-width:150px">${r.sx?(esc(sxActs(r.sx.acts))||(r.sx.est?'<span class="muted">no breakdown</span>':'<span class="muted">none</span>')):'–'}${sxTimeline(r.sx)}</td><td>${stFmt(r.idle|0)}</td><td>${stFmt(r.away|0)}</td><td>${r.left|0}</td><td>${stFmt(r.lg|0)}</td><td style="font-size:.82rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="10" class="muted">Nobody joined.</td></tr>'}</table></div>
     <button class="btn ghost sm" id="srcsv" style="margin-top:12px">⬇ Download CSV</button></div>`;
-    $('#srcsv').onclick=()=>csvDownload([['Name','ID','On screen %','On screen (s)','Idle (s)','Away (s)','Times left','Longest away (s)','Practised']].concat(rows.map(r=>[r.n,r.sid,r.pct,r.on,r.idle,r.away,r.left,r.lg,r.pr])),'session-'+(S.startedAt?stYmd(new Date(S.startedAt)):id)+'.csv');
-    el.querySelectorAll('tr[data-sid]').forEach(r=>r.onclick=()=>openStudent(r.dataset.sid))};
+    $('#srcsv').onclick=()=>csvDownload([['Name','ID','On screen %','On screen (s)','Idle (s)','Away (s)','Times left','Longest away (s)','Practised','XP in session','Focus bonus','XP basis','Activity']].concat(rows.map(r=>[r.n,r.sid,r.pct,r.on,r.idle,r.away,r.left,r.lg,r.pr,r.sx?r.sx.xp:'',r.sx?r.sx.fx:'',r.sx?(r.sx.est?'estimate (hourly)':'exact'):'',r.sx?sxActs(r.sx.acts,20):''])),'session-'+(S.startedAt?stYmd(new Date(S.startedAt)):id)+'.csv');
+    $('#srrf').onclick=draw;
+    el.querySelectorAll('[data-open]').forEach(r=>r.onclick=()=>openStudent(r.dataset.open))};
+  CLOUD.watchUsers(l=>{USERS=l;if(!drawn||Date.now()-drawn>=60000||!S||!S.active)draw()},()=>{USERS=USERS||[];draw()});
   CLOUD.watchSessionDoc(id,s=>{S=s;if(s&&!s.rep)CLOUD.watchPresence(id,ps=>{P=ps;draw()},()=>{});draw()},e=>{const el=$('#srp');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
 
 /* ---------- lecturer: one student's screen time and sessions (profile) ---------- */
 function presProfileWatch(cb){if(!cloudOn())return;CLOUD.watchSessions(list=>{PR.sessList=list;cb()},()=>{PR.sessList=[];cb()})}
 function presProfileHTML(u,sid,bare){const days=stDays(u,28),mx=Math.max(ST.GOAL,...days.map(x=>x[1])),goals=Object.keys(u.log||{}).filter(k=>k.startsWith('stgoal:')).length;
   const ss=(PR.sessList||[]).filter(s=>s.rep&&s.rep[sid]).slice(0,10),held=(PR.sessList||[]).filter(s=>s.rep).length;
-  if(bare===2)return `<h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${presSessRows(ss,held,sid)}`;
+  if(bare===2)return `<h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${presSessRows(ss,held,sid,u)}`;
   return `${bare?'<div>':'<div class="card psec"><h2>Screen time & live sessions</h2>'}
   <div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>${stFmt(stToday(u))}</b><span>today</span></div><div class="stat"><b>${stFmt(stWeek(u))}</b><span>this week</span></div><div class="stat"><b>${stFmt(stTotal(u))}</b><span>total</span></div><div class="stat"><b>${goals}</b><span>daily goals met</span></div></div>
   <div class="stbars wide" aria-label="Minutes per day, last 4 weeks">${days.map(([k,s])=>`<div title="${k}: ${stFmt(s)}"><i style="height:${Math.max(2,Math.round(s/mx*100))}%" class="${s>=ST.GOAL?'goal':''}"></i></div>`).join('')}</div>
   <p class="muted" style="font-size:.78rem;margin:2px 0 10px">Active minutes per day, last 4 weeks (green = 20-minute goal met). Screen time is tracked from ${esc(Object.keys(u.st||{}).sort()[0]||'its first use')}.</p>
-  <h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${presSessRows(ss,held,sid)}</div>`}
-const presSessRows=(ss,held,sid)=>ss.length?`<div class="tablewrap"><table><tr><th>Session</th><th>On screen</th><th>Times left</th><th>Longest away</th></tr>${ss.map(s=>{const r=s.rep[sid];return `<tr><td>${ME&&ME.sid===LECTURER?`<a href="#/session/${esc(s.id)}">${esc(s.name)}</a>`:esc(s.name)}</td><td><b>${r.pct|0}%</b></td><td>${r.left|0}</td><td>${stFmt(r.lg|0)}</td></tr>`}).join('')}</table></div>`:`<p class="muted">${held?'Not joined any of the '+held+' sessions held.':'No sessions held yet.'}</p>`;
+  <h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${presSessRows(ss,held,sid,u)}</div>`}
+const presSessRows=(ss,held,sid,u)=>ss.length?`<div class="tablewrap"><table><tr><th>Session</th><th>On screen</th><th>XP in session</th><th>Times left</th><th>Longest away</th></tr>${ss.map(s=>{const r=s.rep[sid],x=sessXP(u,s,null,r);return `<tr><td>${ME&&ME.sid===LECTURER?`<a href="#/session/${esc(s.id)}">${esc(s.name)}</a>`:esc(s.name)}</td><td><b>${r.pct|0}%</b></td><td class="sxx"><b>${sxXP(x)}</b>${x&&!x.est&&sxActs(x.acts)?`<div class="muted" style="font-size:.74rem">${esc(sxActs(x.acts,3))}</div>`:''}</td><td>${r.left|0}</td><td>${stFmt(r.lg|0)}</td></tr>`}).join('')}</table></div>${ss.some(s=>{const x=sessXP(u,s,null,s.rep[sid]);return x&&x.est})?'<p class="muted" style="font-size:.76rem;margin:4px 0 0">≈ = estimate from whole hours (before exact session tracking started).</p>':''}`:`<p class="muted">${held?'Not joined any of the '+held+' sessions held.':'No sessions held yet.'}</p>`;
 
 /* ---------- styles ---------- */
 (()=>{const s=document.createElement('style');s.textContent=`
@@ -242,4 +305,5 @@ const presSessRows=(ss,held,sid)=>ss.length?`<div class="tablewrap"><table><tr><
 .stbars span{font:600 .68rem Lexend,sans-serif;color:var(--muted)}.stbars.wide{grid-template-columns:repeat(28,1fr);gap:2px;height:70px}.stbars.wide i{border-radius:3px 3px 1px 1px}
 #livebar{position:sticky;top:60px;z-index:19;background:color-mix(in srgb,var(--red) 16%,var(--bg));border-bottom:1px solid var(--line)}
 #livebar .lbin{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:46px;padding-top:6px;padding-bottom:6px;font-size:.92rem}
-#livebar .btn.sm{min-height:34px}`;document.head.append(s)})();
+#livebar .btn.sm{min-height:34px}
+.sxtl summary{cursor:pointer;font-size:.78rem;color:var(--muted);margin-top:4px}.sxtl ol{margin:4px 0 0;padding-left:1.1em;font-size:.78rem;max-height:220px;overflow:auto}.sxtl li{margin:1px 0}`;document.head.append(s)})();
