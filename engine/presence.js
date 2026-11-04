@@ -183,24 +183,31 @@ async function liveFinish(id){if(liveFinish.busy)return;liveFinish.busy=1;try{co
 let LIVE_NAMES=null;
 function liveNames(){return new Promise(res=>{if(LIVE_NAMES)return res(LIVE_NAMES);let done=false;CLOUD.watchUsers(list=>{LIVE_NAMES={};list.forEach(x=>LIVE_NAMES[x.id]=x.name||'');if(!done){done=true;res(LIVE_NAMES)}},()=>{if(!done){done=true;res({})}})})}
 const csvDownload=(rows,name)=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download=name;a.click()};
+/* XP earned during a session, from the hourly XP record (U.xph, GMT+5 hours): every hour from the one the session started in
+   to the one it ended in (or now, while live). Hourly, so the first hour can include a little XP from just before the start. */
+const sxHour=t=>new Date(t+5*36e5).toISOString().slice(0,13);
+function sessXP(u,S,now){if(!u||!S||!S.startedAt)return null;const H=u.xph||{},a=sxHour(+S.startedAt),b=sxHour(S.endedAt?+S.endedAt:Math.min(now,S.endsAt?+S.endsAt:now));let x=0;for(const k in H)if(k>=a&&k<=b)x+=H[k]|0;return x}
+const sxCell=x=>x==null?'–':`<b>+${x}</b>`;
 function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shell('#/lecturer','<div class="callout">Live sessions need the live connection.</div>');
   shell('#/lecturer',`<p><a href="#/lecturer">← Lecturer</a></p><div id="lvb"><p class="muted">Loading…</p></div>`);
   let P=[],USERS=null,sort={k:'s',d:1};const order={away:0,off:1,idle:2,on:3};
   CLOUD.watchUsers(l=>{USERS=l;draw()},()=>{});
   const draw=()=>{const el=$('#lvb');if(!el)return;const S=PR.sess;
     if(!S){el.innerHTML='<div class="card"><h2>No live session</h2><p class="muted">Start one from the Lecturer tab.</p></div>';return}
-    const now=Date.now(),names={};(USERS||[]).forEach(u=>names[u.id]=u.name);
-    const rows=P.map(p=>Object.assign(liveRow(p,now),{name:names[p.id]||p.id}));
+    const now=Date.now(),names={},UU={};(USERS||[]).forEach(u=>{names[u.id]=u.name;UU[u.id]=u.u});
+    const rows=P.map(p=>Object.assign(liveRow(p,now),{name:names[p.id]||p.id,sx:sessXP(UU[p.id],S,now)}));
+    const sxTot=rows.reduce((t,r)=>t+(r.sx|0),0),sxTop=rows.filter(r=>r.sx>0).sort((a,b)=>b.sx-a.sx).slice(0,3);
     const k=sort.k,cmp=(a,b)=>k==='name'?a.name.localeCompare(b.name):k==='s'?order[a.s]-order[b.s]:(a[k]||0)-(b[k]||0);rows.sort((a,b)=>cmp(a,b)*sort.d);
     const total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:rows.length),cnt=s=>rows.filter(r=>r.s===s).length;
     const not=(USERS||[]).filter(u=>u.id!==LECTURER&&!P.some(p=>p.id===u.id)).map(u=>u.name||u.id).sort();
     const th=(key,l)=>`<th data-sk="${key}" class="click" aria-sort="${sort.k===key?(sort.d>0?'ascending':'descending'):'none'}">${l}${sort.k===key?(sort.d>0?' ▲':' ▼'):''}</th>`;
     el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h1 style="margin:0">${esc(S.name)}</h1>${sessLive()?'<span class="live"><i></i>LIVE</span>':'<span class="tag">Ended</span>'}</div>
-    <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>joined</span></div><div class="stat"><b>${cnt('on')}</b><span>🟢 on screen</span></div><div class="stat"><b>${cnt('idle')}</b><span>🟡 idle</span></div><div class="stat"><b>${cnt('away')+cnt('off')}</b><span>🔴 away or ⚫ offline</span></div></div>
-    <div class="tablewrap"><table class="wide"><tr>${th('s','Status')}${th('name','Student')}${th('pct','On screen')}${th('idle','Idle')}${th('left','Times left')}${th('longest','Longest away')}${th('chAt','Last change')}<th>Section now</th><th>Practised</th></tr>
-    ${rows.map(r=>`<tr class="click" data-sid="${esc(r.id)}"><td style="white-space:nowrap">${LIVE_LBL[r.s]||r.s}</td><td>${esc(r.name)}<div class="muted" style="font-size:.78rem">${esc(r.id)}</div></td><td><b>${r.pct}%</b></td><td>${stFmt(r.idle|0)}</td><td>${r.left|0}</td><td>${stFmt(r.longest|0)}</td><td>${r.chAt?ago(new Date(r.chAt)):'–'}</td><td style="font-size:.85rem">${esc(r.sec||'')}</td><td style="font-size:.8rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="9" class="muted">Nobody has joined yet.</td></tr>'}</table></div>
+    <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>joined</span></div><div class="stat"><b>${cnt('on')}</b><span>🟢 on screen</span></div><div class="stat"><b>${cnt('idle')}</b><span>🟡 idle</span></div><div class="stat"><b>${cnt('away')+cnt('off')}</b><span>🔴 away or ⚫ offline</span></div><div class="stat"><b>+${sxTot}</b><span>XP this session</span></div></div>
+    ${sxTop.length?`<p style="margin:0 0 10px"><b>🏆 Session leaders:</b> ${sxTop.map((r,i)=>['🥇','🥈','🥉'][i]+' '+esc(r.name)+' <b>+'+r.sx+'</b>').join(' · ')}</p>`:''}
+    <div class="tablewrap"><table class="wide"><tr>${th('s','Status')}${th('name','Student')}${th('sx','XP this session')}${th('pct','On screen')}${th('idle','Idle')}${th('left','Times left')}${th('longest','Longest away')}${th('chAt','Last change')}<th>Section now</th><th>Practised</th></tr>
+    ${rows.map(r=>`<tr class="click" data-sid="${esc(r.id)}"><td style="white-space:nowrap">${LIVE_LBL[r.s]||r.s}</td><td>${esc(r.name)}<div class="muted" style="font-size:.78rem">${esc(r.id)}</div></td><td>${sxCell(r.sx)}</td><td><b>${r.pct}%</b></td><td>${stFmt(r.idle|0)}</td><td>${r.left|0}</td><td>${stFmt(r.longest|0)}</td><td>${r.chAt?ago(new Date(r.chAt)):'–'}</td><td style="font-size:.85rem">${esc(r.sec||'')}</td><td style="font-size:.8rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="10" class="muted">Nobody has joined yet.</td></tr>'}</table></div>
     <h3 style="margin-top:14px">Not joined (${not.length}${total>(USERS||[]).length-1?` + ${Math.max(0,total-((USERS||[]).filter(u=>u.id!==LECTURER).length))} not signed up`:''})</h3><p style="font-size:.9rem">${not.map(esc).join(', ')||'–'}</p>
-    <p class="muted" style="font-size:.8rem">On screen = the portal is open and in use. Idle = open but untouched for 2+ minutes. Left the app = switched app or tab, or locked the screen. Offline = no check-in for 5+ minutes. These are signals, not proof.</p>
+    <p class="muted" style="font-size:.8rem">On screen = the portal is open and in use. Idle = open but untouched for 2+ minutes. Left the app = switched app or tab, or locked the screen. Offline = no check-in for 5+ minutes. These are signals, not proof. XP this session counts XP from the hour the session started (hourly record), so it can include a few minutes before the start.</p>
     <div class="row" style="margin-top:10px">${sessLive()?'<button class="btn red" id="lvend">■ End session</button>':''}<a class="btn ghost" href="#/session/${esc(S.id)}">Report</a></div></div>`;
     el.querySelectorAll('[data-sk]').forEach(h=>h.onclick=()=>{sort=sort.k===h.dataset.sk?{k:sort.k,d:-sort.d}:{k:h.dataset.sk,d:h.dataset.sk==='name'||h.dataset.sk==='s'?1:-1};draw()});
     el.querySelectorAll('tr[data-sid]').forEach(r=>r.onclick=()=>openStudent(r.dataset.sid));
@@ -209,16 +216,16 @@ function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shel
   watch();const iv=setInterval(()=>{if(!document.getElementById('lvb'))return clearInterval(iv);draw()},15000)}
 function sessionReport(id){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shell('#/lecturer','<div class="callout">Session reports need the live connection.</div>');
   shell('#/lecturer',`<p><a href="#/lecturer">← Lecturer</a></p><div id="srp"><p class="muted">Loading…</p></div>`);
-  let S=null,P=null;const draw=()=>{const el=$('#srp');if(!el||!S)return;const now=Date.now(),live=S.active&&(!S.endsAt||now<S.endsAt);
+  let S=null,P=null,UU={};CLOUD.watchUsers(l=>{UU={};l.forEach(u=>UU[u.id]=u.u);draw()},()=>{});const draw=()=>{const el=$('#srp');if(!el||!S)return;const now=Date.now(),live=S.active&&(!S.endsAt||now<S.endsAt);
     const rep=S.rep||Object.fromEntries((P||[]).map(p=>{const r=liveRow(p,now);return [p.id,{n:'',on:r.on|0,idle:r.idle|0,away:r.away|0,left:r.left|0,lg:r.longest|0,pct:r.pct,pr:r.pr||''}]}));
-    const rows=Object.entries(rep).map(([sid,r])=>Object.assign({sid},r)).sort((a,b)=>b.pct-a.pct),avg=rows.length?Math.round(rows.reduce((t,r)=>t+r.pct,0)/rows.length):0;
+    const rows=Object.entries(rep).map(([sid,r])=>Object.assign({sid},r,{sx:r.xp!=null?r.xp:sessXP(UU[sid],S,now)})).sort((a,b)=>b.pct-a.pct),avg=rows.length?Math.round(rows.reduce((t,r)=>t+r.pct,0)/rows.length):0;
     const total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:rows.length),dur=S.startedAt?Math.round(((S.endedAt||(live?now:S.endsAt))-S.startedAt)/60000):0;
     el.innerHTML=`<div class="card"><h1 style="margin:0">${esc(S.name)}</h1><p class="muted">${S.startedAt?new Date(S.startedAt).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):''} · ${dur} min${live?' · still running':''}</p>
-    <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>attended</span></div><div class="stat"><b>${avg}%</b><span>average on screen</span></div><div class="stat"><b>${rows.filter(r=>r.pct>=ST.FOCUS*100).length}</b><span>85%+ focused</span></div><div class="stat"><b>${rows.reduce((t,r)=>t+(r.left|0),0)}</b><span>switches in total</span></div></div>
-    <div class="tablewrap"><table class="wide"><tr><th>Student</th><th>On screen</th><th>Idle</th><th>Away</th><th>Times left</th><th>Longest away</th><th>Practised</th></tr>
-    ${rows.map(r=>`<tr class="click" data-sid="${esc(r.sid)}"><td>${esc(r.n||r.sid)}<div class="muted" style="font-size:.78rem">${esc(r.sid)}</div></td><td><b>${r.pct}%</b></td><td>${stFmt(r.idle|0)}</td><td>${stFmt(r.away|0)}</td><td>${r.left|0}</td><td>${stFmt(r.lg|0)}</td><td style="font-size:.82rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="7" class="muted">Nobody joined.</td></tr>'}</table></div>
+    <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>attended</span></div><div class="stat"><b>${avg}%</b><span>average on screen</span></div><div class="stat"><b>${rows.filter(r=>r.pct>=ST.FOCUS*100).length}</b><span>85%+ focused</span></div><div class="stat"><b>${rows.reduce((t,r)=>t+(r.left|0),0)}</b><span>switches in total</span></div><div class="stat"><b>+${rows.reduce((t,r)=>t+(r.sx|0),0)}</b><span>XP in session</span></div></div>
+    <div class="tablewrap"><table class="wide"><tr><th>Student</th><th>XP in session</th><th>On screen</th><th>Idle</th><th>Away</th><th>Times left</th><th>Longest away</th><th>Practised</th></tr>
+    ${rows.map(r=>`<tr class="click" data-sid="${esc(r.sid)}"><td>${esc(r.n||r.sid)}<div class="muted" style="font-size:.78rem">${esc(r.sid)}</div></td><td>${sxCell(r.sx)}</td><td><b>${r.pct}%</b></td><td>${stFmt(r.idle|0)}</td><td>${stFmt(r.away|0)}</td><td>${r.left|0}</td><td>${stFmt(r.lg|0)}</td><td style="font-size:.82rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="8" class="muted">Nobody joined.</td></tr>'}</table></div>
     <button class="btn ghost sm" id="srcsv" style="margin-top:12px">⬇ Download CSV</button></div>`;
-    $('#srcsv').onclick=()=>csvDownload([['Name','ID','On screen %','On screen (s)','Idle (s)','Away (s)','Times left','Longest away (s)','Practised']].concat(rows.map(r=>[r.n,r.sid,r.pct,r.on,r.idle,r.away,r.left,r.lg,r.pr])),'session-'+(S.startedAt?stYmd(new Date(S.startedAt)):id)+'.csv');
+    $('#srcsv').onclick=()=>csvDownload([['Name','ID','XP in session','On screen %','On screen (s)','Idle (s)','Away (s)','Times left','Longest away (s)','Practised']].concat(rows.map(r=>[r.n,r.sid,r.sx==null?'':r.sx,r.pct,r.on,r.idle,r.away,r.left,r.lg,r.pr])),'session-'+(S.startedAt?stYmd(new Date(S.startedAt)):id)+'.csv');
     el.querySelectorAll('tr[data-sid]').forEach(r=>r.onclick=()=>openStudent(r.dataset.sid))};
   CLOUD.watchSessionDoc(id,s=>{S=s;if(s&&!s.rep)CLOUD.watchPresence(id,ps=>{P=ps;draw()},()=>{});draw()},e=>{const el=$('#srp');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
 
