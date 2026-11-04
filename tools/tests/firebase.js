@@ -249,7 +249,7 @@ async sessions(){if(process.env.OLDRULES)return;
   const x0=await c.evaluate(()=>{const r=U.sess[PR.sess.id];r.on=1000;r.idle=20;r.away=30;PR.fc=0;return U.xp});
   await l.go('#/live');await waitFor(l,()=>!!document.querySelector('#lvend'));await l.click('#lvend');
   await waitFor(c,()=>!PR.joined&&!document.querySelector('#livebar'));await waitFor(c,id=>!!U.log['sessfocus:'+id],sid);ok(await c.evaluate(([id,x])=>U.gain['sessfocus:'+id]===20&&U.xp>=x+20,[sid,x0]),'focus XP not +20');
-  const sd=await fsDoc('sessions',sid);ok(sd&&sd.active.booleanValue===false&&sd.rep&&sd.rep.mapValue.fields[C],'report not saved');
+  const sd=await fsDoc('sessions',sid),lr=await waitDoc('sessions/'+sid+'/lect','rep',null,R2?15000:1);ok(sd&&sd.active.booleanValue===false&&(sd.rep&&sd.rep.mapValue.fields[C]||lr&&lr.rows.mapValue.fields[C]),'report not saved');
   await l.go('#/session/'+sid);await waitFor(l,()=>!!document.querySelector('#srp tr[data-sid]'));ok((await l.textContent('#srp')).includes('Shifa'),'report row missing');ok(await l.$('#srcsv'),'CSV button missing');await shot(l,'session-report',true);
   await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes('Week 11 tutorial'));
   await waitFor(l,()=>!!document.querySelector('#lsname')&&document.querySelector('#lsname').value==='Week 12 tutorial');
@@ -433,10 +433,23 @@ async sessxp(){if(process.env.OLDRULES)return;const T=Date.now()-2*3600e3,s=t=>M
   await fsPut('sessions/SX1/p',C,{st:'on',sec:'Practice',pr:'Practice',on:5000,idle:100,away:50,left:1,longest:30,ch:10,joinedAt:new Date(T+5*m),t:new Date()});
   const l=await page({w:1280,h:900,allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
   await l.evaluate(async()=>{PR.sessList=[await CLOUD.getSession('SX1')];await liveFinish('SX1')});
-  const d=await waitDoc('sessions','SX1',x=>x.rep&&x.rep.mapValue.fields[C]);ok(d&&d.active.booleanValue===false,'session not ended');
-  const r=d.rep.mapValue.fields[C].mapValue.fields;ok(int(r.xp)===29&&int(r.fx)===0&&int(r.acts.mapValue.fields.mcq)===2&&int(r.acts.mapValue.fields.plan)===1&&r.j,'rep row: '+JSON.stringify(r).slice(0,300));
+  const d=await waitDoc('sessions','SX1',x=>x.active.booleanValue===false);ok(d,'session not ended');
+  const lr=d.rep?null:await waitDoc('sessions/SX1/lect','rep');const r=(d.rep||lr.rows).mapValue.fields[C].mapValue.fields;ok(!d.rep||!R2,'rows left on the session doc');ok(int(r.xp)===29&&int(r.fx)===0&&int(r.acts.mapValue.fields.mcq)===2&&int(r.acts.mapValue.fields.plan)===1&&r.j,'rep row: '+JSON.stringify(r).slice(0,300));
   await l.go('#/session/SX1');await waitFor(l,()=>!!document.querySelector('#srp tr[data-sid] .sxx'));const t=await l.textContent('#srp tr[data-sid]');
   ok(t.includes('29 XP')&&t.includes('2 MCQs · 1 plan'),'report row: '+t);await shot(l,'sessxp-report',true);await l.done()},
+/* privacy on the newest rules: a student reads only their own session figures; the per-student rows and overrides are lecturer-only; live feedback and reflections */
+async sessPriv(){if(!R2)return;const al=/permission|insufficient|400|Failed to load resource|identitytoolkit/i;
+  await fsPut('sessions','PV1',{name:'Week 14 tutorial',startedAt:new Date(Date.now()-7200e3),endsAt:new Date(Date.now()-3600e3),active:false,nj:2,refl:{avg:60,note:''}});
+  await fsPut('sessions/PV1/me',C,{pct:80,sc:70,xp:20});await fsPut('sessions/PV1/me',A,{pct:40,sc:20,xp:5});await fsPut('sessions/PV1/lect','rep',{rows:{[C]:{pct:80},[A]:{pct:40}}});
+  const c=await page({allow:al});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
+  const r=await c.evaluate(async([a,cc])=>{const t=async p=>{try{const d=await CLOUD.get(p);return d?'ok':'none'}catch(e){return 'denied'}};
+    return {own:await t('sessions/PV1/me/'+cc),other:await t('sessions/PV1/me/'+a),rep:await t('sessions/PV1/lect/rep'),r3:await sessR3(),fb:await CLOUD.put('sessions/PV1',{fb:[{t:1,m:'x',q:''}]},true).then(()=>'ok',()=>'denied')}},[A,C]);
+  ok(r.own==='ok'&&r.other==='denied'&&r.rep==='denied'&&r.r3===true&&r.fb==='denied','student access: '+JSON.stringify(r));
+  await c.go('#/sessions/PV1');await waitFor(c,()=>(document.querySelector('#sxsp')||{}).textContent.includes('Your session'));ok((await c.textContent('#sxsp')).includes('70%'),'own score not shown');await shot(c,'sess-past',true);await c.done();
+  const l=await page({w:1280,h:900,allow:al});await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+  const w=await l.evaluate(async()=>{const o={};for(const [k,p,d] of [['fb','sessions/PV1',{fb:[{t:Date.now(),m:'Remember the levels',q:'t10-12'}]}],['refl','sessions/PV1',{refl:{note:'Well done'}}],['att','sessions/PV1/lect/att',{m:{S082110:'p'}}],['me','sessions/PV1/me/S082110',{pct:81}]])
+      o[k]=await CLOUD.put(p,d,true).then(()=>'ok',e=>'denied '+e.code);return o});
+  ok(Object.values(w).every(v=>v==='ok'),'lecturer writes: '+JSON.stringify(w));const d=await fsDoc('sessions','PV1');ok(d.refl.mapValue.fields.note.stringValue==='Well done'&&d.refl.mapValue.fields.avg,'note merge lost the reflection');await l.done()},
 /* tools/wild/open.mjs and close.mjs against the emulators: the week's top 5, the document, the invites, then ranked results */
 async wildTools(){if(!R2)return;const P='mkt301'.toUpperCase(),run=(f,a)=>spawnSync(process.execPath,[path.join(ROOT,'tools/wild',f)].concat(a),{encoding:'utf8',
     env:Object.assign({},process.env,{[P+'_EMU']:'1',[P+'_LECTURER_PIN']:PINL})});

@@ -202,3 +202,26 @@ XP and activity per live tutorial session, in `engine/presence.js`. No rules cha
 - **Tests:**
   - Site (`tools/tests/sessxp-site.js`, shared by both repos): `sxlog`, `sxwin`, `sxcats`, `sxhourly`, `sxbar`, `sxreport`.
   - Cloud (`firebase.js`): `sessxp`.
+
+### Session analytics (live feedback, reflections, attendance)
+
+- **`U.ans` and `U.ansSince`.** `U.ans` logs every practice answer as `[seconds, question id, ok (1/0 or a 0–1 score), pick]`, using `ansLog()` in engine/presence.js. It keeps 45 days and at most 3,000 entries. Logged answers:
+  - MCQs (MKT101)
+  - quick rounds, challenges and battles (`quizRun`)
+  - review and flashcards
+  - paragraph builders and the weekly challenge
+  - plan checks (score), typed answers (auto-check band / 6) and self-checks (ticks / checks)
+  - case verdicts
+- **Live feedback panel (`#/live`).** Shows the average score, the most missed questions (top 5 and Show all, with the correct answer and the most common wrong pick), the questions mostly answered right (80%+), the topics practised, and a Score column. The projector view hides names.
+  - The lecturer can send messages, stored in `sessions/{id}.fb`; students see them as a toast and in the live bar.
+- **End session on the newest rules ("r3").**
+  - The per-student rows go to `sessions/{id}/lect/rep` (lecturer only).
+  - Each student's own figures go to `sessions/{id}/me/{SID}`.
+  - The session doc keeps `nj` and `refl`: covered topics, average score and XP, strengths, areas to reflect on with notes links, and an editable note.
+  - Older sessions' `rep` is copied to `lect/rep`, checked, and then removed from the session doc (`sxMigrate`).
+- **Students: Past tutorial sessions** (`#/sessions`, `#/sessions/<id>`), linked from More and My progress. Shows the reflection plus their own figures only.
+- **Report (`#/session/<id>`).**
+  - The answers panel.
+  - Attendance for the whole class list (Present / Late / Partial / Absent), with lecturer overrides saved in `lect/att`, filter and sort, Copy names and a CSV.
+  - The reflection editor, or "Build and publish" for sessions that ended before this release.
+- **Rules.** Session doc keys gain `nj` / `fb` / `refl`, plus the `lect/{doc}` and `me/{sid}` subcollections. On the older rules everything that writes stays hidden (`sessR3()` probes `sessions/_probe/me/<own ID>`).

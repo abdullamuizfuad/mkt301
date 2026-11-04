@@ -230,10 +230,16 @@ const AL={KEEP:45*864e5,MAX:2500};
 function alAdd(key,xp){if(typeof U==='undefined'||!U||!xp||VIEWAS)return;const now=Date.now();U.al=U.al||[];U.alSince=U.alSince||now;
   U.al.push([Math.round(now/1000),key==null?'mission':String(key).slice(0,60),xp|0]);
   const cut=Math.round((now-AL.KEEP)/1000);let i=0;while(i<U.al.length&&U.al[i][0]<cut)i++;if(i)U.al.splice(0,i);if(U.al.length>AL.MAX)U.al.splice(0,U.al.length-AL.MAX)}
-const alStart=()=>{if(typeof U!=='undefined'&&U&&!VIEWAS&&ME&&ME.sid!==LECTURER&&!U.alSince)U.alSince=Date.now()};
+const alStart=()=>{if(typeof U!=='undefined'&&U&&!VIEWAS&&ME&&ME.sid!==LECTURER){if(!U.alSince)U.alSince=Date.now();if(!U.ansSince)U.ansSince=Date.now()}};
 /* registered from presOn(): this file loads before core.js defines onHook */
 function alHooks(){if(alHooks.done)return;alHooks.done=1;onHook('award',(key,xp)=>{alAdd(key,xp);if(PR.joined)setTimeout(presBar,0)});
   onHook('checkin',xp=>alAdd('checkin:'+today(),xp));onHook('cloud',alStart)}
+/* U.ans: every practice answer from this version on: [seconds, question id, ok (1/0, or a score 0-1), what was picked]; 45 days, at most 3,000.
+   U.ansSince = when this device started logging. Session analytics (lecturer live board, reflections) come from it. */
+const ANS={KEEP:45*864e5,MAX:3000};
+function ansLog(qid,ok,pick){if(typeof U==='undefined'||!U||VIEWAS||!ME||ME.sid===LECTURER||qid==null)return;const now=Date.now();U.ans=U.ans||[];U.ansSince=U.ansSince||now;
+  const v=typeof ok==='boolean'?+ok:Math.max(0,Math.min(1,Math.round((+ok||0)*100)/100));U.ans.push([Math.round(now/1000),String(qid).slice(0,40),v,pick==null?'':typeof pick==='number'?pick:String(pick).slice(0,12)]);
+  const cut=Math.round((now-ANS.KEEP)/1000);let i=0;while(i<U.ans.length&&U.ans[i][0]<cut)i++;if(i)U.ans.splice(0,i);if(U.ans.length>ANS.MAX)U.ans.splice(0,U.ans.length-ANS.MAX)}
 /* award key prefix → activity category; * = a bonus on top of an activity already counted (XP only, not counted again) */
 const SX_MAP={mcq:'mcq',mcqr:'mcq',mqs:'mset',plan:'plan',perfect:'plan*',chip:'chip',typed:'typed',timed:'timed',ltimed:'timed',catimed:'timed',essay:'timed',
   check:'check',lmark:'check',cacheck:'check',emark:'check',fc:'fc',rev:'rev',notes:'notes',read:'case',readall:'case*',casedone:'case*',actdone:'case',argue:'case',

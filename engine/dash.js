@@ -41,7 +41,7 @@ const qAreaOf=id=>typeof qArea==='function'?qArea(id):((qIndex()[id]||{}).area||
 function srsAdd(id,wrong){U.srs=U.srs||{};const s=U.srs[id];if(s&&!wrong&&s.s<SRS_GAP.length)return;
   U.srs[id]={s:0,due:addDays(today(),SRS_GAP[0]),n:(s&&s.n)|0}}
 function srsDue(u){u=u||U;const t=today();return Object.entries(u.srs||{}).filter(([id,s])=>s.due&&s.due<=t&&revOf(id)).sort((a,b)=>a[1].due<b[1].due?-1:1).map(([id])=>id)}
-function srsDone(id,ok){const s=U.srs[id]||{s:0,n:0},due=s.due||today();award('rev:'+id+':'+due,ok?4:2,'Review done',1);countOnce('rev:'+id+':'+due,'reviews');
+function srsDone(id,ok){ansLog(id,ok?1:0,'rev');const s=U.srs[id]||{s:0,n:0},due=s.due||today();award('rev:'+id+':'+due,ok?4:2,'Review done',1);countOnce('rev:'+id+':'+due,'reviews');
   s.n=(s.n|0)+1;if(ok){s.s++;s.due=s.s<SRS_GAP.length?addDays(today(),SRS_GAP[s.s]):null}else{s.s=0;s.due=addDays(today(),1)}U.srs[id]=s}
 function confNote(id,sure,ok){U.conf=U.conf||{};const a=qAreaOf(id)||'_',r=U.conf[a]||(U.conf[a]=[0,0,0,0]);if(sure){r[0]++;if(ok)r[1]++}else{r[2]++;if(ok)r[3]++}}
 /* written questions: the question and its key ideas (good chips) */
@@ -100,7 +100,7 @@ ROUTES.cards=h=>{const D=typeof flashDecks==='function'?flashDecks():[];U.fc=U.f
     shell('#/',`<p><a href="#/cards">← All decks</a></p><div class="row" style="justify-content:space-between"><h1 style="margin:0">${esc(dk.label)}</h1><span class="tag">${i+1} of ${q.length}</span></div>
     <button class="card fcard" id="fcard" aria-live="polite"><span class="muted" style="font-size:.78rem">TAP TO FLIP</span><b class="lex">${esc(c[0])}</b></button><div class="row hide" id="fcr" style="justify-content:center;margin-top:12px"><button class="btn" data-k="1">✓ Knew it</button><button class="btn ghost" data-k="0">↺ Again</button></div>`);
     $('#fcard').onclick=()=>{$('#fcard').innerHTML=`<span class="muted" style="font-size:.78rem">${esc(c[0])}</span><span>${esc(c[1])}</span>`;$('#fcard').classList.add('flip');$('#fcr').classList.remove('hide')};
-    document.querySelectorAll('#fcr [data-k]').forEach(b=>b.onclick=()=>{const ok=b.dataset.k==='1',s=U.fc[id]||{s:0};if(ok){got++;s.s=(s.s|0)+1;s.due=s.s<SRS_GAP.length?addDays(today(),SRS_GAP[s.s]):null}else{s.s=0;s.due=addDays(today(),1)}U.fc[id]=s;
+    document.querySelectorAll('#fcr [data-k]').forEach(b=>b.onclick=()=>{const ok=b.dataset.k==='1',s=U.fc[id]||{s:0};ansLog('fc:'+id,ok?1:0,'fc');if(ok){got++;s.s=(s.s|0)+1;s.due=s.s<SRS_GAP.length?addDays(today(),SRS_GAP[s.s]):null}else{s.s=0;s.due=addDays(today(),1)}U.fc[id]=s;
       if(award('fc:'+id+':'+today(),1,'Flashcard',1))countOnce('fc:'+id+':'+today(),'cards');i++;one()})};
   one()};
 

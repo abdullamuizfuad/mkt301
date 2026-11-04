@@ -29,7 +29,8 @@ function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)retur
     $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)}
 onHook('afterLoad',()=>{if(ME&&!ME.cloud)whatsNew()});onHook('cloud',whatsNew);
 const WHATSNEW=[
-  ['🔴','XP in live sessions','When you join a live tutorial session, the bar now shows the XP you have earned in that session. My progress lists your XP for each session you joined.'],
+  ['🎓','Past tutorial sessions','After each live session your lecturer publishes a reflection: what was covered, what the class did well and the questions to look at again, with links to the notes. You also see your own minutes, XP and score. Find it under More.'],
+  ['🔴','XP and feedback in live sessions','When you join a live tutorial session, the bar shows the XP you have earned in it and any feedback your lecturer sends.'],
   ['🎁','The 6th-spot challenge','Every week your lecturer brings a gift for the top 5 students by XP earned that week. Everyone else gets one 20-minute challenge in the 24 hours before class: the best score wins the 6th gift. Read the notes on the two topics before you start.'],
   ['🧱','Build a paragraph','A new kind of practice: put the right ideas in the right order and leave out the decoys. Find it under Practice.'],
   ['📖','Refer to notes','Written questions now have a "Refer to notes" button that opens the notes for that topic.'],

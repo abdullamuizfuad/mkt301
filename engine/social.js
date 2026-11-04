@@ -27,7 +27,7 @@ function quizRun(host,ids,secs,done,seed){const items=ids.map(id=>quizItem(id)).
   const one=()=>{if(i>=items.length||Date.now()>=dead)return end();const it=items[i],ord=qmix(rng,it.o.map((x,j)=>j));
     host.innerHTML=`<div class="row" style="justify-content:space-between"><span class="tag">${i+1} of ${items.length}</span><b class="lex" id="qrt"></b></div><h2 style="font-weight:600;margin:10px 0">${esc(it.q)}</h2>
     <div class="mopts">${ord.map(j=>`<button class="mopt" data-qo="${j}">${esc(it.o[j])}</button>`).join('')}</div><div id="qrw"></div>`;
-    host.querySelectorAll('[data-qo]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const ok=+b.dataset.qo===0;if(ok)s++;
+    host.querySelectorAll('[data-qo]').forEach(b=>b.onclick=()=>{if(b.disabled)return;const ok=+b.dataset.qo===0;if(ok)s++;ansLog(it.id,ok?1:0,+b.dataset.qo);
       host.querySelectorAll('[data-qo]').forEach(x=>{x.disabled=true;if(+x.dataset.qo===0)x.classList.add('good');else if(x===b)x.classList.add('bad')});
       $('#qrw').innerHTML=`<div class="fb ${ok?'ok':'bad'}" style="margin-top:10px">${ok?'✓ Correct.':'✗ Not quite.'} ${esc(it.why||'')}</div>`;i++;setTimeout(one,ok?700:1600)})};
   const tick=()=>{const e=$('#qrt');if(!document.body.contains(host))return clearInterval(tm);const l=dead-Date.now();if(l<=0)return end();if(e)e.textContent='⏱ '+Math.floor(l/60000)+':'+String(Math.floor(l/1000)%60).padStart(2,'0')};

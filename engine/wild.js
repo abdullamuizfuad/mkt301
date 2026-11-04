@@ -102,6 +102,7 @@ function wildRun(D,A){WILD_LOCK=true;document.body.classList.add('wlock');const 
 /* finishing: the attempt (with every answer), then the public score; +20 XP for taking part */
 async function wildSubmit(D,A){WILD_LOCK=false;document.body.classList.remove('wlock');if(A.done&&A.up)return;if(A.done&&!A.up)return wildUpload(D,A);const r=wildScore(D.items,A.a),V=Object.values(A.a),ms=Math.round(V.length>=D.items.length?Math.min(WILD_MS,V.reduce((t,x)=>t+(x.t|0),0)):WILD_MS);
   const a={};Object.entries(A.a).forEach(([i,x])=>{a[i]={v:x.v==null?-1:x.v,t:x.t|0}});
+  if(!A.done)(D.items||[]).forEach((id,i)=>{const it=wildItem(id),x=A.a[i];if(!it)return;if(it.kind==='chips'){const R=chipsScore(it,x&&Array.isArray(x.v)?x.v:[]);ansLog(id,R.max?R.s/R.max:0,'wild')}else ansLog(id,x&&x.v===0?1:0,x&&x.v!=null?x.v:'')});
   Object.assign(A,{done:1,up:0,s:r.s,mx:r.mx,ms,sa:a});save();if(award('wild:'+D.id,20,'6th-spot challenge'))countOnce('wild:'+D.id,'wild');return wildUpload(D,A)}
 /* sends a finished attempt (again, if it failed before): the attempt first, then the public score */
 async function wildUpload(D,A){if(A.up||A.busy)return;A.busy=1;

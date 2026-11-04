@@ -36,5 +36,5 @@ ROUTES.chips=h=>{const T=typeof chipTopics==='function'?chipTopics():[],k=h[1],L
   const one=()=>{const it=list[i],lab=(T.find(([x])=>String(x)===String(k))||[0,''])[1];
     shell('#/practice',`<p><a href="#/chips">← All topics</a></p><div class="row" style="justify-content:space-between"><h1 style="margin:0;font-size:1.3rem">🧱 ${esc(lab)}</h1><span class="tag">${i+1} of ${list.length}</span></div>
     <div class="card qcard" id="chq" style="margin-top:12px"></div><div class="row" style="justify-content:space-between;margin-top:12px">${notesBtn(it,{topic:k})}<button class="btn ghost" id="chnx">Next →</button></div>`);
-    chipsUI($('#chq'),it,{seed:ME.sid+'|'+it.id,onDone:(sel,R)=>{st[it.id]={d:today(),s:R.s};if(!L&&award('chip:'+it.id+':'+today(),R.s*2,'Paragraph built',!R.s))countOnce('chip:'+it.id+':'+today(),'chips');save()}});
+    chipsUI($('#chq'),it,{seed:ME.sid+'|'+it.id,onDone:(sel,R)=>{st[it.id]={d:today(),s:R.s};ansLog(it.id,R.max?R.s/R.max:0,sel.length);if(!L&&award('chip:'+it.id+':'+today(),R.s*2,'Paragraph built',!R.s))countOnce('chip:'+it.id+':'+today(),'chips');save()}});
     $('#chnx').onclick=()=>{i=(i+1)%list.length;one()}};one()};
