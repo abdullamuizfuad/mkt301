@@ -36,7 +36,7 @@ async sxbar(){const p=await page({sid:STUDENT});const r=await p.evaluate(async()
 /* the live board: XP this session per joined student (exact from the log, ≈ from whole hours), the total and the session leaders */
 async sxlive(){const l=await page({sid:LECT});const t=await l.evaluate(async()=>{const now=Date.now(),T=now-50*60e3,s=x=>Math.round(x/1000);ME.cloud=true;CLOUD.ok=true;['push','flush','put'].forEach(k=>CLOUD[k]=()=>Promise.resolve());
     PR.sess={id:'LV',name:'Week 13 tutorial',active:true,startedAt:T,endsAt:now+3600e3};PR.sessOn=true;
-    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S081441',name:'Aminath Test',u:{ansSince:T-1,ans:[[s(T+6*60e3),'qa',0,2],[s(T+7*60e3),'qb',1,0]],alSince:T-864e5,al:[[s(T-60e3),'mcq:a:0',2],[s(T+5*60e3),'mcq:a:1',2],[s(T+9*60e3),'plan:q:1',15]]}},{id:'S085542',name:'Other Student',u:{xph:{[mvHour(T)]:7,[mvHour(now)]:3}}}]),0);
+    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S081441',name:'Aminath Test',u:{qaSince:T-1,qa:[[s(T+6*60e3),'qa',0,2],[s(T+7*60e3),'qb',1,0]],alSince:T-864e5,al:[[s(T-60e3),'mcq:a:0',2],[s(T+5*60e3),'mcq:a:1',2],[s(T+9*60e3),'plan:q:1',15]]}},{id:'S085542',name:'Other Student',u:{xph:{[mvHour(T)]:7,[mvHour(now)]:3}}}]),0);
     CLOUD.watchPresence=(id,cb)=>setTimeout(()=>cb([{id:'S081441',st:'on',on:2000,idle:0,away:0,left:0,longest:0,joinedAt:T+2*60e3,t:now},{id:'S085542',st:'idle',on:1000,idle:500,away:0,left:1,longest:0,joinedAt:T,t:now}]),0);
     location.hash='#/live';await new Promise(r=>setTimeout(r,300));return document.querySelector('#lvb').textContent});
   ok(t.includes('XP this session')&&/Session leaders:.*Aminath Test \+17/.test(t),'live board XP: '+t.slice(0,500));
@@ -44,13 +44,13 @@ async sxlive(){const l=await page({sid:LECT});const t=await l.evaluate(async()=>
   await shot(l,'sx-live',true);await l.click('#lvproj');ok(await l.$eval('#lvmain',e=>getComputedStyle(e).display==='none'),'projector view shows names');await shot(l,'sx-live-projector',true);
   await l.evaluate(()=>document.body.classList.remove('proj'));await l.done()},
 /* every practice answer is logged with its time, question, result and pick; trimmed like the XP log */
-async sxans(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>{U.ans=[];ansLog('q1',true,2);ansLog('q2',.456,'plan');ansLog('q3',0,'x'.repeat(30));
-    const a=JSON.stringify(U.ans.map(x=>x.slice(1)));U.ans.unshift([Math.round((Date.now()-50*864e5)/1000),'old',1,'']);for(let i=0;i<3100;i++)U.ans.push([Math.round(Date.now()/1000),'f'+i,1,'']);ansLog('last',1,0);
-    return {a,len:U.ans.length,old:U.ans.some(x=>x[1]==='old'),since:!!U.ansSince}});
+async sxans(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>{U.qa=[];ansLog('q1',true,2);ansLog('q2',.456,'plan');ansLog('q3',0,'x'.repeat(30));
+    const a=JSON.stringify(U.qa.map(x=>x.slice(1)));U.qa.unshift([Math.round((Date.now()-50*864e5)/1000),'old',1,'']);for(let i=0;i<3100;i++)U.qa.push([Math.round(Date.now()/1000),'f'+i,1,'']);ansLog('last',1,0);
+    return {a,len:U.qa.length,old:U.qa.some(x=>x[1]==='old'),since:!!U.qaSince}});
   ok(r.a==='[["q1",1,2],["q2",0.46,"plan"],["q3",0,"xxxxxxxxxxxx"]]','answers: '+r.a);ok(r.len===3000&&!r.old&&r.since,'trim: '+r.len);await p.done()},
 /* class figures: average, most missed with the common wrong pick, mostly right, topics; students without the log are counted apart */
 async sxstats(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>{const T=Date.now()-3600e3,s=x=>Math.round(x/1000),S={id:'Z',startedAt:T,endedAt:T+3000e3,active:false};
-    const u=a=>({ansSince:T-1,ans:a.map(([m,q,ok,pk])=>[s(T+m*60e3),q,ok,pk])});
+    const u=a=>({qaSince:T-1,qa:a.map(([m,q,ok,pk])=>[s(T+m*60e3),q,ok,pk])});
     const rows=[{id:'A',u:u([[1,'qa',0,2],[2,'qb',1,0],[3,'qc',1,0],[60,'qz',0,1]])},{id:'B',u:u([[1,'qa',0,2],[2,'qb',1,0],[4,'qc',1,0]])},{id:'C',u:u([[1,'qa',0,3],[2,'qb',0,1],[5,'qc',1,0]])},{id:'D',u:{xph:{}}}];
     const st=sessStats(rows,S);return {avg:st.avg,n:st.n,miss:st.missed.map(e=>e.id+':'+e.pw+':'+e.n+':'+JSON.stringify(e.picks)).join(),right:st.right.map(e=>e.id).join(),cover:st.cover+'/'+st.miss,A:st.per.A.sc+':'+st.per.A.miss.join('+')}});
   ok(r.avg===56&&r.n===9,'average: '+r.avg+' of '+r.n);ok(r.miss==='qa:100:3:{"2":2,"3":1},qb:33:3:{"1":1}','most missed: '+r.miss);ok(r.right==='qc','mostly right: '+r.right);
@@ -68,7 +68,7 @@ async sxpast(){const p=await page({sid:STUDENT});const t=await p.evaluate(async(
 async sxfinish(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>{const T=Date.now()-60*60e3,s=x=>Math.round(x/1000),W=[];ME.cloud=true;CLOUD.ok=true;PR.r3=true;
     CLOUD.put=(p,d,m)=>{W.push([p,JSON.parse(JSON.stringify(d))]);return Promise.resolve()};CLOUD.endSession2=(id,d)=>{W.push(['END '+id,d]);return Promise.resolve()};CLOUD.endSession=()=>{W.push(['OLD']);return Promise.resolve()};
     CLOUD.presenceOnce=async()=>[{id:'S081441',st:'on',on:3000,idle:0,away:0,left:0,longest:0,joinedAt:T+60e3,t:Date.now()},{id:'S085542',st:'on',on:1000,idle:900,away:900,left:3,longest:200,joinedAt:T+20*60e3,t:Date.now()}];
-    const U2=(a)=>({alSince:T-1,ansSince:T-1,al:[[s(T+5*60e3),'mcq:x:1',2]],ans:a});
+    const U2=(a)=>({alSince:T-1,qaSince:T-1,al:[[s(T+5*60e3),'mcq:x:1',2]],qa:a});
     CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S081441',name:'A',u:U2([[s(T+5*60e3),'qa',1,0],[s(T+6*60e3),'qb',0,2]])},{id:'S085542',name:'B',u:U2([[s(T+25*60e3),'qb',0,2]])}]),0);
     PR.sessList=[{id:'F1',name:'Week 12 tutorial',active:true,startedAt:T,endsAt:T+3*3600e3,fb:[]}];LIVE_NAMES={S081441:'A',S085542:'B'};
     await liveFinish('F1');return W});

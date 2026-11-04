@@ -205,7 +205,7 @@ XP and activity per live tutorial session, in `engine/presence.js`. No rules cha
 
 ### Session analytics (live feedback, reflections, attendance)
 
-- **`U.ans` and `U.ansSince`.** `U.ans` logs every practice answer as `[seconds, question id, ok (1/0 or a 0–1 score), pick]`, using `ansLog()` in engine/presence.js. It keeps 45 days and at most 3,000 entries. Logged answers:
+- **`U.qa` and `U.qaSince`.** (`U.ans` already holds submitted typed answers, so the log has its own name.) `U.qa` logs every practice answer as `[seconds, question id, ok (1/0 or a 0–1 score), pick]`, using `ansLog()` in engine/presence.js. It keeps 45 days and at most 3,000 entries. Logged answers:
   - MCQs (MKT101)
   - quick rounds, challenges and battles (`quizRun`)
   - review and flashcards
