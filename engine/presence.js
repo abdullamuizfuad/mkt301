@@ -191,18 +191,20 @@ function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shel
   CLOUD.watchUsers(l=>{USERS=l;draw()},()=>{});
   const draw=()=>{const el=$('#lvb');if(!el)return;const S=PR.sess;
     if(!S){el.innerHTML='<div class="card"><h2>No live session</h2><p class="muted">Start one from the Lecturer tab.</p></div>';return}
-    const now=Date.now(),names={};(USERS||[]).forEach(u=>names[u.id]=u.name);
-    const rows=P.map(p=>Object.assign(liveRow(p,now),{name:names[p.id]||p.id}));
+    const now=Date.now(),names={},UU={};(USERS||[]).forEach(u=>{names[u.id]=u.name;UU[u.id]=u.u});
+    const rows=P.map(p=>{const x=USERS?sessXP(UU[p.id],S,p.joinedAt):null;return Object.assign(liveRow(p,now),{name:names[p.id]||p.id,sxo:x,sx:x?x.xp:null})});
+    const sxTot=rows.reduce((t,r)=>t+(r.sx|0),0),sxEst=rows.some(r=>r.sxo&&r.sxo.est),sxTop=rows.filter(r=>r.sx>0).sort((a,b)=>b.sx-a.sx).slice(0,3);
     const k=sort.k,cmp=(a,b)=>k==='name'?a.name.localeCompare(b.name):k==='s'?order[a.s]-order[b.s]:(a[k]||0)-(b[k]||0);rows.sort((a,b)=>cmp(a,b)*sort.d);
     const total=(typeof ROSTER!=='undefined'?ROSTER.hashes.length-1:rows.length),cnt=s=>rows.filter(r=>r.s===s).length;
     const not=(USERS||[]).filter(u=>u.id!==LECTURER&&!P.some(p=>p.id===u.id)).map(u=>u.name||u.id).sort();
     const th=(key,l)=>`<th data-sk="${key}" class="click" aria-sort="${sort.k===key?(sort.d>0?'ascending':'descending'):'none'}">${l}${sort.k===key?(sort.d>0?' ▲':' ▼'):''}</th>`;
     el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between"><h1 style="margin:0">${esc(S.name)}</h1>${sessLive()?'<span class="live"><i></i>LIVE</span>':'<span class="tag">Ended</span>'}</div>
-    <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>joined</span></div><div class="stat"><b>${cnt('on')}</b><span>🟢 on screen</span></div><div class="stat"><b>${cnt('idle')}</b><span>🟡 idle</span></div><div class="stat"><b>${cnt('away')+cnt('off')}</b><span>🔴 away or ⚫ offline</span></div></div>
-    <div class="tablewrap"><table class="wide"><tr>${th('s','Status')}${th('name','Student')}${th('pct','On screen')}${th('idle','Idle')}${th('left','Times left')}${th('longest','Longest away')}${th('chAt','Last change')}<th>Section now</th><th>Practised</th></tr>
-    ${rows.map(r=>`<tr class="click" data-sid="${esc(r.id)}"><td style="white-space:nowrap">${LIVE_LBL[r.s]||r.s}</td><td>${esc(r.name)}<div class="muted" style="font-size:.78rem">${esc(r.id)}</div></td><td><b>${r.pct}%</b></td><td>${stFmt(r.idle|0)}</td><td>${r.left|0}</td><td>${stFmt(r.longest|0)}</td><td>${r.chAt?ago(new Date(r.chAt)):'–'}</td><td style="font-size:.85rem">${esc(r.sec||'')}</td><td style="font-size:.8rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="9" class="muted">Nobody has joined yet.</td></tr>'}</table></div>
+    <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>joined</span></div><div class="stat"><b>${cnt('on')}</b><span>🟢 on screen</span></div><div class="stat"><b>${cnt('idle')}</b><span>🟡 idle</span></div><div class="stat"><b>${cnt('away')+cnt('off')}</b><span>🔴 away or ⚫ offline</span></div><div class="stat"><b>${sxEst?'≈ ':''}+${sxTot}</b><span>XP this session</span></div></div>
+    ${sxTop.length?`<p style="margin:0 0 10px"><b>🏆 Session leaders:</b> ${sxTop.map((r,i)=>['🥇','🥈','🥉'][i]+' '+esc(r.name)+' <b>'+(r.sxo.est?'≈ ':'')+'+'+r.sx+'</b>').join(' · ')}</p>`:''}
+    <div class="tablewrap"><table class="wide"><tr>${th('s','Status')}${th('name','Student')}${th('sx','XP this session')}${th('pct','On screen')}${th('idle','Idle')}${th('left','Times left')}${th('longest','Longest away')}${th('chAt','Last change')}<th>Section now</th><th>Practised</th></tr>
+    ${rows.map(r=>`<tr class="click" data-sid="${esc(r.id)}"><td style="white-space:nowrap">${LIVE_LBL[r.s]||r.s}</td><td>${esc(r.name)}<div class="muted" style="font-size:.78rem">${esc(r.id)}</div></td><td>${sxCell(r.sxo)}${r.sxo&&!r.sxo.est&&sxActs(r.sxo.acts)?`<div class="muted" style="font-size:.74rem">${esc(sxActs(r.sxo.acts,3))}</div>`:''}</td><td><b>${r.pct}%</b></td><td>${stFmt(r.idle|0)}</td><td>${r.left|0}</td><td>${stFmt(r.longest|0)}</td><td>${r.chAt?ago(new Date(r.chAt)):'–'}</td><td style="font-size:.85rem">${esc(r.sec||'')}</td><td style="font-size:.8rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="10" class="muted">Nobody has joined yet.</td></tr>'}</table></div>
     <h3 style="margin-top:14px">Not joined (${not.length}${total>(USERS||[]).length-1?` + ${Math.max(0,total-((USERS||[]).filter(u=>u.id!==LECTURER).length))} not signed up`:''})</h3><p style="font-size:.9rem">${not.map(esc).join(', ')||'–'}</p>
-    <p class="muted" style="font-size:.8rem">On screen = the portal is open and in use. Idle = open but untouched for 2+ minutes. Left the app = switched app or tab, or locked the screen. Offline = no check-in for 5+ minutes. These are signals, not proof.</p>
+    <p class="muted" style="font-size:.8rem">On screen = the portal is open and in use. Idle = open but untouched for 2+ minutes. Left the app = switched app or tab, or locked the screen. Offline = no check-in for 5+ minutes. These are signals, not proof. XP this session counts XP since each student joined; ≈ marks an estimate from whole hours (devices not yet on the exact record).</p>
     <div class="row" style="margin-top:10px">${sessLive()?'<button class="btn red" id="lvend">■ End session</button>':''}<a class="btn ghost" href="#/session/${esc(S.id)}">Report</a></div></div>`;
     el.querySelectorAll('[data-sk]').forEach(h=>h.onclick=()=>{sort=sort.k===h.dataset.sk?{k:sort.k,d:-sort.d}:{k:h.dataset.sk,d:h.dataset.sk==='name'||h.dataset.sk==='s'?1:-1};draw()});
     el.querySelectorAll('tr[data-sid]').forEach(r=>r.onclick=()=>openStudent(r.dataset.sid));
@@ -253,6 +255,7 @@ function sessXP(u,S,join,rep){u=u||{};join=join||(u.sess&&u.sess[S.id]&&u.sess[S
 function sxActs(acts,max){const e=Object.entries(acts||{}).filter(([c,n])=>n&&!SX_BONUS.has(c)).sort((a,b)=>b[1]-a[1]);
   return e.slice(0,max||9).map(([c,n])=>n+' '+(SX_CAT[c]||SX_CAT.other)[n===1?0:1]).join(' · ')}
 const sxXP=r=>r?(r.est?'≈ ':'')+r.xp+' XP':'–';
+const sxCell=x=>x==null?'–':`<b>${x.est?'≈ ':''}+${x.xp}</b>`;
 const sxTime=t=>new Date(t).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Indian/Maldives'});
 function sxTimeline(r){if(!r||!r.tl.length)return '';return `<details class="sxtl" data-lect=""><summary>Timeline (${r.tl.length})</summary><ol>${r.tl.map(([t,k,x])=>{const c=sxCat(k).c;
   return `<li><span class="muted">${sxTime(t)}</span> ${esc((SX_CAT[c]||SX_CAT.other)[0])} <span class="muted">${esc(String(k).split(':').slice(1,2).join(''))}</span> <b>+${x}</b></li>`}).join('')}</ol></details>`}
