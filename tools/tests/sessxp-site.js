@@ -41,7 +41,7 @@ async sxlive(){const l=await page({sid:LECT});const t=await l.evaluate(async()=>
     location.hash='#/live';await new Promise(r=>setTimeout(r,300));return document.querySelector('#lvb').textContent});
   ok(t.includes('XP this session')&&/Session leaders:.*Aminath Test \+17/.test(t),'live board XP: '+t.slice(0,500));
   ok(t.includes('Most missed')&&t.includes('average score')&&t.includes('50%')&&t.includes('Answer details from 1 of 2'),'live panel: '+t.slice(0,600));ok(/≈ \+\d+\s*XP this session/.test(t),'live total not marked ≈: '+t.slice(0,300));
-  await shot(l,'sx-live',true);await l.click('#lvproj');ok(await l.$eval('#lvmain',e=>getComputedStyle(e).display==='none'),'projector view shows names');await shot(l,'sx-live-projector',true);
+  await shot(l,'sx-live',true);await l.click('#lvproj');ok(await l.$eval('#lvmain',e=>getComputedStyle(e).display==='none'),'projector view shows names');await shot(l,'sx-live-projector',true);await l.setViewportSize({width:1366,height:768});await l.waitForTimeout(150);await shot(l,'sx-live-projector-1366');await l.setViewportSize({width:390,height:844});
   await l.evaluate(()=>document.body.classList.remove('proj'));await l.done()},
 /* every practice answer is logged with its time, question, result and pick; trimmed like the XP log */
 async sxans(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>{U.qa=[];ansLog('q1',true,2);ansLog('q2',.456,'plan');ansLog('q3',0,'x'.repeat(30));
