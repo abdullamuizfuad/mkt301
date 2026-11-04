@@ -476,6 +476,7 @@ function classDash(){
     el.querySelectorAll('tr[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();openStudent(r.dataset.sid)}}})}}
 function start(){if(ACT&&!start.done){start.done=1;return actionPage(ACT)}hook('beforeMe');ME=me();if(!ME)return gate();load();hook('afterLoad');if(!U.badges.boarding){checkBadges();save()}hud();route();presOn();if(ME.cloud)cloudSync();if(!U.tour)setTimeout(()=>{if(ME&&!U.tour&&!document.querySelector('.modal'))tour(0)},700);else if(!U.inst)setTimeout(()=>{if(ME&&!document.querySelector('.modal'))installPop(1)},1200)}
 function route(){CLOUD.unwatch();hook('leave');if(!ME)return gate();const h=location.hash.replace(/^#\/?/,'').split('/');
+  if(typeof tutGuard==='function'){const g=tutGuard(h);if(g){location.replace(g);return}}
   if(ROUTES[h[0]])return ROUTES[h[0]](h);
   if(h[0]==='student')return studentPage(String(h[1]||'').toUpperCase());
   if(h[0]==='live')return livePage();

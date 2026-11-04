@@ -229,7 +229,7 @@ async sessions(){if(process.env.OLDRULES)return;
   const l=await page({w:1280,h:900,theme:'light',allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
   await l.go('#/lecturer');await waitFor(l,()=>!!document.querySelector('#lsess #lsgo'));
   ok(JSON.stringify(await l.$$eval('#lsname option',o=>o.map(x=>x.value)))===JSON.stringify(['Week 11 tutorial','Week 12 tutorial','Week 13 tutorial','Week 14 tutorial']),'week dropdown should offer only weeks 11-14');
-  ok(await l.$eval('#lsname',s=>s.value)==='Week 11 tutorial','Week 11 should be preselected');await shot(l,'session-start',true);await l.click('#lsgo');
+  ok(await l.$eval('#lsname',s=>s.value)==='Week 11 tutorial'&&await l.$eval('#lsgrp',s=>s.value)==='1','Week 11 Session 1 should be preselected');await shot(l,'session-start',true);await l.click('#lsgo');
   await waitFor(l,()=>PR.sessOn===true);const sid=await l.evaluate(()=>PR.sess.id);ok((await l.textContent('#lsess')).includes('Week 11 tutorial'),'running session not shown');
   const c=await page({allow:/400|Failed to load resource|identitytoolkit/});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);
   await waitFor(c,()=>!!document.querySelector('#lbjoin'));ok(await c.evaluate(()=>!PR.joined),'joined without tapping Join');await shot(c,'sess-banner');
@@ -252,7 +252,7 @@ async sessions(){if(process.env.OLDRULES)return;
   const sd=await fsDoc('sessions',sid),lr=await waitDoc('sessions/'+sid+'/lect','rep',null,R3?15000:1);ok(sd&&sd.active.booleanValue===false&&(sd.rep&&sd.rep.mapValue.fields[C]||lr&&lr.rows.mapValue.fields[C]),'report not saved');
   await l.go('#/session/'+sid);await waitFor(l,()=>!!document.querySelector('#srp tr[data-sid]'));ok((await l.textContent('#srp')).includes('Shifa'),'report row missing');ok(await l.$('#srcsv'),'CSV button missing');await shot(l,'session-report',true);
   await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes('Week 11 tutorial'));
-  await waitFor(l,()=>!!document.querySelector('#lsname')&&document.querySelector('#lsname').value==='Week 12 tutorial');
+  await waitFor(l,()=>!!document.querySelector('#lsname')&&document.querySelector('#lsname').value==='Week 11 tutorial'&&document.querySelector('#lsgrp').value==='2');
   await l.go('#/student/'+C);await waitFor(l,()=>!!document.querySelector('#prof')&&document.querySelector('#prof').textContent.includes('Week 11 tutorial'));
   ok((await l.textContent('#prof')).includes('Screen time'),'screen time missing from the profile');
   await c.done();await l.done()},

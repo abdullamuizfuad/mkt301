@@ -106,11 +106,11 @@ function stCardHTML(){if(!U)return '';const days=stDays(U,7),t=stToday(U),wk=stW
 
 /* ---------- live sessions: student side ---------- */
 function presSession(s){const was=PR.sess;PR.sess=s;PR.sessOn=sessLive();
-  if(s&&U&&U.sess&&U.sess[s.id]&&PR.sessOn&&ME.sid!==LECTURER&&!PR.joined){PR.joined=true;PR.st='';presSection()}
+  if(s&&U&&U.sess&&U.sess[s.id]&&!U.sess[s.id].lv&&PR.sessOn&&ME.sid!==LECTURER&&!PR.joined){PR.joined=true;PR.st='';presSection()}
   if(PR.joined&&(!PR.sessOn||(was&&s&&was.id!==s.id))){const id=was&&was.id||s&&s.id;PR.joined=false;presClaim(id)}
   if(s&&!PR.sessOn&&U&&U.sess&&U.sess[s.id]&&!U.sess[s.id].c)presClaim(s.id);
   if(PR.sessOn&&document.querySelector('[aria-label="Take a break"]'))closeModal();
-  sxFbSeen(s);presBar();if(typeof liveCardRefresh==='function')liveCardRefresh()}
+  sxFbSeen(s);presBar();tutAct(s);if(typeof liveCardRefresh==='function')liveCardRefresh()}
 function presBar(){let b=document.getElementById('livebar');const show=typeof ME!=='undefined'&&ME&&PR.sessOn;
   if(!show){if(b)b.remove();return}
   if(!b){b=document.createElement('div');b.id='livebar';b.setAttribute('role','status');const app=document.getElementById('app');app.parentNode.insertBefore(b,app)}
@@ -127,7 +127,7 @@ function presNote(join){closeModal();const m=document.createElement('div');m.cla
 const presJoinAsk=()=>presNote(true);
 function presJoin(){closeModal();const S=PR.sess;if(!S||!sessLive())return;U.sess=U.sess||{};
   if(!U.sess[S.id])U.sess[S.id]={j:Date.now(),on:0,idle:0,away:0,left:0,lg:0,pr:[],c:0};
-  PR.joined=true;PR.st='';PR.last=Date.now();save();presSection();presWrite(true);presBar();toast('🔴','Joined '+S.name,'Stay on screen to earn the focus bonus')}
+  PR.joined=true;PR.st='';PR.last=Date.now();save();presSection();presWrite(true);presBar();toast('🔴','Joined '+S.name,'Stay on screen to earn the focus bonus');PR.actK=null;tutAct(S)}
 function presSection(){const w=(typeof presWhere==='function'&&presWhere())||(document.querySelector('main h1')||{}).textContent||'Home';
   const sec=String(w).replace(/\s+/g,' ').trim().slice(0,60);if(sec!==PR.sec){PR.sec=sec;PR.secDirty=true}
   if(PR.joined&&U&&PR.sess&&U.sess&&U.sess[PR.sess.id]){const r=U.sess[PR.sess.id],a=sec.split(' · ')[0];if(a&&!r.pr.includes(a)&&r.pr.length<12)r.pr.push(a)}}
@@ -195,7 +195,7 @@ const usersOnce=()=>new Promise(res=>{let d=0;CLOUD.watchUsers(l=>{if(!d){d=1;re
 function liveNames(){return new Promise(res=>{if(LIVE_NAMES)return res(LIVE_NAMES);let done=false;CLOUD.watchUsers(list=>{LIVE_NAMES={};LIVE_USERS=list;list.forEach(x=>LIVE_NAMES[x.id]=x.name||'');if(!done){done=true;res(LIVE_NAMES)}},()=>{if(!done){done=true;res({})}})})}
 const csvDownload=(rows,name)=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download=name;a.click()};
 function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shell('#/lecturer','<div class="callout">Live sessions need the live connection.</div>');
-  shell('#/lecturer',`<div class="row" style="justify-content:space-between;align-items:center"><a href="#/lecturer">← Lecturer</a><button class="btn ghost sm" id="lvproj" data-lect>⛶ Projector view</button></div><div id="lvb" style="margin-top:10px"><p class="muted">Loading…</p></div><div class="card" id="lvfc" data-lect style="margin-top:16px"><h2>💬 Send live feedback</h2><div id="lvfcb"><p class="muted">Checking…</p></div></div>`);
+  shell('#/lecturer',`<div class="row" style="justify-content:space-between;align-items:center"><a href="#/lecturer">← Lecturer</a><button class="btn ghost sm" id="lvproj" data-lect>⛶ Projector view</button></div><div id="lvb" style="margin-top:10px"><p class="muted">Loading…</p></div><div class="card" id="lvfc" data-lect style="margin-top:16px"><h2>💬 Send live feedback</h2><div id="lvfcb"><p class="muted">Checking…</p></div></div><div class="card" id="lvac" data-lect style="margin-top:16px"><h2>🎯 Activity for joined students</h2><div id="lvacb"><p class="muted">Checking…</p></div></div>`);
   let P=[],USERS=null,sort={k:'s',d:1},allM=false,fcOn=false;const order={away:0,off:1,idle:2,on:3};
   $('#lvproj').onclick=()=>{const on=document.body.classList.toggle('proj');$('#lvproj').textContent=on?'✕ Exit projector view':'⛶ Projector view'};
   addEventListener('hashchange',function off(){document.body.classList.remove('proj');removeEventListener('hashchange',off)});
@@ -210,7 +210,7 @@ function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shel
     const not=(USERS||[]).filter(u=>u.id!==LECTURER&&!P.some(p=>p.id===u.id)).map(u=>u.name||u.id).sort();
     const th=(key,l)=>`<th data-sk="${key}" class="click" aria-sort="${sort.k===key?(sort.d>0?'ascending':'descending'):'none'}">${l}${sort.k===key?(sort.d>0?' ▲':' ▼'):''}</th>`;
     const st=USERS?sessStats(P.map(p=>({id:p.id,u:UU[p.id],join:p.joinedAt})),S):null;rows.forEach(r=>{const x=st&&st.per[r.id];r.sc=x?x.sc:null});
-    el.innerHTML=`<div class="card sxpanel" id="lvpan"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📊 ${esc(S.name)}: live feedback</h2>${sessLive()?'<span class="live"><i></i>LIVE</span>':''}</div>${sxPanelHTML(st,allM)}</div>
+    el.innerHTML=`<div class="card sxpanel" id="lvpan"><div class="row" style="justify-content:space-between"><h2 style="margin:0">📊 ${esc(S.name)}: live feedback</h2><span class="tag">🎯 ${esc(actLabel(S.act))}</span>${sessLive()?'<span class="live"><i></i>LIVE</span>':''}</div>${sxPanelHTML(st,allM)}</div>
     <div class="card" id="lvmain" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h1 style="margin:0">${esc(S.name)}</h1>${sessLive()?'<span class="live"><i></i>LIVE</span>':'<span class="tag">Ended</span>'}</div>
     <div class="stats" style="margin:12px 0"><div class="stat"><b>${rows.length}/${total}</b><span>joined</span></div><div class="stat"><b>${cnt('on')}</b><span>🟢 on screen</span></div><div class="stat"><b>${cnt('idle')}</b><span>🟡 idle</span></div><div class="stat"><b>${cnt('away')+cnt('off')}</b><span>🔴 away or ⚫ offline</span></div><div class="stat"><b>${sxEst?'≈ ':''}+${sxTot}</b><span>XP this session</span></div></div>
     ${sxTop.length?`<p style="margin:0 0 10px"><b>🏆 Session leaders:</b> ${sxTop.map((r,i)=>['🥇','🥈','🥉'][i]+' '+esc(r.name)+' <b>'+(r.sxo.est?'≈ ':'')+'+'+r.sx+'</b>').join(' · ')}</p>`:''}
@@ -221,7 +221,9 @@ function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shel
     <div class="row" style="margin-top:10px">${sessLive()?'<button class="btn red" id="lvend">■ End session</button>':''}<a class="btn ghost" href="#/session/${esc(S.id)}">Report</a></div></div>`;
     el.querySelectorAll('[data-sk]').forEach(h=>h.onclick=()=>{sort=sort.k===h.dataset.sk?{k:sort.k,d:-sort.d}:{k:h.dataset.sk,d:h.dataset.sk==='name'||h.dataset.sk==='s'?1:-1};draw()});
     const sa=$('#sxall');if(sa)sa.onclick=()=>{allM=!allM;draw()};
-    if(!fcOn){fcOn=true;sessR3().then(ok=>{const b=$('#lvfcb');if(!b)return;b.innerHTML=sxFbBox(PR.sess||S,ok);const go=$('#sxfs');if(go){go.onclick=()=>sxFbSend(PR.sess||S);$('#sxfm').onkeydown=e=>{if(e.key==='Enter')sxFbSend(PR.sess||S)}}})}
+    if(!fcOn){fcOn=true;sessR3().then(ok=>{const ab=$('#lvacb');if(ab){const A=(PR.sess||S).act||{k:'free'};ab.innerHTML=ok?`<p style="margin:0 0 6px">Now: <b id="lvacn">${esc(actLabel(A))}</b></p>${actPickHTML('lv',A)}<button class="btn" id="lvacs" style="margin-top:8px">Set activity</button><p class="muted" style="font-size:.8rem;margin:6px 0 0">Joined students switch to it at once. Free practice lets them use the site as usual.</p>`:'<p class="muted" style="font-size:.85rem">Activities need the newest rules: publish them, then reload.</p>';
+      if(ok){actPickBind('lv',A);$('#lvacs').onclick=async()=>{const act=actPickRead('lv'),T=PR.sess||S;try{await CLOUD.put('sessions/'+T.id,{act},true);T.act=act;$('#lvacn').textContent=actLabel(act);toast('🎯','Activity set',actLabel(act))}catch(e){toast('⚠️','Not set',CLOUD.say(e))}}}}
+      const b=$('#lvfcb');if(!b)return;b.innerHTML=sxFbBox(PR.sess||S,ok);const go=$('#sxfs');if(go){go.onclick=()=>sxFbSend(PR.sess||S);$('#sxfm').onkeydown=e=>{if(e.key==='Enter')sxFbSend(PR.sess||S)}}})}
     else{const fl=$('#sxfl');if(fl)fl.innerHTML=sxFbList((PR.sess||S).fb)}
     el.querySelectorAll('tr[data-sid]').forEach(r=>r.onclick=()=>openStudent(r.dataset.sid));
     const e=$('#lvend');if(e)e.onclick=()=>{if(confirm('End "'+S.name+'" now?'))liveFinish(S.id)}};
@@ -288,6 +290,54 @@ function sxRepAdd(rep,S,users,ps){const by={};(users||[]).forEach(x=>by[x.id]=x.
   Object.keys(rep).forEach(sid=>{const r=sessXP(by[sid],Object.assign({},S,{endedAt:S.endedAt||Date.now()}),jn[sid]);if(jn[sid])rep[sid].j=jn[sid];
     if(r){rep[sid].xp=r.xp-r.fx;rep[sid].fx=r.fx;rep[sid].acts=Object.fromEntries(Object.entries(r.acts).slice(0,20));if(r.est)rep[sid].est=1}});return rep}
 
+/* ---------- the session activity (act on the session doc) and the students' Tutorial page (#/tutorial) ----------
+   act = {k:'free'} (default: practise as usual) | {k:'mcq', topics, n} | {k:'plans', ids} | {k:'chips', topics} | {k:'case', id} | {k:'notes', topics}.
+   While a student is joined and the activity isn't free, other pages lead back to #/tutorial (core route() asks tutGuard); "📖 Refer to notes"
+   for the activity's topics stays open, and "Leave session" ends it for them. XP, anti-farming, presence and idle tracking work as everywhere else. */
+const ACT_K=[['free','Free practice'],['mcq','MCQ set'],['plans','Short-answer plan questions'],['chips','Build a paragraph'],['case','A case'],['notes','Notes and quick checks']];
+const actKinds=()=>ACT_K.filter(([k])=>k!=='mcq'||typeof startMcq==='function'&&typeof drawMcq==='function');
+const actTopics=()=>typeof notesCfg==='function'&&typeof notesOK==='function'&&notesOK()?notesCfg().keys.map(k=>[+k||k,(notesCfg().word||'Topic')+' '+k+': '+notesCfg().title(k)]):[];
+const actQTop=q=>+(q.t||q.week||0);
+function actLabel(a){if(!a||a.k==='free')return 'Free practice';const w=typeof notesCfg==='function'&&typeof notesOK==='function'&&notesOK()?notesCfg().word:'Topic',tp=(a.topics||[]).length?' · '+w+' '+a.topics.join(', '):'';
+  if(a.k==='mcq')return 'MCQ set ('+(a.n||10)+' questions)'+tp;if(a.k==='plans')return (a.ids||[]).length+' short-answer plan question'+((a.ids||[]).length===1?'':'s');if(a.k==='chips')return 'Build a paragraph'+tp;
+  if(a.k==='case'){const c=(typeof CASE_ALL!=='undefined'?CASE_ALL:[]).find(x=>x.id===a.id);return 'Case: '+(c?caseName(c):a.id)}if(a.k==='notes')return 'Notes and quick checks'+tp;return a.k}
+function actPickHTML(p,a){a=a||{k:'free'};const T=actTopics(),tp=new Set(a.topics||[]);
+  return `<div class="actpick" id="${p}ap" data-lect><label for="${p}ak" style="margin-top:8px">Activity for joined students</label><select id="${p}ak">${actKinds().map(([k,l])=>`<option value="${k}"${a.k===k?' selected':''}>${l}</option>`).join('')}</select>
+  <div id="${p}at" class="tpicks" style="margin-top:6px">${T.map(([k,l])=>`<label class="tpk"><input type="checkbox" value="${k}"${tp.has(k)?' checked':''}><span>${esc(l)}</span></label>`).join('')}</div>
+  <div id="${p}an" class="row" style="margin-top:6px"><label style="margin:0">Questions</label><select id="${p}ann">${[5,10,15,20,30].map(n=>`<option${(a.n||10)===n?' selected':''}>${n}</option>`).join('')}</select></div>
+  <div id="${p}aq" style="margin-top:6px;max-height:220px;overflow:auto"></div>
+  <div id="${p}ac" style="margin-top:6px"><select id="${p}acs">${(typeof CASE_ALL!=='undefined'?CASE_ALL:[]).map(c=>`<option value="${esc(c.id)}"${a.id===c.id?' selected':''}>${esc(caseName(c))}</option>`).join('')}</select></div></div>`}
+function actPickBind(p,a){const k=$('#'+p+'ak');if(!k)return;const sel=new Set((a&&a.ids)||[]);
+  const sync=()=>{const v=k.value,tps=[...document.querySelectorAll('#'+p+'at input:checked')].map(x=>+x.value||x.value);$('#'+p+'at').hidden=!['mcq','chips','notes','plans'].includes(v);$('#'+p+'an').hidden=v!=='mcq';$('#'+p+'ac').hidden=v!=='case';
+    const q=$('#'+p+'aq');q.hidden=v!=='plans';if(v==='plans'){document.querySelectorAll('#'+p+'aq input:checked').forEach(x=>sel.add(x.value));document.querySelectorAll('#'+p+'aq input:not(:checked)').forEach(x=>sel.delete(x.value));
+      const pool=(typeof BANK_B_ALL!=='undefined'?BANK_B_ALL:[]).filter(x=>!tps.length||tps.includes(actQTop(x)));q.innerHTML=pool.length?pool.slice(0,60).map(x=>`<label class="tpk" style="display:flex"><input type="checkbox" value="${esc(x.id)}"${sel.has(x.id)?' checked':''}><span>${esc(x.id)} · ${esc(String(x.q).slice(0,110))}</span></label>`).join(''):'<p class="muted">Tick a topic first.</p>'}};
+  k.onchange=sync;document.querySelectorAll('#'+p+'at input').forEach(x=>x.onchange=sync);sync()}
+function actPickRead(p){const k=$('#'+p+'ak');if(!k)return {k:'free'};const v=k.value,tps=[...document.querySelectorAll('#'+p+'at input:checked')].map(x=>+x.value||x.value).slice(0,8);
+  if(v==='mcq')return {k:v,topics:tps,n:+$('#'+p+'ann').value||10};if(v==='plans')return {k:v,ids:[...document.querySelectorAll('#'+p+'aq input:checked')].map(x=>x.value).slice(0,12)};
+  if(v==='chips'||v==='notes')return {k:v,topics:tps};if(v==='case')return {k:v,id:$('#'+p+'acs').value};return {k:'free'}}
+/* the topics an activity covers (for its notes links) */
+function actTops(a){if(!a)return [];if(a.k==='plans'){const I=typeof qIndex==='function'?qIndex():{};return [...new Set((a.ids||[]).map(id=>I[id]&&actQTop(I[id].q)).filter(Boolean))]}return a.topics||[]}
+const actKey=a=>JSON.stringify(a||{k:'free'});
+/* is this student in tutorial mode now? */
+function tutOn(){return !!(typeof ME!=='undefined'&&ME&&ME.sid!==LECTURER&&!VIEWAS&&PR.joined&&sessLive()&&PR.sess&&PR.sess.act&&PR.sess.act.k&&PR.sess.act.k!=='free')}
+function tutAllowed(h,a){const r=h.join('/');if(h[0]==='tutorial')return true;if(h[0]==='notes'&&(!h[1]||actTops(a).map(String).includes(String(h[1]))))return true;
+  if(a.k==='mcq')return h[0]==='mcq';if(a.k==='chips')return h[0]==='chips'&&(!h[1]||(a.topics||[]).map(String).includes(String(h[1])));if(a.k==='case')return h[0]==='case'&&h[1]===a.id;if(a.k==='notes')return h[0]==='notes';return false}
+function tutGuard(h){const on=tutOn();document.body.classList.toggle('tut',on);if(!on)return '';return tutAllowed(h,PR.sess.act)?'':'#/tutorial'}
+/* the lecturer changed the activity: joined students switch live */
+function tutAct(s){if(!tutOn()){document.body.classList.remove('tut');if(location.hash==='#/tutorial')location.hash='#/';PR.actK=null;return}const k=s&&s.id+'|'+actKey(s.act);if(PR.actK===k)return;const first=PR.actK==null;PR.actK=k;
+  if(!first)toast('🎓','New activity',actLabel(s.act));if(location.hash!=='#/tutorial')location.hash='#/tutorial';else route()}
+function tutLeave(){const S=PR.sess;if(!S||!confirm('Leave "'+S.name+'"? Your lecturer will see that you left.'))return;if(U.sess&&U.sess[S.id])U.sess[S.id].lv=Date.now();PR.joined=false;
+  presWrite(true,'off');presClaim(S.id);document.body.classList.remove('tut');save();presBar();location.hash='#/'}
+function tutPage(){if(!tutOn()){document.body.classList.remove('tut');return home()}const S=PR.sess,a=S.act,tops=actTops(a),w=typeof notesCfg==='function'&&notesOK()?notesCfg().word:'Topic';
+  const notes=tops.map(t=>{const h=typeof notesHref==='function'?notesHref({t,week:t},{}):'';return h?`<a class="btn ghost sm" href="${h}">📖 Refer to notes: ${w} ${t}</a>`:''}).join(' ');
+  const go={mcq:'#/mcq',chips:'#/chips/'+((a.topics||[])[0]||''),case:'#/case/'+a.id,notes:'#/notes/'+((a.topics||[])[0]||'')}[a.k];
+  shell('#/',`<div class="card"><div class="row" style="justify-content:space-between"><span class="live"><i></i>LIVE</span><button class="btn ghost sm" id="tutlv">Leave session</button></div><h1 style="margin:6px 0 2px">${esc(S.name)}</h1><p class="muted" style="margin:0">Your lecturer has set this activity. Stay on it until they change it.</p></div>
+  <div class="card" style="margin-top:14px"><h2 style="margin:0 0 6px">🎯 ${esc(actLabel(a))}</h2>${a.k==='chips'&&(a.topics||[]).length>1?`<div class="row">${a.topics.map(t=>`<a class="btn" href="#/chips/${t}">🧱 ${w} ${t}</a>`).join('')}</div>`:a.k==='notes'&&(a.topics||[]).length>1?`<div class="row">${a.topics.map(t=>`<a class="btn" href="#/notes/${t}">📖 ${w} ${t}</a>`).join('')}</div>`:go?`<a class="btn" id="tutgo" href="${go}">▶ Start</a>`:''}
+  ${notes?`<p style="margin:10px 0 0">${notes}</p>`:''}</div><div id="qs" style="margin-top:14px"></div>
+  ${(S.fb||[]).length?`<div class="card" style="margin-top:14px"><h3 style="margin:0 0 6px">💬 From your lecturer</h3><ul class="sxfb">${sxFbList(S.fb)}</ul></div>`:''}`);
+  $('#tutlv').onclick=tutLeave;
+  const g=$('#tutgo');if(g&&a.k==='mcq')g.onclick=e=>{const key=S.id+'|'+actKey(a);if(U.tutMq!==key||!U.mq||U.mq.done){const tp=(a.topics||[]).length?a.topics:undefined;U.mtopics=tp||U.mtopics;startMcq(drawMcq(tp||U.mtopics,a.n||10),{topics:tp||U.mtopics||[]});U.tutMq=key;save()}};
+  if(a.k==='plans'){const I=typeof qIndex==='function'?qIndex():{},qs=(a.ids||[]).map(id=>I[id]&&I[id].q).filter(Boolean);if(qs.length&&typeof player==='function')player({key:'_tut',qs,o:q=>q.week?{week:q.week}:{short:1,secs:480},next:()=>{},weak:()=>{}})}}
 /* ---------- session analytics, live feedback, reflections, attendance ----------
    Newer rules ("r3", probed by reading sessions/_probe/me/<own ID>) allow: nj / fb / refl on the session doc (lecturer writes),
    sessions/{id}/lect/{rep|att} (lecturer only: the per-student rows and attendance overrides) and sessions/{id}/me/{SID}
@@ -372,7 +422,7 @@ function sxAttHTML(S,rep,dir,ov,f,sort,ok){const rows=(dir.length?dir:Object.key
   ${ok?'<p class="muted" style="font-size:.78rem">Override: tap to cycle Auto → Present → Absent (for students without a phone, and so on). Saved for this session.</p>':'<p class="muted" style="font-size:.78rem">Overrides need the newest rules.</p>'}`}}
 /* students: Past tutorial sessions (#/sessions, #/sessions/<id>): the reflection and only their OWN figures */
 /* registered from engine/simple.js (this file loads before core.js defines ROUTES) */
-function presRoutes(){ROUTES.sessions=h=>{if(!cloudOn())return shell('#/progress','<h1>Past tutorial sessions</h1><div class="callout">Past sessions need the live connection.</div>');if(h[1])return sxSessPage(h[1]);
+function presRoutes(){ROUTES.tutorial=()=>tutPage();ROUTES.sessions=h=>{if(!cloudOn())return shell('#/progress','<h1>Past tutorial sessions</h1><div class="callout">Past sessions need the live connection.</div>');if(h[1])return sxSessPage(h[1]);
   const L=ME.sid===LECTURER;shell('#/progress',`<h1>Past tutorial sessions</h1><p class="muted" style="margin-top:-4px">${L?'Every session you have run. Open one for its report.':'What each session covered, and how you did.'}</p><div id="sxsl"><p class="muted">Loading…</p></div>`);
   CLOUD.watchSessions(list=>{const el=$('#sxsl');if(!el)return;const past=list.filter(s=>!(s.active&&(!s.endsAt||Date.now()<s.endsAt)));
     el.innerHTML=past.length?`<div class="card"><ul class="sumlist">${past.map(s=>{const j=U&&U.sess&&U.sess[s.id];return `<li><a href="${L?'#/session/':'#/sessions/'}${esc(s.id)}">${esc(s.name)}</a> <span class="muted" style="font-size:.82rem">${s.startedAt?new Date(s.startedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Indian/Maldives'}):''}${L?'':j?' · you joined':' · not joined'}${s.refl?' · reflection ✓':''}</span></li>`}).join('')}</ul></div>`:'<div class="card"><p class="muted" style="margin:0">No sessions yet.</p></div>'},
@@ -493,5 +543,6 @@ const presSessRows=(ss,held,sid,u)=>ss.length?`<div class="tablewrap"><table><tr
 #livebar .lbin{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:46px;padding-top:6px;padding-bottom:6px;font-size:.92rem}
 #livebar .btn.sm{min-height:34px}#livebar .lbfb{flex-basis:100%;font-size:.86rem;background:color-mix(in srgb,var(--teal) 14%,transparent);border-radius:8px;padding:4px 8px}
 .sxq{margin:4px 0 10px;padding-left:1.2em}.sxq li{margin:6px 0}.sxq .muted{font-size:.82rem}.sxq .ok{color:var(--teal)}.sxfb{margin:8px 0 0;padding-left:1.1em;font-size:.88rem}
+body.tut nav.tabs,body.tut .tabbar,body.tut .tabmore{display:none!important}
 body.proj #lvmain,body.proj #lvfc,body.proj .tabbar,body.proj header.top,body.proj #livebar{display:none!important}body.proj .sxpanel{font-size:1.3rem}body.proj .sxpanel h2{font-size:2rem}body.proj .sxpanel h3{font-size:1.5rem;margin-top:22px}body.proj .sxpanel .stat b{font-size:2.2rem}
 .sxtl summary{cursor:pointer;font-size:.78rem;color:var(--muted);margin-top:4px}.sxtl ol{margin:4px 0 0;padding-left:1.1em;font-size:.78rem;max-height:220px;overflow:auto}.sxtl li{margin:1px 0}`;document.head.append(s)})();
