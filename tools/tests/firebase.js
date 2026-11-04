@@ -8,7 +8,7 @@ const ARGS=Object.fromEntries(process.argv.slice(2).map(a=>a.replace(/^--/,'').s
 const EMU='http://127.0.0.1:9099/emulator/v1/projects/demo-mkt301',FS='http://127.0.0.1:8085/v1/projects/demo-mkt301/databases/(default)/documents';
 const A='S081441',B='S085542',L='S000001',C='S082110',PIN='482913',PINB='730516',PINL='905127',PINC='371946';
 const fs=require('fs'),os=require('os'),{spawnSync}=require('child_process');
-let browser,fails=0,passes=0;const R2=process.env.RULES2==='1';const ok=(c,m)=>{if(!c)throw new Error(m)};
+let browser,fails=0,passes=0;const R2=process.env.RULES2==='1';const R3=!!process.env.RULES&&/match \/me\/\{sid\}/.test(fs.readFileSync(process.env.RULES,'utf8'));const ok=(c,m)=>{if(!c)throw new Error(m)};
 const shot=async(p,name,full)=>{if(ARGS.shots)await p.screenshot({path:path.join(ARGS.shots,name+'.png'),fullPage:!!full})};
 
 async function page(o={}){const ctx=await browser.newContext({viewport:{width:o.w||390,height:o.h||844}});
@@ -249,7 +249,7 @@ async sessions(){if(process.env.OLDRULES)return;
   const x0=await c.evaluate(()=>{const r=U.sess[PR.sess.id];r.on=1000;r.idle=20;r.away=30;PR.fc=0;return U.xp});
   await l.go('#/live');await waitFor(l,()=>!!document.querySelector('#lvend'));await l.click('#lvend');
   await waitFor(c,()=>!PR.joined&&!document.querySelector('#livebar'));await waitFor(c,id=>!!U.log['sessfocus:'+id],sid);ok(await c.evaluate(([id,x])=>U.gain['sessfocus:'+id]===20&&U.xp>=x+20,[sid,x0]),'focus XP not +20');
-  const sd=await fsDoc('sessions',sid),lr=await waitDoc('sessions/'+sid+'/lect','rep',null,R2?15000:1);ok(sd&&sd.active.booleanValue===false&&(sd.rep&&sd.rep.mapValue.fields[C]||lr&&lr.rows.mapValue.fields[C]),'report not saved');
+  const sd=await fsDoc('sessions',sid),lr=await waitDoc('sessions/'+sid+'/lect','rep',null,R3?15000:1);ok(sd&&sd.active.booleanValue===false&&(sd.rep&&sd.rep.mapValue.fields[C]||lr&&lr.rows.mapValue.fields[C]),'report not saved');
   await l.go('#/session/'+sid);await waitFor(l,()=>!!document.querySelector('#srp tr[data-sid]'));ok((await l.textContent('#srp')).includes('Shifa'),'report row missing');ok(await l.$('#srcsv'),'CSV button missing');await shot(l,'session-report',true);
   await l.go('#/lecturer');await waitFor(l,()=>(document.querySelector('#lsess')||{}).textContent.includes('Week 11 tutorial'));
   await waitFor(l,()=>!!document.querySelector('#lsname')&&document.querySelector('#lsname').value==='Week 12 tutorial');
@@ -434,11 +434,11 @@ async sessxp(){if(process.env.OLDRULES)return;const T=Date.now()-2*3600e3,s=t=>M
   const l=await page({w:1280,h:900,allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
   await l.evaluate(async()=>{PR.sessList=[await CLOUD.getSession('SX1')];await liveFinish('SX1')});
   const d=await waitDoc('sessions','SX1',x=>x.active.booleanValue===false);ok(d,'session not ended');
-  const lr=d.rep?null:await waitDoc('sessions/SX1/lect','rep');const r=(d.rep||lr.rows).mapValue.fields[C].mapValue.fields;ok(!d.rep||!R2,'rows left on the session doc');ok(int(r.xp)===29&&int(r.fx)===0&&int(r.acts.mapValue.fields.mcq)===2&&int(r.acts.mapValue.fields.plan)===1&&r.j,'rep row: '+JSON.stringify(r).slice(0,300));
+  const lr=d.rep?null:await waitDoc('sessions/SX1/lect','rep');const r=(d.rep||lr.rows).mapValue.fields[C].mapValue.fields;ok(!d.rep||!R3,'rows left on the session doc');ok(int(r.xp)===29&&int(r.fx)===0&&int(r.acts.mapValue.fields.mcq)===2&&int(r.acts.mapValue.fields.plan)===1&&r.j,'rep row: '+JSON.stringify(r).slice(0,300));
   await l.go('#/session/SX1');await waitFor(l,()=>!!document.querySelector('#srp tr[data-sid] .sxx'));const t=await l.textContent('#srp tr[data-sid]');
   ok(t.includes('29 XP')&&t.includes('2 MCQs · 1 plan'),'report row: '+t);await shot(l,'sessxp-report',true);await l.done()},
 /* privacy on the newest rules: a student reads only their own session figures; the per-student rows and overrides are lecturer-only; live feedback and reflections */
-async sessPriv(){if(!R2)return;const al=/permission|insufficient|400|Failed to load resource|identitytoolkit/i;
+async sessPriv(){if(!R3)return;const al=/permission|insufficient|400|Failed to load resource|identitytoolkit/i;
   await fsPut('sessions','PV1',{name:'Week 14 tutorial',startedAt:new Date(Date.now()-7200e3),endsAt:new Date(Date.now()-3600e3),active:false,nj:2,refl:{avg:60,note:''}});
   await fsPut('sessions/PV1/me',C,{pct:80,sc:70,xp:20});await fsPut('sessions/PV1/me',A,{pct:40,sc:20,xp:5});await fsPut('sessions/PV1/lect','rep',{rows:{[C]:{pct:80},[A]:{pct:40}}});
   const c=await page({allow:al});await ensure(c,C,PINC);await signIn(c,C,PINC,'Shifa Test');await tourOff(c);

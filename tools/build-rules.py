@@ -116,19 +116,23 @@ __EMAILS__
     }
 
     // Live tutorial sessions: only the lecturer starts and ends them; everyone on the class list can see them.
-    // nj = how many joined, fb = live feedback messages, refl = the reflection published at the end (no per-student figures).
+    // nj = how many joined, fb = live feedback messages, refl = the reflection published at the end (no per-student figures),
+    // wk / grp = tutorial week and session number (1-3), act = the activity the lecturer set for joined students.
     // rep (older sessions only) = the per-student rows; the site moves them to lect/rep, which only the lecturer reads.
     match /sessions/{id} {
       allow read: if onRoster();
       allow create, update: if isLecturer()
-        && request.resource.data.keys().hasOnly(['name', 'startedAt', 'endsAt', 'active', 'endedAt', 'rep', 'nj', 'fb', 'refl'])
+        && request.resource.data.keys().hasOnly(['name', 'startedAt', 'endsAt', 'active', 'endedAt', 'rep', 'nj', 'fb', 'refl', 'wk', 'grp', 'act'])
         && str(request.resource.data.name, 80)
         && request.resource.data.active is bool
         && request.resource.data.startedAt is timestamp && request.resource.data.endsAt is timestamp
         && (!('rep' in request.resource.data) || (request.resource.data.rep is map && request.resource.data.rep.size() <= 200))
         && (!('nj' in request.resource.data) || request.resource.data.nj is int)
         && (!('fb' in request.resource.data) || (request.resource.data.fb is list && request.resource.data.fb.size() <= 60))
-        && (!('refl' in request.resource.data) || request.resource.data.refl is map);
+        && (!('refl' in request.resource.data) || request.resource.data.refl is map)
+        && (!('wk' in request.resource.data) || request.resource.data.wk is int)
+        && (!('grp' in request.resource.data) || (request.resource.data.grp is int && request.resource.data.grp >= 1 && request.resource.data.grp <= 3))
+        && (!('act' in request.resource.data) || request.resource.data.act is map);
       allow delete: if isLecturer();
 
       // The lecturer's own records for the session: lect/rep (per-student rows) and lect/att (attendance overrides).
