@@ -128,7 +128,7 @@ ROUTES.progress=h=>{if(ME.sid===LECTURER){shell('#/progress',`<h1>My progress</h
 
 /* ---------- More menu, and the phone tab bar (remove with CRS.tabbar=false) ---------- */
 function moreMenu(){const st=ME&&ME.sid!==LECTURER,N=NAV.map(n=>n[0]);
-  const items=[['#/avatar','🧑‍🎨','My profile'],st&&['#/progress','📈','My progress'],st&&['#/badges','🏅','Badges'],N.includes('#/notes')&&['#/notes','📖','Study notes'],st&&['#/cards','🃏','Flashcards'],st&&['#/review','🧠','Review'],
+  const items=[['#/avatar','🧑‍🎨','My profile'],st&&['#/progress','📈','My progress'],st&&['#/badges','🏅','Badges'],N.includes('#/notes')&&['#/notes','📖','Study notes'],st&&['#/cards','🃏','Flashcards'],cloudOn()&&['#/sessions','🎓','Past tutorial sessions'],st&&['#/review','🧠','Review'],
     typeof ppLine==='function'&&['#/paper','📝','Practice paper'],typeof wildCfg==='function'&&wildCfg()&&['#/wild','🎁','6th-spot challenge'],typeof CHIPS!=='undefined'&&CHIPS.length&&['#/chips','🧱','Build a paragraph'],st&&['#/backup','💾','Save my progress'],['help','❔','How it works'],['#/whatsnew','✨',"What's new"],['inst','📲','Install the app'],['#/privacy','🔒','Privacy'],['so','🚪','Sign out']].filter(Boolean);
   const m=modal('More',`<h2 style="margin:0 0 10px">More</h2><div class="morelist">${items.map(x=>x[0][0]==='#'?`<a href="${x[0]}" data-mi="1"><span>${x[1]}</span>${x[2]}</a>`:`<button type="button" data-mi="${x[0]}"><span>${x[1]}</span>${x[2]}</button>`).join('')}</div>`);
   m.querySelectorAll('[data-mi]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.mi;closeModal();if(k==='help')tour(0);else if(k==='inst')installPop(0);else if(k==='so')signOut()}))}
@@ -169,3 +169,4 @@ document.addEventListener('click',e=>{if(!VIEWAS)return;const t=e.target.closest
   if(!t||t.closest(VA_OK))return;e.preventDefault();e.stopImmediatePropagation();vaSay()},true);
 document.addEventListener('focusin',e=>{if(!VIEWAS)return;const t=e.target;if(/^(TEXTAREA|INPUT|SELECT)$/.test(t.tagName)&&!t.closest(VA_OK)){t.blur();vaSay()}},true);
 document.addEventListener('keydown',e=>{if(VIEWAS&&e.key.length===1&&!e.ctrlKey&&!e.metaKey&&!(e.target.closest&&e.target.closest('a[href],'+VA_OK))){e.preventDefault();e.stopImmediatePropagation()}},true);
+if(typeof presRoutes==='function')presRoutes();

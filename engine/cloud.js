@@ -103,7 +103,7 @@ const CLOUD=(()=>{
   /* live tutorial sessions: sessions/{id} = {name,startedAt,endsAt,active,endedAt?,rep?} (lecturer writes);
      sessions/{id}/p/{SID} = a joined student's presence (that student writes, only while the session is open) */
   const ms=v=>v&&v.toDate?v.toDate().getTime():v instanceof Date?v.getTime():null;
-  const sessObj=d=>{const x=d.data();return {id:d.id,name:x.name||'',active:!!x.active,startedAt:ms(x.startedAt),endsAt:ms(x.endsAt),endedAt:ms(x.endedAt),rep:x.rep||null}};
+  const sessObj=d=>{const x=d.data();return {id:d.id,name:x.name||'',active:!!x.active,startedAt:ms(x.startedAt),endsAt:ms(x.endsAt),endedAt:ms(x.endedAt),rep:x.rep||null,fb:Array.isArray(x.fb)?x.fb:[],refl:x.refl||null,nj:x.nj==null?null:x.nj}};
   const presObj=d=>{const x=d.data();return Object.assign({id:d.id},x,{joinedAt:ms(x.joinedAt),t:ms(x.t)})};
   let latest=null;
   C.watchLatestSession=(cb,err)=>{C.unwatchLatestSession();latest=F.onSnapshot(F.query(F.collection(db,'sessions'),F.orderBy('startedAt','desc'),F.limit(1)),
@@ -116,6 +116,8 @@ const CLOUD=(()=>{
   C.presenceOnce=id=>new Promise((res,rej)=>{let u=null,done=false;u=F.onSnapshot(F.collection(db,'sessions',id,'p'),s=>{if(done)return;done=true;res(s.docs.map(presObj));setTimeout(()=>u&&u(),0)},e=>{if(!done){done=true;rej(e)}})});
   C.startSession=(name,hours)=>F.setDoc(F.doc(F.collection(db,'sessions')),{name:String(name).slice(0,80),startedAt:F.serverTimestamp(),endsAt:new Date(Date.now()+hours*3600e3),active:true});
   C.endSession=(id,rep)=>F.setDoc(F.doc(db,'sessions',id),{active:false,endedAt:F.serverTimestamp(),rep},{merge:true});
+  /* newer rules: the per-student rows go to sessions/{id}/lect/rep (lecturer only); the session doc keeps nj, refl and fb */
+  C.endSession2=(id,data)=>F.setDoc(F.doc(db,'sessions',id),Object.assign({active:false,endedAt:F.serverTimestamp()},data),{merge:true});
   C.putPresence=(id,sid,p)=>F.setDoc(F.doc(db,'sessions',id,'p',sid),Object.assign({},p,{t:F.serverTimestamp()}));
 
   /* generic helpers for engine modules. Paths are 'col' or 'col/id' (or deeper, alternating).

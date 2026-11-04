@@ -139,7 +139,7 @@ function boardPane(c){
     <div class="card"><h3>Now build your own position</h3><p class="muted" style="margin:0">On paper, write 3–4 sentences on "${esc(cur)}": pick the strongest point, challenge the weakest one with theory, and add one idea nobody in the room suggested.</p></div>`;
     document.querySelectorAll('[data-tp]').forEach(b=>b.onclick=()=>{cur=b.dataset.tp;LS.set('bt_'+c.id,cur);draw()});
     document.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{const [i,v]=b.dataset.v.split('|');const a=c.boardroom[+i],k=c.id+':'+i;if(U.verd[k])return;
-      U.verd[k]=v;count('verdicts');const right=v===a.v;if(right){count('verdictsRight');if(a.v==='weak')count('weakSpotted')}
+      U.verd[k]=v;count('verdicts');const right=v===a.v;ansLog('v:'+k,right?1:0,v);if(right){count('verdictsRight');if(a.v==='weak')count('weakSpotted')}
       award('verdict:'+k,right?10:3,right?'Good call':'Verdict recorded');draw()})};
   draw()}
 function qCard(q,i,o={}){
@@ -192,7 +192,7 @@ function qCard(q,i,o={}){
   el.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{const j=+b.dataset.j;st.sel=st.sel.includes(j)?st.sel.filter(x=>x!==j):st.sel.concat(j);save();re()});
   el.querySelector('[data-a="restart"]').onclick=()=>restartItem(qKeys(q.id),'this question',()=>{stopMic();delete U.plansSaved[q.id];LS.del('tm_'+q.id);clearInterval(TIMERS[q.id]);clearInterval(TIMERS['sw'+q.id])})&&re();
   const A=a=>el.querySelector(`[data-a="${a}"]`),on=(a,f)=>el.querySelectorAll(`[data-a="${a}"]`).forEach(b=>b.onclick=f);
-  A('check')&&(A('check').onclick=()=>{st.checked=true;const hit=st.sel.filter(j=>q.chips[j].g).length,bad=st.sel.filter(j=>!q.chips[j].g).length;
+  A('check')&&(A('check').onclick=()=>{st.checked=true;const hit=st.sel.filter(j=>q.chips[j].g).length,bad=st.sel.filter(j=>!q.chips[j].g).length;ansLog(q.id,good.length?Math.max(0,(hit-bad)/good.length):0,'plan');
     countOnce('plan:'+q.id+':'+today(),'plans',o.week&&'bplans');award('plan:'+q.id+':'+today(),15,'Answer plan built');if(!bad&&hit===good.length){countOnce('perfect:'+q.id,'perfect');award('perfect:'+q.id,10,'Flawless plan')}
     weakMark(q,o,bad+(good.length-hit)*.5,true);save();re()});
   on('replan',()=>{st.checked=false;st.sel=[];save();re()});
@@ -203,7 +203,7 @@ function qCard(q,i,o={}){
   on('next',()=>o.next?o.next():0);
   if(st.route==='paper'&&st.step===1)timer(q.id,secs,el,ok=>{st.step=2;if(ok){countOnce('timed:'+q.id+':'+today(),'timed',o.week&&'btimed');award('timed:'+q.id+':'+today(),30,'Timed answer finished')}else noTimeXP(secs);save();re()});
   el.querySelectorAll('[data-k]').forEach(b=>b.onchange=()=>{const j=+b.dataset.k;st.ticks=b.checked?st.ticks.concat(j):st.ticks.filter(x=>x!==j);save()});
-  A('fin')&&(A('fin').onclick=()=>{st.final=st.done=true;award('check:'+q.id+':'+today(),st.ticks.length*3,'Self-check');if(st.ticks.length<q.checks.length/2)weakMark(q,o,1);save();re()});
+  A('fin')&&(A('fin').onclick=()=>{st.final=st.done=true;ansLog(q.id,q.checks&&q.checks.length?st.ticks.length/q.checks.length:0,'check');award('check:'+q.id+':'+today(),st.ticks.length*3,'Self-check');if(st.ticks.length<q.checks.length/2)weakMark(q,o,1);save();re()});
   /* typed route */
   const ta=$('#ta-'+q.id);if(ta)typingBox(q,st,ta,el);
   on('sw',()=>{st.sw=Date.now();save();re()});
@@ -214,7 +214,7 @@ function qCard(q,i,o={}){
   el.querySelectorAll(`[name="bd-${q.id}"]`).forEach(b=>b.onchange=()=>{st.band=+b.value;save();re()});
   A('tfin')&&(A('tfin').onclick=()=>{const C=st.chk||CONCEPT.checkAnswer(q,st.txt||'',namesFor(q,o)),why=typedNoXP(st,C);st.done=true;st.xpGot=why?0:C.xp;
     if(st.fast){U.integ=U.integ||{};U.integ.fast=(U.integ.fast||0)+1}
-    st.ak=submitAnswer(q,o,st,C);
+    st.ak=submitAnswer(q,o,st,C);ansLog(q.id,(C.band||0)/6,'typed');
     if(!why){countOnce('typed:'+q.id+':'+today(),'typed',o.week&&'btyped');award('typed:'+q.id+':'+today(),C.xp,'Typed answer checked')}
     weakMark(q,o,(C.band<=2?2:C.band<=4?1:0)+(C.found.length<C.need/2?1:0));save();re()})}
 function shortPage(){

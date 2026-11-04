@@ -116,16 +116,30 @@ __EMAILS__
     }
 
     // Live tutorial sessions: only the lecturer starts and ends them; everyone on the class list can see them.
-    // rep = the report the lecturer saves at the end ({SID: {n, on, idle, away, left, lg, pct, pr}}).
+    // nj = how many joined, fb = live feedback messages, refl = the reflection published at the end (no per-student figures).
+    // rep (older sessions only) = the per-student rows; the site moves them to lect/rep, which only the lecturer reads.
     match /sessions/{id} {
       allow read: if onRoster();
       allow create, update: if isLecturer()
-        && request.resource.data.keys().hasOnly(['name', 'startedAt', 'endsAt', 'active', 'endedAt', 'rep'])
+        && request.resource.data.keys().hasOnly(['name', 'startedAt', 'endsAt', 'active', 'endedAt', 'rep', 'nj', 'fb', 'refl'])
         && str(request.resource.data.name, 80)
         && request.resource.data.active is bool
         && request.resource.data.startedAt is timestamp && request.resource.data.endsAt is timestamp
-        && (!('rep' in request.resource.data) || (request.resource.data.rep is map && request.resource.data.rep.size() <= 200));
+        && (!('rep' in request.resource.data) || (request.resource.data.rep is map && request.resource.data.rep.size() <= 200))
+        && (!('nj' in request.resource.data) || request.resource.data.nj is int)
+        && (!('fb' in request.resource.data) || (request.resource.data.fb is list && request.resource.data.fb.size() <= 60))
+        && (!('refl' in request.resource.data) || request.resource.data.refl is map);
       allow delete: if isLecturer();
+
+      // The lecturer's own records for the session: lect/rep (per-student rows) and lect/att (attendance overrides).
+      match /lect/{doc} {
+        allow read, write: if isLecturer();
+      }
+      // Each student's own figures for the session, written by the lecturer at the end; only that student (and the lecturer) reads them.
+      match /me/{sid} {
+        allow read: if isOwner(sid) || isLecturer();
+        allow write: if isLecturer();
+      }
 
       // A joined student's presence: written only by that student, only while the session is running.
       match /p/{sid} {
