@@ -426,6 +426,17 @@ async wild(){if(!R2)return;const al=/400|403|Failed to load resource|identitytoo
   await l2.evaluate(()=>CLOUD.put('wild/wT3',{closes:CLOUD.when(Date.now()-1000)},true));await l2.go('#/wild/wT3');await waitFor(l2,()=>!!document.querySelector('[data-win]'));await shot(l2,'wild-live',true);
   await l2.click('[data-win]');const d=await waitDoc('wild','wT3',x=>x.win);ok(d&&d.win.stringValue===C&&d.st.stringValue==='done','the winner was not saved');await l2.done();
   await c.go('#/wild/wT3');await waitFor(c,()=>!!U.log['wildwin:wT3']);await c.waitForTimeout(900);await c.done()},
+/* XP and activity per live session: liveFinish adds xp / fx / acts / j to each report row (the rules accept them), and the report is built from users docs */
+async sessxp(){if(process.env.OLDRULES)return;const T=Date.now()-2*3600e3,s=t=>Math.round(t/1000),m=60e3;
+  await fsPut('users',C,{name:'Shifa Test',u:JSON.stringify({xp:500,alSince:T-864e5,gain:{},sess:{SX1:{j:T+5*m}},al:[[s(T-m),'mcq:a:0',2],[s(T+10*m),'mcq:a:1',2],[s(T+11*m),'mcq:a:2',2],[s(T+40*m),'plan:q:1',15],[s(T+41*m),'perfect:q',10]]}),xp:500,ts:new Date()});
+  await fsPut('sessions','SX1',{name:'Week 13 tutorial',startedAt:new Date(T),endsAt:new Date(T+180*m),active:true});
+  await fsPut('sessions/SX1/p',C,{st:'on',sec:'Practice',pr:'Practice',on:5000,idle:100,away:50,left:1,longest:30,ch:10,joinedAt:new Date(T+5*m),t:new Date()});
+  const l=await page({w:1280,h:900,allow:/400|Failed to load resource|identitytoolkit/});await ensure(l,L,PINL);await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
+  await l.evaluate(async()=>{PR.sessList=[await CLOUD.getSession('SX1')];await liveFinish('SX1')});
+  const d=await waitDoc('sessions','SX1',x=>x.rep&&x.rep.mapValue.fields[C]);ok(d&&d.active.booleanValue===false,'session not ended');
+  const r=d.rep.mapValue.fields[C].mapValue.fields;ok(int(r.xp)===29&&int(r.fx)===0&&int(r.acts.mapValue.fields.mcq)===2&&int(r.acts.mapValue.fields.plan)===1&&r.j,'rep row: '+JSON.stringify(r).slice(0,300));
+  await l.go('#/session/SX1');await waitFor(l,()=>!!document.querySelector('#srp tr[data-sid] .sxx'));const t=await l.textContent('#srp tr[data-sid]');
+  ok(t.includes('29 XP')&&t.includes('2 MCQs · 1 plan'),'report row: '+t);await shot(l,'sessxp-report',true);await l.done()},
 /* tools/wild/open.mjs and close.mjs against the emulators: the week's top 5, the document, the invites, then ranked results */
 async wildTools(){if(!R2)return;const P='mkt301'.toUpperCase(),run=(f,a)=>spawnSync(process.execPath,[path.join(ROOT,'tools/wild',f)].concat(a),{encoding:'utf8',
     env:Object.assign({},process.env,{[P+'_EMU']:'1',[P+'_LECTURER_PIN']:PINL})});

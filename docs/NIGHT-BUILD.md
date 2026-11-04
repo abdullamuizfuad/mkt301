@@ -181,3 +181,24 @@ Status: **live** (main: MKT301 `32b2cb5`, MKT101 `62625c1`). Site suites MKT301 
 - Rules: the `wild` blocks in `tools/build-rules.py`. The lecturer must publish the new FINAL rules before the first window opens (MKT301: Mon 2 Nov, 16:00).
 - Tests: site groups in `tools/tests/wild-site.js` (wildwin, wildtop5, wildxph, chipscore, wilditems, wildlock, notesref, notesfold, wildpage); cloud groups `wild` and `wildTools`.
 - MKT301's first week, w2026-11-03, uses weeks 10 and 11 (the lecturer's choice, `CRS.wildPlan`).
+
+## Session activity
+
+XP and activity per live tutorial session, in `engine/presence.js`. No rules change: the `rep` map's values are not schema-checked.
+
+- **`U.al` and `U.alSince`.** `U.al` logs every award from this version on as `[seconds, key, xp]`, plus the daily check-in. It keeps 45 days and at most 2,500 entries. `U.alSince` is when logging started on that student's device. The hooks are registered from `presOn()`, because presence.js loads before core.js. `award()` now runs the `award` hook before `save()`, so the log is saved with the award.
+- **`sessXP(u, S, join, rep)`.** Covers the window from the session start (or the student's join time, if later) to the end, or to now while the session is live.
+  - When the log covers the window, the result is exact: XP plus activity counts by category (`SX_MAP`, from the real award key prefixes in both courses), plus the session's focus bonus found by key.
+  - Otherwise it uses the row saved at the end of the session.
+  - Otherwise it gives an hourly estimate from `U.xph`, marked "≈", with no breakdown.
+- **`liveFinish`** saves `xp`, `fx`, `acts` and `j` in each report row (`sxRepAdd`).
+- **Report (`#/session/<id>`):**
+  - New columns: XP in session, focus bonus, activity, plus a timeline under each student (`data-lect`).
+  - New class totals: XP earned and XP per student.
+  - The CSV has the new columns.
+  - XP comes from users docs, redrawn at most once a minute while live, plus a Refresh button.
+- **Profile sessions table and My progress:** a new "XP in session" column.
+- **Joined student's bar:** shows "+N XP this session".
+- **Tests:**
+  - Site (`tools/tests/sessxp-site.js`, shared by both repos): `sxlog`, `sxwin`, `sxcats`, `sxhourly`, `sxbar`, `sxreport`.
+  - Cloud (`firebase.js`): `sessxp`.
