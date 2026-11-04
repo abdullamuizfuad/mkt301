@@ -33,6 +33,14 @@ async sxbar(){const p=await page({sid:STUDENT});const r=await p.evaluate(async()
     U.sess={L1:{j:now-30e3,on:0,idle:0,away:0,left:0,lg:0,pr:[],c:0}};PR.joined=true;presBar();award('mcq:bar:1',2,'x');award('plan:bar:1',15,'y');
     await new Promise(r=>setTimeout(r,30));return (document.querySelector('#lbxp')||{}).textContent||''});
   ok(/^\+(17|27) XP this session$/.test(r),'bar counter: '+r);await shot(p,'sx-bar');await p.done()},
+/* the live board: XP this session per joined student (exact from the log, ≈ from whole hours), the total and the session leaders */
+async sxlive(){const l=await page({sid:LECT});const t=await l.evaluate(async()=>{const now=Date.now(),T=now-50*60e3,s=x=>Math.round(x/1000);ME.cloud=true;CLOUD.ok=true;['push','flush','put'].forEach(k=>CLOUD[k]=()=>Promise.resolve());
+    PR.sess={id:'LV',name:'Week 13 tutorial',active:true,startedAt:T,endsAt:now+3600e3};PR.sessOn=true;
+    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S081441',name:'Aminath Test',u:{alSince:T-864e5,al:[[s(T-60e3),'mcq:a:0',2],[s(T+5*60e3),'mcq:a:1',2],[s(T+9*60e3),'plan:q:1',15]]}},{id:'S085542',name:'Other Student',u:{xph:{[mvHour(T)]:7,[mvHour(now)]:3}}}]),0);
+    CLOUD.watchPresence=(id,cb)=>setTimeout(()=>cb([{id:'S081441',st:'on',on:2000,idle:0,away:0,left:0,longest:0,joinedAt:T+2*60e3,t:now},{id:'S085542',st:'idle',on:1000,idle:500,away:0,left:1,longest:0,joinedAt:T,t:now}]),0);
+    location.hash='#/live';await new Promise(r=>setTimeout(r,300));return document.querySelector('#lvb').textContent});
+  ok(t.includes('XP this session')&&/Session leaders:.*Aminath Test \+17/.test(t),'live board XP: '+t.slice(0,500));ok(/≈ \+\d+\s*XP this session/.test(t),'live total not marked ≈: '+t.slice(0,300));
+  await shot(l,'sx-live',true);await l.done()},
 /* the lecturer's report: XP and activity columns, class totals, a timeline, the CSV; a student's progress shows their own XP and nothing lecturer-only */
 async sxreport(){const T0=Date.now()-3*3600e3;
   const mk=(T,m)=>({S:{id:'R1',name:'Week 12 tutorial',active:false,startedAt:T,endedAt:T+100*m,endsAt:T+180*m,rep:{S081441:{n:'Aminath Test',on:5000,idle:200,away:100,left:2,lg:60,pct:94,pr:'Section A',j:T+5*m},
