@@ -447,7 +447,7 @@ async sessPriv(){if(!R3)return;const al=/permission|insufficient|400|Failed to l
   ok(r.own==='ok'&&r.other==='denied'&&r.rep==='denied'&&r.r3===true&&r.fb==='denied','student access: '+JSON.stringify(r));
   await c.go('#/sessions/PV1');await waitFor(c,()=>(document.querySelector('#sxsp')||{}).textContent.includes('Your session'));ok((await c.textContent('#sxsp')).includes('70%'),'own score not shown');await shot(c,'sess-past',true);await c.done();
   const l=await page({w:1280,h:900,allow:al});await signIn(l,L,PINL,'Abdulla Muiz Fuad');await tourOff(l);
-  const w=await l.evaluate(async()=>{const o={};for(const [k,p,d] of [['fb','sessions/PV1',{fb:[{t:Date.now(),m:'Remember the levels',q:'t10-12'}]}],['refl','sessions/PV1',{refl:{note:'Well done'}}],['att','sessions/PV1/lect/att',{m:{S082110:'p'}}],['me','sessions/PV1/me/S082110',{pct:81}]])
+  const w=await l.evaluate(async()=>{const o={};for(const [k,p,d] of [['fb','sessions/PV1',{fb:[{t:Date.now(),m:'Remember the levels',q:'t10-12'}]}],['refl','sessions/PV1',{refl:{note:'Well done'}}],['att','sessions/PV1/lect/att',{m:{S082110:'p'}}],['me','sessions/PV1/me/S082110',{pct:81}],['act','sessions/PV1',{act:{k:'mcq',topics:[10],n:10}}],['wkgrp','sessions/PV1',{wk:14,grp:2}]])
       o[k]=await CLOUD.put(p,d,true).then(()=>'ok',e=>'denied '+e.code);return o});
   ok(Object.values(w).every(v=>v==='ok'),'lecturer writes: '+JSON.stringify(w));const d=await fsDoc('sessions','PV1');ok(d.refl.mapValue.fields.note.stringValue==='Well done'&&d.refl.mapValue.fields.avg,'note merge lost the reflection');await l.done()},
 /* tools/wild/open.mjs and close.mjs against the emulators: the week's top 5, the document, the invites, then ranked results */

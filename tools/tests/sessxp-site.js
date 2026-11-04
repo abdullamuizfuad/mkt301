@@ -103,6 +103,43 @@ async sxday(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>{
   ok(r.t.includes("Based on the day's practice"),'≈ day note missing');const P=r.W.map(x=>x[0]);
   ok(P.includes('sessions/D1/me/S000002')&&P.includes('sessions/D1/lect/rep'),'reflection writes: '+P.join());const rf=r.W.find(x=>x[0]==='sessions/D1'&&x[1].refl);ok(rf&&rf[1].refl.est===1&&rf[1].refl.ar[0].id==='t9-5'&&rf[1].nj===2,'reflection: '+JSON.stringify(rf));
   ok(r.W.some(x=>x[0]==='sessions/D1'&&x[1].rep==='DEL'&&x[1].nj===2),'old rows not moved off the session doc');await l.done()},
+/* two or three classes per week: Session 1/2/3 from wk/grp or the name; the next unused pair is suggested; the Week view combines them */
+async sxweek(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>{const T=Date.now()-30*3600e3;ME.cloud=true;CLOUD.ok=true;PR.r3=false;
+    const wg=[sxWG({name:'Week 11 tutorial'}),sxWG({name:'Week 11 tutorial · Session 2'}),sxWG({name:'x',wk:12,grp:3})].map(x=>x.wk+'.'+x.grp).join();
+    const d1=sessWeekDefault([{name:'Week 11 tutorial'}]),d2=sessWeekDefault([{name:'Week 11 tutorial'},{name:sxName(11,2)}]);
+    const S1={id:'W1',name:'Week 11 tutorial',active:false,startedAt:T,endedAt:T+90*60e3,endsAt:T+3*3600e3,rep:{S000002:{n:'Bee',on:3000,pct:90,j:T}}},
+      S2={id:'W2',name:sxName(11,2),wk:11,grp:2,active:false,startedAt:T+24*3600e3,endedAt:T+25.5*3600e3,endsAt:T+27*3600e3,rep:{S000003:{n:'Cee',on:1800,pct:60,j:T+24*3600e3}}};
+    CLOUD.docs=async c=>c==='sessions'?[S1,S2,{id:'W9',name:'Week 12 tutorial'}]:[{id:'S000002',n:'Bee'},{id:'S000003',n:'Cee'},{id:'S000004',n:'Dee'}];CLOUD.get=async()=>null;
+    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S000002',name:'Bee',u:{}},{id:'S000003',name:'Cee',u:{}}]),0);CLOUD.watchSessionDoc=(id,cb)=>setTimeout(()=>cb(S2),0);CLOUD.watchPresence=()=>{};
+    let blob=null;URL.createObjectURL=b=>{blob=b;return 'blob:x'};HTMLAnchorElement.prototype.click=function(){};
+    location.hash='#/session/W2';await new Promise(r=>setTimeout(r,400));document.querySelector('[data-rt="w"]').click();await new Promise(r=>setTimeout(r,500));
+    const t=document.querySelector('#srw').textContent;document.querySelector('#wvcsv').click();return {wg,d1:d1.wk+'.'+d1.grp,d2:d2.wk+'.'+d2.grp,t,csv:await blob.text()}});
+  ok(r.wg==='11.1,11.2,12.3','week and session: '+r.wg);ok(r.d1==='11.2'&&r.d2==='12.1','suggested next: '+r.d1+' '+r.d2);
+  ok(r.t.includes('Week 11: all sessions')&&r.t.includes('2/3')&&/Dee\s*S000004/.test(r.t)&&r.t.includes('Attended none (1)'),'week view: '+r.t.slice(0,500));
+  ok(r.csv.includes('"Bee","S000002","","Session 1","50"')&&r.csv.includes('"Dee","S000004","","none"'),'week CSV: '+r.csv.slice(0,300));await shot(l,'sx-week',true);await l.done()},
+/* the activity picker reads back what the lecturer chose */
+async sxactpick(){const l=await page({sid:LECT});const r=await l.evaluate(()=>{const h=document.createElement('div');document.querySelector('main').append(h);h.innerHTML=actPickHTML('tp',{k:'free'});actPickBind('tp');
+    const k=document.querySelector('#tpak');k.value='plans';k.dispatchEvent(new Event('change'));const b=document.querySelector('#tpat input');b.checked=true;b.dispatchEvent(new Event('change'));
+    const qs=[...document.querySelectorAll('#tpaq input')].slice(0,2);qs.forEach(x=>x.checked=true);const a=actPickRead('tp');k.value='chips';k.dispatchEvent(new Event('change'));
+    return {a,c:actPickRead('tp'),lab:actLabel(a),lect:!!document.querySelector('#tpap[data-lect]')}});
+  ok(r.a.k==='plans'&&r.a.ids.length===2,'plans: '+JSON.stringify(r.a));ok(r.c.k==='chips'&&r.c.topics.length===1,'chips: '+JSON.stringify(r.c));ok(/2 short-answer plan questions/.test(r.lab)&&r.lect,'label: '+r.lab);await l.done()},
+/* joined students follow the lecturer's activity: other pages lead back to #/tutorial, notes for its topic stay open, changes switch live, Leave session ends it */
+async sxtut(){const p=await page({sid:STUDENT});const r={};const go=async h=>{await p.evaluate(h=>{location.hash=h},h);await p.waitForTimeout(250);return p.evaluate(()=>location.hash)};
+  const t0=await p.evaluate(()=>{const now=Date.now(),t=actTopics()[0][0];PR.sess={id:'TT',name:'Week 12 tutorial · Session 1',active:true,startedAt:now-60e3,endsAt:now+3600e3,fb:[{t:now,m:'Read the question twice',q:''}],act:{k:'chips',topics:[t]}};
+    PR.sessOn=true;U.sess={TT:{j:now-30e3,on:0,idle:0,away:0,left:0,lg:0,pr:[],c:0}};PR.joined=true;presSession(PR.sess);return t});
+  await p.waitForTimeout(300);r.start=await p.evaluate(()=>location.hash);r.tut=await p.evaluate(()=>document.body.classList.contains('tut')&&getComputedStyle(document.querySelector('nav.tabs')).display==='none');
+  r.page=await p.textContent('main');r.badges=await go('#/badges');r.chips=await go('#/chips/'+t0);r.notes=await go('#/notes/'+t0);
+  await p.evaluate(t=>{PR.sess=Object.assign({},PR.sess,{act:{k:'notes',topics:[t]}});presSession(PR.sess)},t0);await p.waitForTimeout(300);r.sw=await p.evaluate(()=>location.hash+'|'+document.querySelector('main').textContent.includes('Notes and quick checks'));
+  await shot(p,'sx-tutorial',true);await go('#/tutorial');await p.click('#tutlv');await p.waitForTimeout(300);r.left=await p.evaluate(()=>[PR.joined,location.hash,document.body.classList.contains('tut'),!!U.sess.TT.lv].join());
+  r.free=await go('#/badges');
+  ok(r.start==='#/tutorial'&&r.tut,'not sent to the tutorial page: '+r.start+' '+r.tut);ok(r.page.includes('Build a paragraph')&&r.page.includes('Read the question twice')&&r.page.includes('Leave session'),'tutorial page: '+r.page.slice(0,300));
+  ok(r.badges==='#/tutorial','other pages not redirected: '+r.badges);ok(r.chips==='#/chips/'+t0&&r.notes==='#/notes/'+t0,'activity pages blocked: '+r.chips+' '+r.notes);
+  ok(r.sw==='#/tutorial|true','did not switch live: '+r.sw);ok(r.left==='false,#/,false,true','leave: '+r.left);ok(r.free==='#/badges','still locked after leaving');await p.done()},
+/* an MCQ activity (MKT101): Start draws a set from the chosen topics once per activity */
+async sxtutmcq(){const p=await page({sid:STUDENT});if(!await p.evaluate(()=>typeof startMcq==='function'))return p.done();
+  await p.evaluate(()=>{const now=Date.now();PR.sess={id:'TM',name:'Week 12 tutorial · Session 2',active:true,startedAt:now-60e3,endsAt:now+3600e3,fb:[],act:{k:'mcq',topics:[10],n:10}};PR.sessOn=true;
+    U.sess={TM:{j:now-30e3,on:0,idle:0,away:0,left:0,lg:0,pr:[],c:0}};PR.joined=true;presSession(PR.sess)});await p.waitForTimeout(300);await p.click('#tutgo');await p.waitForTimeout(300);
+  const r=await p.evaluate(()=>[location.hash,U.mq&&U.mq.ids.length,U.mq&&U.mq.ids.every(id=>MCQ_BY[id].t===10)].join());ok(r==='#/mcq,10,true','MCQ activity: '+r);await p.done()},
 /* the lecturer's report: XP and activity columns, class totals, a timeline, the CSV; a student's progress shows their own XP and nothing lecturer-only */
 async sxreport(){const T0=Date.now()-3*3600e3;
   const mk=(T,m)=>({S:{id:'R1',name:'Week 12 tutorial',active:false,startedAt:T,endedAt:T+100*m,endsAt:T+180*m,rep:{S081441:{n:'Aminath Test',on:5000,idle:200,away:100,left:2,lg:60,pct:94,pr:'Section A',j:T+5*m},
