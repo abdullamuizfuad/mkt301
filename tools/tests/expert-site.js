@@ -2,7 +2,7 @@
    the new levels, review XP, the weekly board row and the tutorial offer. Courses without Expert sets (CRS.expert off) skip the set tests. */
 module.exports=({page,ok,STUDENT,LECT,shot})=>{
 const on=p=>p.evaluate(()=>EX_ON());
-const seed=(p,mt,exa)=>p.evaluate(([mt,exa])=>{U.mt=Object.assign({},U.mt||{},mt);EXA=exa;save()},[mt,exa]);
+const seed=(p,mt,exa)=>p.evaluate(([mt,exa])=>{U.mt=Object.assign({},U.mt||{},mt);EXA=exa;if(!U.days.includes(today()))U.days.push(today());save()},[mt,exa]);/* the day's check-in is done, so XP counts are exact */
 return {
 /* every student sees every set: locked with progress, "Coming soon" until approved, open once unlocked and approved */
 async excards(){const p=await page({sid:STUDENT});if(!await on(p)){await p.go('#/practice');ok(!await p.$('[data-ex]'),'Expert cards on a course without sets');return p.done()}
@@ -37,7 +37,7 @@ async exessay(){const p=await page({sid:STUDENT});if(!await on(p))return p.done(
 async exlevels(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>[LEVELS.length,level(LEVELS[LEVELS.length-1][0]+1).name,BADGES.some(b=>b.id==='lvl'+LEVELS.length)]);
   if(r[0]>9)ok(/Marketing Partner|Partner/.test(r[1])&&r[2],'top level: '+r);else ok(r[2],'level badges: '+r);await p.done()},
 /* review: +4 when remembered, nothing when forgotten, at most 25 a day */
-async exrev(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>{const id=Object.keys(qIndex())[0];U.srs={};const x0=U.xp;
+async exrev(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>{if(!U.days.includes(today()))U.days.push(today());const id=Object.keys(qIndex())[0];U.srs={};const x0=U.xp;
     U.srs[id]={s:0,due:today()};srsDone(id,false);const a=U.xp-x0;U.srs[id]={s:1,due:addDays(today(),-1)};srsDone(id,true);const b=U.xp-x0;
     U.revx={d:today(),n:REV_CAP};U.srs[id]={s:2,due:addDays(today(),-2)};srsDone(id,true);return [a,b,U.xp-x0]});
   ok(r.join()==='0,4,4','review XP / cap: '+r);await p.go('#/');ok(/to review/.test(await p.textContent('#trv')),'review chip missing');await p.done()},

@@ -55,7 +55,7 @@ onHook('cloud',()=>{if(EX_ON())exLoadA()});
 ROUTES.expert=h=>{if(!EX_ON())return shell('#/practice','<h1>Expert sets</h1><p class="muted">No Expert sets for this course yet.</p>');
   const t=h[1],L=ME.sid===LECTURER;
   if(!t||!exSet(t)){shell('#/practice',`<p><a href="#/practice">← Practice</a></p><h1>🎓 Expert sets</h1><p class="muted">For students who have mastered a topic: harder case questions, paragraph builders with more decoys, and a short essay that your lecturer marks. Master a topic's MCQs (80%+ on ${EX_NEED}) to unlock its set.</p>
-    ${L?'<p class="muted" data-lect>You see every set as a preview. Approve sets for students on the Lecturer tab (🎓 Expert sets to approve).</p>':''}<div class="grid g2 exgrid">${exTops().map(([x])=>exCardHTML(x)).join('')}</div>`);exLoadA().then(()=>{if(location.hash==='#/expert')ROUTES.expert(['expert'])});return}
+    ${L?'<p class="muted" data-lect>You see every set as a preview. Approve sets for students on the Lecturer tab (🎓 Expert sets to approve).</p>':''}<div class="grid g2 exgrid">${exTops().map(([x])=>exCardHTML(x)).join('')}</div>`);const was=JSON.stringify(exA());exLoadA().then(A=>{if(location.hash==='#/expert'&&JSON.stringify(A)!==was)ROUTES.expert(['expert'])});return}
   const p=exProg(U,t);
   if(!L&&(!p.ok||!exOK(t))){shell('#/practice',`<p><a href="#/expert">← All Expert sets</a></p>${exCardHTML(t)}`);return}
   const S=exSet(t),st=exStat(U,t),part=h[2];
