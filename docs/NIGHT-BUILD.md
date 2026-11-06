@@ -238,3 +238,40 @@ XP and activity per live tutorial session, in `engine/presence.js`. No rules cha
 - **Review XP:** +4 when a due question is remembered (`rev:<id>:<due>`), nothing when forgotten, at most 25 a day (`U.revx`). The Today row shows "+4 XP each".
 - **Leaderboard:** "This week" first (XP since the last class start, `wildWin().from`), "All time" second. The board row carries `w`/`wk` only once the newest rules are published (`PR.r3`, probed on the `cloud` hook); the rules allow `w` (int, 0…x) and `wk`.
 - Tests: `tools/tests/expert-site.js` (excards, exunlock, exxp, exessay, exlevels, exrev, exweek, extut, exlect).
+## Fun and tutors
+
+Items 1–14 of the lecturer's list, in `engine/fun.js` (with `engine/agg.js`), MKT101 first. Everything takes 5–15 minutes.
+Settings: `CRS.fun` (MKT101 `{boss, story, tutorLvl:9, tutorEx:3, goal:3000}`, MKT301 `{tutorLvl:4, tutorEx:0, goal:1500}`).
+
+- **Boss rounds** (`#/boss`, content `bank-boss.js`, MKT101): a 10-minute mini-case at the end of each topic's Expert set: 3 decisions and a
+  paragraph builder, marked at once. Every student sees them, locked until they finish the topic's Expert set; "Coming soon" until the
+  lecturer approves (`meta/expert` `b<topic>`, Lecturer tab "Boss rounds and story"). The first try counts (+5 a right decision, up to +10
+  for the paragraph, +20 for passing at 70%); later tries are practice. Badges `boss<t>` and "Boss of bosses". Also a live-session activity
+  (`act.k='boss'`): joined students can play the round even if it is still locked for them.
+- **Story mode** (`#/story`, `story.js`, MKT101): Raalhu Juice, one chapter per topic, open after 10 MCQs in the topic; released by the
+  lecturer (`meta/expert.story`). +5 per right decision, once.
+- **Speed runs** (`#/speed`): 20 mixed questions (`quizItems`), 5 minutes (4 in hard mode). Score = right × 10 + seconds left × accuracy.
+  XP: right answers on the first run of the day (`speed:<day>`), +5 for a new best (`spb:<day>`).
+- **Hard mode** (`U.hard`, switch on Practice): body.hard hides hints and "Refer to notes"; the `award` hook adds the same XP again for
+  correct answers (`hard:<key>`), at most +60 a day (`U.hardd`).
+- **Term cards** (`#/collection`): a flashcard known on two reviews (`U.fc[...].s >= 2`) is a card; a full deck gives a rare card.
+- **Monday recap**: a home card on Monday and Tuesday until dismissed (`U.recap[week]`).
+- **Class figures** (`meta/agg`, see docs/AGG.md): class goal, most improved, territories. Written by the lecturer (Lecturer tab card or
+  `tools/agg/run.mjs`); rewards `goal:<week>` and `imp:<week>` (+20 each) are credited by `funCredit()` on the student's device.
+- **Streak duels** (`#/duels`): `challenges` with `mode:'streak'`, 2 players, 7 days (+1 day to claim). Each player writes their best run of
+  days in a row to `r/<SID>` after day 7; win +30, tie +15, loss +5 (`duel:<id>`); at most 2 at a time.
+- **Mentors**: on the live board, 🤝 Mentors (`#/mentors/<session>`): tick mentors, pair classmates (`sessions/{id}.ment`), and give mentor
+  bonuses. A bonus is a mark with key `bonus_ment_<session>` in `reviews/<SID>`: `applyMarks` pays it once (`bonus:<key>`, up to 30 XP) and
+  shows the message. Joined students see their mentor or mentees on the tutorial page.
+- **Teach-back** (`#/teach`) and **Question writer** (`#/write`): for topics where the student has the Expert badge (or, without Expert
+  sets, from `tutorLvl`). Drafts in `subs/<SID>_<tb|qw>_<1-9>`; the lecturer approves on the Lecturer tab ("Teach-backs and questions").
+  Approved teach-backs show on the topic's notes page ("Explained by …"); approved questions are written to `qbank` as live MCQs.
+  +15 / +20 XP (`tb:<id>`, `qw:<id>`).
+- **Tutor badge and Ask a tutor** (`#/help`): a tutor reaches `tutorLvl` with `tutorEx` Expert badges (topics = those badges). The board row
+  carries `tu` (topics) and `hp` (classmates helped); the leaderboard shows 🎓 Tutor. Questions `help/<SID>_<day number>_<1-3>`, answers
+  `help/<id>/r/<SID>_<1-3>`; "This helped me" sets `ok` and notifies the tutor (`ref help:<id>/<rid>`), whose device credits +10
+  (`helped:<id>/<rid>`, at most 50 a day). Reports go to the Reports card; the lecturer hides or deletes from the thread page or the
+  "Ask a tutor" card.
+- **Rules** (one update): board `tu`/`hp`; sessions `ment`; challenges `mode:'streak'`; new `help` (+ `r`) and `subs` blocks. The site
+  probes `help/_probe` (`funOK()`); on older rules the writing parts stay hidden.
+- **Tests**: site `tools/tests/fun-site.js`; cloud `tools/tests/fun-cloud.js` (rules, Ask a tutor end to end, teach-back, figures, mentor bonus).

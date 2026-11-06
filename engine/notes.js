@@ -60,6 +60,7 @@ function notesPage(sub){if(typeof wildBusy==='function'&&wildBusy())return shell
    <div class="card lo" id="n-min"><h3>In one minute</h3><ul class="nmin">${T.min.map((x,j)=>`<li${j>=3?' hidden':''}>${Array.isArray(x)?`<b>${esc(x[0])}:</b> ${esc(x[1])}`:esc(x)}</li>`).join('')}</ul>${T.min.length>3?`<button type="button" class="linkbtn" id="nmore" data-va-ok>Show ${T.min.length-3} more ▾</button>`:''}<details class="nlo"><summary>What you need to be able to do</summary>${Array.isArray(T.lo)?listHTML(T.lo):`<p>${esc(T.lo)}</p>`}</details></div>
    <div class="card nsecs">${S.map(x=>sec(...x)).join('')}</div>
    <div class="card nprac" id="n-prac">${studied?`<span class="tag">✓ Studied</span>`:`<button class="btn gold sm" id="nst">📖 I've studied this ${w.toLowerCase()} · +20 XP</button>`}${P.map(([n,h])=>`<a class="btn ghost sm" href="${h}">${esc(n)}</a>`).join('')}</div>
+   ${typeof tbNoteHTML==='function'?tbNoteHTML(k):''}
    <div class="row" style="justify-content:space-between;margin-top:10px">${prev!=null?`<a class="btn ghost sm" href="#/notes/${prev}">← ${w} ${prev}</a>`:'<span></span>'}${next!=null?`<a class="btn ghost sm" href="#/notes/${next}">${w} ${next} →</a>`:''}</div>`);
   $('#nmore')&&($('#nmore').onclick=()=>{document.querySelectorAll('.nmin li[hidden]').forEach(x=>x.hidden=false);$('#nmore').remove()});
   $('#nwk').onchange=e=>{location.hash='#/notes/'+e.target.value};
