@@ -34,8 +34,8 @@ async exessay(){const p=await page({sid:STUDENT});if(!await on(p))return p.done(
   const r=await p.evaluate(()=>{const q=EXPERT.sets[12].essay,k=submitAnswer(q,{short:1},{txt:'test'},{band:3,found:[],struct:{},words:1});return [U.ans[k].q,(qIndex()['xe12']||{}).label]});
   ok(r[0]==='xe12'&&/Expert set/.test(r[1]),'essay not in the marking queue: '+r);await p.done()},
 /* the stars above Marketing Consultant, with their level badges */
-async exlevels(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>[LEVELS.length,level(LEVELS[LEVELS.length-1][0]+1).name,BADGES.some(b=>b.id==='lvl'+LEVELS.length)]);
-  if(r[0]>9)ok(/Marketing Partner|Partner/.test(r[1])&&r[2],'top level: '+r);else ok(r[2],'level badges: '+r);await p.done()},
+async exlevels(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>[LEVELS.length,level(LEVELS[LEVELS.length-1][0]+1).name,BADGES.some(b=>b.id==='lvl'+LEVELS.length),LEVELS[LEVELS.length-1][1]]);
+  if(r[0]>9)ok(/Marketing Partner/.test(r[1])&&r[2],'top level: '+r);else ok(r[1]===r[3],'top level: '+r);await p.done()},
 /* review: +4 when remembered, nothing when forgotten, at most 25 a day */
 async exrev(){const p=await page({sid:STUDENT});const r=await p.evaluate(()=>{if(!U.days.includes(today()))U.days.push(today());const id=Object.keys(qIndex())[0];U.srs={};const x0=U.xp;
     U.srs[id]={s:0,due:today()};srsDone(id,false);const a=U.xp-x0;U.srs[id]={s:1,due:addDays(today(),-1)};srsDone(id,true);const b=U.xp-x0;
