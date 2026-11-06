@@ -286,7 +286,7 @@ async names(){if(!R2)return;await fsPut('directory',A,{n:'Hawwa Uyoon Ali',g:'H0
   await p.evaluate(()=>{U.xp-=2000;save()});await p.waitForTimeout(2600);
   await p.go('#/board');await p.waitForTimeout(800);ok((await p.textContent('#lbl')).includes('@Uyoon441'),'username not on the board');ok(!await p.$('#hd'),'Hidden player option still offered');await p.done()},
 /* the board row carries this week's XP (w, wk) on the newest rules; w can never be more than the row's XP */
-async boardWeek(){if(!R3)return;const p=await page();await signIn(p,A,PIN);await tourOff(p);await p.evaluate(async()=>{await sessR3();if(!U.days.includes(today()))U.days.push(today());award('mcq:bw:'+today(),2,'x');save();await CLOUD.flush()});
+async boardWeek(){if(!R3)return;const p=await page({allow:/400|Failed to load resource|permission|PERMISSION|insufficient/});await signIn(p,A,PIN);await tourOff(p);await p.evaluate(async()=>{await sessR3();if(!U.days.includes(today()))U.days.push(today());award('mcq:bw:'+today(),2,'x');save();await CLOUD.flush()});
   const b=await waitDoc('board',A,d=>!!d.wk,15000);ok(b&&b.wk&&int(b.w)>=0&&int(b.w)<=int(b.x),'weekly XP not on the board row');
   const r=await p.evaluate(async()=>{const row=rowOf(ME.sid),base={n:row.n,u:row.u,a:row.a,x:0,l:0,b:0,s:0,t:CLOUD.ts()};const t=async v=>{try{await CLOUD.put('board/'+ME.sid,Object.assign({},base,v));return 'allowed'}catch(e){return 'refused'}};
     return {over:await t({w:5,wk:row.wk}),long:await t({w:0,wk:'x'.repeat(20)}),ok:await t({w:0,wk:row.wk})}});
