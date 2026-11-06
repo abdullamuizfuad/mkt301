@@ -80,7 +80,7 @@ ROUTES.challenges=async h=>{if(notPlayer('Challenges'))return;if(!(await rulesOK
   <p class="muted">Challenge up to ${CH_MAX-1} classmates to ${CH_N} quick questions. <b>Live</b>: everyone plays together when you start. <b>Open</b>: everyone has 24 hours.</p>
   <div class="card" id="chl" style="margin-top:12px"><p class="muted" style="margin:0">Loading…</p></div>
   <div class="card" style="margin-top:12px"><h2 style="margin:0 0 6px">XP</h2><ul class="sumlist"><li>You win: +50 for you, +15 for each classmate who played.</li><li>You lose: +25 for each classmate who played, +5 for you.</li><li>Tie: +15 for everyone.</li><li>Rewards from up to ${CH_DAY} challenges a day.</li></ul></div>`);
-  CLOUD.watch('challenges',{where:[['p','array-contains',ME.sid]],limit:60},d=>{const el=$('#chl');if(!el)return;d.sort((a,b)=>(b.t|0)-(a.t|0));d=d.slice(0,30);
+  CLOUD.watch('challenges',{where:[['p','array-contains',ME.sid]],limit:60},d=>{const el=$('#chl');if(!el)return;d=d.filter(c=>c.mode!=='streak');d.sort((a,b)=>(b.t|0)-(a.t|0));d=d.slice(0,30);
     el.innerHTML=d.length?d.map(c=>{const over=Date.now()>c.exp||c.st==='done';return `<a class="rdrow" href="#/challenge/${c.id}"><span class="em">${c.mode==='live'?'⚡':'⏳'}</span><span class="rdl">${c.by===ME.sid?'You challenged '+c.p.filter(s=>s!==ME.sid).map(nameOf).join(', '):nameOf(c.by)+' challenged you'+(c.p.length>2?' and '+(c.p.length-2)+' more':'')}</span><span class="tag">${over?'Finished':c.mode==='live'?(c.st==='live'?'Live now':'Waiting'):'Open'}</span></a>`}).join(''):'<p class="muted" style="margin:0">No challenges yet. Start one!</p>'},e=>{const el=$('#chl');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})};
 function chNew(pre){const all=Object.entries(SDIR).filter(([s])=>s!==ME.sid&&s!==LECTURER).sort((a,b)=>a[1].n<b[1].n?-1:1),sel=new Set(pre&&SDIR[pre]?[pre]:[]);
   shell('#/',`<p><a href="#/challenges">← Challenges</a></p><h1>New challenge</h1>
@@ -111,7 +111,7 @@ ROUTES.challenge=async h=>{if(notPlayer('Challenge'))return;if(!(await rulesOK()
     $('#chplay')&&($('#chplay').onclick=()=>{playing=true;el.innerHTML='<div class="card qcard" id="chq"></div>';
       quizRun($('#chq'),C.items,CH_SECS,async r=>{playing=false;try{await CLOUD.put('challenges/'+id+'/r/'+ME.sid,{s:r.s,n:r.n,ms:r.ms,at:CLOUD.ts()})}catch(e){toast('⚠️','Score not saved',CLOUD.say(e))}
         R[ME.sid]=r;draw();if(chOver(C,R)&&C.by!==ME.sid)notify(C.by,'result',id,`${U.dn||ME.name} finished your challenge`).catch(()=>{})},id)})};
-  CLOUD.watchOne('challenges/'+id,d=>{const was=C&&C.st;C=d;if(d&&d.mode==='live'&&was&&was!=='live'&&d.st==='live'&&!R[ME.sid]){draw();$('#chplay')&&$('#chplay').click()}else draw()},e=>{const el=$('#chv');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`});
+  CLOUD.watchOne('challenges/'+id,d=>{if(d&&d.mode==='streak'){location.hash='#/duels/'+id;return}const was=C&&C.st;C=d;if(d&&d.mode==='live'&&was&&was!=='live'&&d.st==='live'&&!R[ME.sid]){draw();$('#chplay')&&$('#chplay').click()}else draw()},e=>{const el=$('#chv');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`});
   CLOUD.watch('challenges/'+id+'/r',{},d=>{R={};d.forEach(x=>R[x.id]=x);draw()},()=>{})};
 
 /* ---------- the weekend challenge (Friday and Saturday, GMT+5) ---------- */

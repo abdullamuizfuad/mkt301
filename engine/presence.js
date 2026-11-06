@@ -218,7 +218,7 @@ function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shel
     ${rows.map(r=>`<tr class="click" data-sid="${esc(r.id)}"><td style="white-space:nowrap">${LIVE_LBL[r.s]||r.s}</td><td>${esc(r.name)}<div class="muted" style="font-size:.78rem">${esc(r.id)}</div></td><td>${sxCell(r.sxo)}${r.sxo&&!r.sxo.est&&sxActs(r.sxo.acts)?`<div class="muted" style="font-size:.74rem">${esc(sxActs(r.sxo.acts,3))}</div>`:''}</td><td>${r.sc==null?'–':r.sc+'%'}</td><td><b>${r.pct}%</b></td><td>${stFmt(r.idle|0)}</td><td>${r.left|0}</td><td>${stFmt(r.longest|0)}</td><td>${r.chAt?ago(new Date(r.chAt)):'–'}</td><td style="font-size:.85rem">${esc(r.sec||'')}</td><td style="font-size:.8rem">${esc(r.pr||'')}</td></tr>`).join('')||'<tr><td colspan="11" class="muted">Nobody has joined yet.</td></tr>'}</table></div>
     <h3 style="margin-top:14px">Not joined (${not.length}${total>(USERS||[]).length-1?` + ${Math.max(0,total-((USERS||[]).filter(u=>u.id!==LECTURER).length))} not signed up`:''})</h3><p style="font-size:.9rem">${not.map(esc).join(', ')||'–'}</p>
     <p class="muted" style="font-size:.8rem">On screen = the portal is open and in use. Idle = open but untouched for 2+ minutes. Left the app = switched app or tab, or locked the screen. Offline = no check-in for 5+ minutes. These are signals, not proof. XP this session counts XP since each student joined; ≈ marks an estimate from whole hours (devices not yet on the exact record).</p>
-    <div class="row" style="margin-top:10px">${sessLive()?'<button class="btn red" id="lvend">■ End session</button>':''}<a class="btn ghost" href="#/session/${esc(S.id)}">Report</a></div></div>`;
+    <div class="row" style="margin-top:10px">${sessLive()?'<button class="btn red" id="lvend">■ End session</button>':''}<a class="btn ghost" href="#/session/${esc(S.id)}">Report</a>${sessLive()&&typeof mentHTML==='function'?`<a class="btn ghost" href="#/mentors/${esc(S.id)}">🤝 Mentors</a>`:''}</div></div>`;
     el.querySelectorAll('[data-sk]').forEach(h=>h.onclick=()=>{sort=sort.k===h.dataset.sk?{k:sort.k,d:-sort.d}:{k:h.dataset.sk,d:h.dataset.sk==='name'||h.dataset.sk==='s'?1:-1};draw()});
     const sa=$('#sxall');if(sa)sa.onclick=()=>{allM=!allM;draw()};
     if(!fcOn){fcOn=true;sessR3().then(ok=>{const ab=$('#lvacb');if(ab){const A=(PR.sess||S).act||{k:'free'};ab.innerHTML=ok?`<p style="margin:0 0 6px">Now: <b id="lvacn">${esc(actLabel(A))}</b></p>${actPickHTML('lv',A)}<button class="btn" id="lvacs" style="margin-top:8px">Set activity</button><p class="muted" style="font-size:.8rem;margin:6px 0 0">Joined students switch to it at once. Free practice lets them use the site as usual.</p>`:'<p class="muted" style="font-size:.85rem">Activities need the newest rules: publish them, then reload.</p>';
@@ -294,13 +294,13 @@ function sxRepAdd(rep,S,users,ps){const by={};(users||[]).forEach(x=>by[x.id]=x.
    act = {k:'free'} (default: practise as usual) | {k:'mcq', topics, n} | {k:'plans', ids} | {k:'chips', topics} | {k:'case', id} | {k:'notes', topics}.
    While a student is joined and the activity isn't free, other pages lead back to #/tutorial (core route() asks tutGuard); "📖 Refer to notes"
    for the activity's topics stays open, and "Leave session" ends it for them. XP, anti-farming, presence and idle tracking work as everywhere else. */
-const ACT_K=[['free','Free practice'],['mcq','MCQ set'],['plans','Short-answer plan questions'],['chips','Build a paragraph'],['case','A case'],['notes','Notes and quick checks']];
-const actKinds=()=>ACT_K.filter(([k])=>k!=='mcq'||typeof startMcq==='function'&&typeof drawMcq==='function');
+const ACT_K=[['free','Free practice'],['mcq','MCQ set'],['plans','Short-answer plan questions'],['chips','Build a paragraph'],['case','A case'],['notes','Notes and quick checks'],['boss','Boss round (engine/fun.js)']];
+const actKinds=()=>ACT_K.filter(([k])=>(k!=='mcq'||typeof startMcq==='function'&&typeof drawMcq==='function')&&(k!=='boss'||typeof BOSS_ON==='function'&&BOSS_ON())).map(([k,l])=>[k,l.replace(/ \(.*\)$/,'')]);
 const actTopics=()=>typeof notesCfg==='function'&&typeof notesOK==='function'&&notesOK()?notesCfg().keys.map(k=>[+k||k,(notesCfg().word||'Topic')+' '+k+': '+notesCfg().title(k)]):[];
 const actQTop=q=>+(q.t||q.week||0);
 function actLabel(a){if(!a||a.k==='free')return 'Free practice';const w=typeof notesCfg==='function'&&typeof notesOK==='function'&&notesOK()?notesCfg().word:'Topic',tp=(a.topics||[]).length?' · '+w+' '+a.topics.join(', '):'';
   if(a.k==='mcq')return 'MCQ set ('+(a.n||10)+' questions)'+tp;if(a.k==='plans')return (a.ids||[]).length+' short-answer plan question'+((a.ids||[]).length===1?'':'s');if(a.k==='chips')return 'Build a paragraph'+tp;
-  if(a.k==='case'){const c=(typeof CASE_ALL!=='undefined'?CASE_ALL:[]).find(x=>x.id===a.id);return 'Case: '+(c?caseName(c):a.id)}if(a.k==='notes')return 'Notes and quick checks'+tp;return a.k}
+  if(a.k==='case'){const c=(typeof CASE_ALL!=='undefined'?CASE_ALL:[]).find(x=>x.id===a.id);return 'Case: '+(c?caseName(c):a.id)}if(a.k==='notes')return 'Notes and quick checks'+tp;if(a.k==='boss')return 'Boss round'+tp;return a.k}
 function actPickHTML(p,a){a=a||{k:'free'};const T=actTopics(),tp=new Set(a.topics||[]);
   return `<div class="actpick" id="${p}ap" data-lect><label for="${p}ak" style="margin-top:8px">Activity for joined students</label><select id="${p}ak">${actKinds().map(([k,l])=>`<option value="${k}"${a.k===k?' selected':''}>${l}</option>`).join('')}</select>
   <div id="${p}at" class="tpicks" style="margin-top:6px">${T.map(([k,l])=>`<label class="tpk"><input type="checkbox" value="${k}"${tp.has(k)?' checked':''}><span>${esc(l)}</span></label>`).join('')}</div>
@@ -308,20 +308,20 @@ function actPickHTML(p,a){a=a||{k:'free'};const T=actTopics(),tp=new Set(a.topic
   <div id="${p}aq" style="margin-top:6px;max-height:220px;overflow:auto"></div>
   <div id="${p}ac" style="margin-top:6px"><select id="${p}acs">${(typeof CASE_ALL!=='undefined'?CASE_ALL:[]).map(c=>`<option value="${esc(c.id)}"${a.id===c.id?' selected':''}>${esc(caseName(c))}</option>`).join('')}</select></div></div>`}
 function actPickBind(p,a){const k=$('#'+p+'ak');if(!k)return;const sel=new Set((a&&a.ids)||[]);
-  const sync=()=>{const v=k.value,tps=[...document.querySelectorAll('#'+p+'at input:checked')].map(x=>+x.value||x.value);$('#'+p+'at').hidden=!['mcq','chips','notes','plans'].includes(v);$('#'+p+'an').hidden=v!=='mcq';$('#'+p+'ac').hidden=v!=='case';
+  const sync=()=>{const v=k.value,tps=[...document.querySelectorAll('#'+p+'at input:checked')].map(x=>+x.value||x.value);$('#'+p+'at').hidden=!['mcq','chips','notes','plans','boss'].includes(v);$('#'+p+'an').hidden=v!=='mcq';$('#'+p+'ac').hidden=v!=='case';
     const q=$('#'+p+'aq');q.hidden=v!=='plans';if(v==='plans'){document.querySelectorAll('#'+p+'aq input:checked').forEach(x=>sel.add(x.value));document.querySelectorAll('#'+p+'aq input:not(:checked)').forEach(x=>sel.delete(x.value));
       const pool=(typeof BANK_B_ALL!=='undefined'?BANK_B_ALL:[]).filter(x=>!tps.length||tps.includes(actQTop(x)));q.innerHTML=pool.length?pool.slice(0,60).map(x=>`<label class="tpk" style="display:flex"><input type="checkbox" value="${esc(x.id)}"${sel.has(x.id)?' checked':''}><span>${esc(x.id)} · ${esc(String(x.q).slice(0,110))}</span></label>`).join(''):'<p class="muted">Tick a topic first.</p>'}};
   k.onchange=sync;document.querySelectorAll('#'+p+'at input').forEach(x=>x.onchange=sync);sync()}
 function actPickRead(p){const k=$('#'+p+'ak');if(!k)return {k:'free'};const v=k.value,tps=[...document.querySelectorAll('#'+p+'at input:checked')].map(x=>+x.value||x.value).slice(0,8);
   if(v==='mcq')return {k:v,topics:tps,n:+$('#'+p+'ann').value||10};if(v==='plans')return {k:v,ids:[...document.querySelectorAll('#'+p+'aq input:checked')].map(x=>x.value).slice(0,12)};
-  if(v==='chips'||v==='notes')return {k:v,topics:tps};if(v==='case')return {k:v,id:$('#'+p+'acs').value};return {k:'free'}}
+  if(v==='chips'||v==='notes'||v==='boss')return {k:v,topics:tps};if(v==='case')return {k:v,id:$('#'+p+'acs').value};return {k:'free'}}
 /* the topics an activity covers (for its notes links) */
 function actTops(a){if(!a)return [];if(a.k==='plans'){const I=typeof qIndex==='function'?qIndex():{};return [...new Set((a.ids||[]).map(id=>I[id]&&actQTop(I[id].q)).filter(Boolean))]}return a.topics||[]}
 const actKey=a=>JSON.stringify(a||{k:'free'});
 /* is this student in tutorial mode now? */
 function tutOn(){return !!(typeof ME!=='undefined'&&ME&&ME.sid!==LECTURER&&!VIEWAS&&PR.joined&&sessLive()&&PR.sess&&PR.sess.act&&PR.sess.act.k&&PR.sess.act.k!=='free')}
 function tutAllowed(h,a){const r=h.join('/');if(h[0]==='tutorial')return true;if(typeof exTutAllowed==='function'&&exTutAllowed(h,actTops(a)))return true;if(h[0]==='notes'&&(!h[1]||actTops(a).map(String).includes(String(h[1]))))return true;
-  if(a.k==='mcq')return h[0]==='mcq';if(a.k==='chips')return h[0]==='chips'&&(!h[1]||(a.topics||[]).map(String).includes(String(h[1])));if(a.k==='case')return h[0]==='case'&&h[1]===a.id;if(a.k==='notes')return h[0]==='notes';return false}
+  if(a.k==='mcq')return h[0]==='mcq';if(a.k==='chips')return h[0]==='chips'&&(!h[1]||(a.topics||[]).map(String).includes(String(h[1])));if(a.k==='case')return h[0]==='case'&&h[1]===a.id;if(a.k==='notes')return h[0]==='notes';if(a.k==='boss')return h[0]==='boss'&&(!h[1]||(a.topics||[]).map(String).includes(String(h[1])));return false}
 function tutGuard(h){const on=tutOn();document.body.classList.toggle('tut',on);if(!on)return '';return tutAllowed(h,PR.sess.act)?'':'#/tutorial'}
 /* the lecturer changed the activity: joined students switch live */
 function tutAct(s){if(!tutOn()){document.body.classList.remove('tut');if(location.hash==='#/tutorial')location.hash='#/';PR.actK=null;return}const k=s&&s.id+'|'+actKey(s.act);if(PR.actK===k)return;const first=PR.actK==null;PR.actK=k;
@@ -330,10 +330,10 @@ function tutLeave(){const S=PR.sess;if(!S||!confirm('Leave "'+S.name+'"? Your le
   presWrite(true,'off');presClaim(S.id);document.body.classList.remove('tut');save();presBar();location.hash='#/'}
 function tutPage(){if(!tutOn()){document.body.classList.remove('tut');return home()}const S=PR.sess,a=S.act,tops=actTops(a),w=typeof notesCfg==='function'&&notesOK()?notesCfg().word:'Topic';
   const notes=tops.map(t=>{const h=typeof notesHref==='function'?notesHref({t,week:t},{}):'';return h?`<a class="btn ghost sm" href="${h}">📖 Refer to notes: ${w} ${t}</a>`:''}).join(' ');
-  const go={mcq:'#/mcq',chips:'#/chips/'+((a.topics||[])[0]||''),case:'#/case/'+a.id,notes:'#/notes/'+((a.topics||[])[0]||'')}[a.k];
+  const go={mcq:'#/mcq',chips:'#/chips/'+((a.topics||[])[0]||''),case:'#/case/'+a.id,notes:'#/notes/'+((a.topics||[])[0]||''),boss:'#/boss/'+((a.topics||[])[0]||'')}[a.k];
   shell('#/',`<div class="card"><div class="row" style="justify-content:space-between"><span class="live"><i></i>LIVE</span><button class="btn ghost sm" id="tutlv">Leave session</button></div><h1 style="margin:6px 0 2px">${esc(S.name)}</h1><p class="muted" style="margin:0">Your lecturer has set this activity. Stay on it until they change it.</p></div>
   <div class="card" style="margin-top:14px"><h2 style="margin:0 0 6px">🎯 ${esc(actLabel(a))}</h2>${a.k==='chips'&&(a.topics||[]).length>1?`<div class="row">${a.topics.map(t=>`<a class="btn" href="#/chips/${t}">🧱 ${w} ${t}</a>`).join('')}</div>`:a.k==='notes'&&(a.topics||[]).length>1?`<div class="row">${a.topics.map(t=>`<a class="btn" href="#/notes/${t}">📖 ${w} ${t}</a>`).join('')}</div>`:go?`<a class="btn" id="tutgo" href="${go}">▶ Start</a>`:''}
-  ${notes?`<p style="margin:10px 0 0">${notes}</p>`:''}</div>${typeof exTutHTML==='function'?exTutHTML(tops):''}<div id="qs" style="margin-top:14px"></div>
+  ${notes?`<p style="margin:10px 0 0">${notes}</p>`:''}</div>${typeof exTutHTML==='function'?exTutHTML(tops):''}${typeof mentHTML==='function'?mentHTML(S):''}<div id="qs" style="margin-top:14px"></div>
   ${(S.fb||[]).length?`<div class="card" style="margin-top:14px"><h3 style="margin:0 0 6px">💬 From your lecturer</h3><ul class="sxfb">${sxFbList(S.fb)}</ul></div>`:''}`);
   $('#tutlv').onclick=tutLeave;
   const g=$('#tutgo');if(g&&a.k==='mcq')g.onclick=e=>{const key=S.id+'|'+actKey(a);if(U.tutMq!==key||!U.mq||U.mq.done){const tp=(a.topics||[]).length?a.topics:undefined;U.mtopics=tp||U.mtopics;startMcq(drawMcq(tp||U.mtopics,a.n||10),{topics:tp||U.mtopics||[]});U.tutMq=key;save()}};

@@ -68,7 +68,7 @@ const CLOUD=(()=>{
         if(C.rules2){
           /* combined rules: official name, @username and avatar; XP may only climb ~2 XP a second since the last save, so the board catches up in steps */
           const cur=boardX,nx=cur==null?Math.min(x,5000):x>cur?Math.min(x,cur+3000,cur+Math.max(0,Math.floor((Date.now()-boardT)/550))):x;
-          try{await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,80),u:String(r.u||''),a:String(r.a||''),x:nx},base,r.wk?{w:Math.min(r.w|0,nx),wk:String(r.wk).slice(0,12)}:{}));boardX=nx;lagN=0;if(nx!==cur)boardT=Date.now()}
+          try{await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,80),u:String(r.u||''),a:String(r.a||''),x:nx},base,r.wk?{w:Math.min(r.w|0,nx),wk:String(r.wk).slice(0,12)}:{},r.tu!=null?{tu:String(r.tu).slice(0,40),hp:Math.min(999,r.hp|0)}:{}));boardX=nx;lagN=0;if(nx!==cur)boardT=Date.now()}
           catch(e){lagN++;if(C.isNetwork(e))throw e;console.warn('Leaderboard not updated yet',e);
             /* another device (or tab) may have written the row: read it again so the next step starts from the real value */
             try{const b=await F.getDoc(F.doc(db,'board',s.sid));boardX=b.exists()?b.data().x:null;boardT=b.exists()&&b.data().t&&b.data().t.toMillis?Math.min(Date.now(),b.data().t.toMillis()):Date.now()}catch(e2){boardT=Date.now()}
@@ -103,7 +103,7 @@ const CLOUD=(()=>{
   /* live tutorial sessions: sessions/{id} = {name,startedAt,endsAt,active,endedAt?,rep?} (lecturer writes);
      sessions/{id}/p/{SID} = a joined student's presence (that student writes, only while the session is open) */
   const ms=v=>v&&v.toDate?v.toDate().getTime():v instanceof Date?v.getTime():null;
-  const sessObj=d=>{const x=d.data();return {id:d.id,name:x.name||'',active:!!x.active,startedAt:ms(x.startedAt),endsAt:ms(x.endsAt),endedAt:ms(x.endedAt),rep:x.rep||null,fb:Array.isArray(x.fb)?x.fb:[],refl:x.refl||null,nj:x.nj==null?null:x.nj,wk:x.wk||null,grp:x.grp||null,act:x.act||null}};
+  const sessObj=d=>{const x=d.data();return {id:d.id,name:x.name||'',active:!!x.active,startedAt:ms(x.startedAt),endsAt:ms(x.endsAt),endedAt:ms(x.endedAt),rep:x.rep||null,fb:Array.isArray(x.fb)?x.fb:[],refl:x.refl||null,ment:x.ment||null,nj:x.nj==null?null:x.nj,wk:x.wk||null,grp:x.grp||null,act:x.act||null}};
   const presObj=d=>{const x=d.data();return Object.assign({id:d.id},x,{joinedAt:ms(x.joinedAt),t:ms(x.t)})};
   let latest=null;
   C.watchLatestSession=(cb,err)=>{C.unwatchLatestSession();latest=F.onSnapshot(F.query(F.collection(db,'sessions'),F.orderBy('startedAt','desc'),F.limit(1)),

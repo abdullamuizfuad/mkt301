@@ -238,7 +238,7 @@ function liveBoard(){
     const mine=ME.sid!==LECTURER&&W&&typeof weekXP==='function'?weekXP(U,W.from,Date.now())|0:0;
     const wk=cur==='w'&&W,rows=wk?ROWS.map(r=>r.id===ME.sid?Object.assign({},r,{w:Math.max(r.wk===W.id?r.w|0:0,mine),wk:W.id}):r).filter(r=>r.wk===W.id&&(r.w|0)>0).map(r=>Object.assign({},r,{x:r.w|0})).sort((a,b)=>b.x-a.x):ROWS;
     $('#lbw').textContent=wk?'XP earned since class on '+wildWhen(W.from)+'. Everyone starts again at zero when the next class starts.':'Total XP since the start of term.';
-    const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r av ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(showName(r.n,r.id))}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span>${typeof avatarSVG==='function'?avatarSVG(r.a||avFor(r.id),36,''):''}<div style="flex:1;min-width:0"><b>${nameLine(r.n,r.u,r.id)}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):`<p class="muted">${wk?'No XP this week yet. Practise to be first on this week\'s board.':'No scores yet. Earn some XP and you will appear here.'}</p>`;
+    const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r av ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(showName(r.n,r.id))}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span>${typeof avatarSVG==='function'?avatarSVG(r.a||avFor(r.id),36,''):''}<div style="flex:1;min-width:0"><b>${nameLine(r.n,r.u,r.id)}${r.tu?' <span class="tag tutag" title="Tutor: '+esc(r.tu)+'">🎓 Tutor</span>':''}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):`<p class="muted">${wk?'No XP this week yet. Practise to be first on this week\'s board.':'No scores yet. Earn some XP and you will appear here.'}</p>`;
     if(lec)el.querySelectorAll('[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStudent(r.dataset.sid)}}})};
   document.querySelectorAll('[data-lbt]').forEach(b=>b.onclick=()=>{tab=b.dataset.lbt;LS.set('lbtab',tab);draw()});
   CLOUD.watchBoard(rows=>{ROWS=rows.filter(r=>r.id!==LECTURER&&termNow(r));draw()},
@@ -304,7 +304,7 @@ const syncChip=()=>{const v=SYNC[CLOUD.state]||SYNC.off;return v[1]?`<span class
 /* leaderboard row: everyone appears under their official name (directory) once the combined rules are published; until then a short form of the sign-in name */
 const rowOf=sid=>{if(sid===LECTURER)return null;const r={n:CLOUD.rules2?(U.dn||''):defaultNick(ME.name).slice(0,24),u:U.un||'',a:U.av||'',x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,s:streak(U)};
   /* this week's XP for the "This week" board: only once the newest rules (which allow w and wk) are published */
-  const W=typeof PR!=='undefined'&&PR.r3===true&&typeof wildWin==='function'&&typeof weekXP==='function'?wildWin():null;if(W){r.w=Math.max(0,weekXP(U,W.from,Date.now())|0);r.wk=W.id}return r};
+  const W=typeof PR!=='undefined'&&PR.r3===true&&typeof wildWin==='function'&&typeof weekXP==='function'?wildWin():null;if(W){r.w=Math.max(0,weekXP(U,W.from,Date.now())|0);r.wk=W.id}if(typeof funRow==='function')funRow(r);return r};
 async function cloudSync(){const sid=ME.sid;
   if(!CLOUD.ok){toast('📴','Saving on this device only','Your account could not be reached. Sign in again when you are online.');return}
   const u=await CLOUD.current();if(!ME||ME.sid!==sid)return;
@@ -318,10 +318,11 @@ async function cloudSync(){const sid=ME.sid;
   if(sid!==LECTURER)CLOUD.watchMine(sid,m=>{if(ME&&ME.sid===sid)applyMarks(m)});presCloud();hook('cloud')}
 function flagText(f){f=f||{};return [f.paste?'paste blocked ×'+f.paste:'',f.bigKept?'large insert (kept) ×'+f.bigKept:'',f.big?'big insert removed ×'+f.big:'',f.fast?'too fast':''].filter(Boolean).join(' · ')}
 function flagEvHTML(f){const ev=(f&&f.ev)||[];return ev.length?`<ul class="sumlist" style="font-size:.82rem;margin:8px 0 0">${ev.map(x=>`<li><b>${x.k==='paste'?'Paste blocked':'Large insert (kept)'}</b> · ${esc(x.t)}${x.c?' · while composing':''} · ${esc(String(x.at).slice(0,16).replace('T',' '))}<div class="muted">“${esc(x.s)}${String(x.s).length>=120?'…':''}”</div></li>`).join('')}</ul>`:''}
-const isNote=k=>/^note_/.test(k);
+const isNote=k=>/^note_/.test(k),isBonus=k=>/^bonus_/.test(k);/* bonus_<…>: XP from the lecturer, e.g. a mentor bonus (engine/fun.js) */
 function applyMarks(m){U.rev=U.rev||{};U.gain=U.gain||{};let n=0,ch=0;
   let nn=0,first='';U.notes=U.notes||{};
   for(const [key,v] of Object.entries(m||{})){if(!v||typeof v!=='object')continue;
+    if(isBonus(key)){const bk='bonus:'+key;if(!U.log[bk]){U.fun=U.fun||{};if(/^bonus_ment_/.test(key))U.fun.ment=(U.fun.ment|0)+1;award(bk,Math.max(0,Math.min(30,v.xp|0)),String(v.fb||'Bonus from your lecturer').slice(0,80));U.notes[key]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};nn++;first=first||U.notes[key].fb}continue}
     if(isNote(key)){if(!U.notes[key]){U.notes[key]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};nn++;first=first||U.notes[key].fb}continue}
     const r={q:String(v.q||''),band:Math.max(0,Math.min(6,v.band|0)),xp:Math.max(0,Math.min(30,v.xp|0)),fb:String(v.fb||'').slice(0,600),at:String(v.at||''),by:v.by==='lecturer'?'lecturer':'claude'},k='review:'+key;
     const old=U.rev[key];U.rev[key]=r;

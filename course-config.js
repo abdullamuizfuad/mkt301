@@ -1,5 +1,7 @@
 /* MKT301 Arena course settings read by the shared engine (engine/*.js). Loaded first. */
 const CRS={
+  /* fun and tutors (engine/fun.js): Boss rounds and story mode (MKT101 only: content in bank-boss.js, story.js), tutors from level tutorLvl with tutorEx Expert badges, the default weekly class goal */
+  fun:{tutorLvl:4,tutorEx:0,goal:1500},
   id:'mkt301',CODE:'MKT301',name:'MKT301 Arena',ls:'mkt301_',repo:'mkt301',
   title:'International Marketing',
   /* the weekly 6th-spot challenge (engine/wild.js): class starts Tuesday 4:00 pm (GMT+5); the challenge is open the 24 hours before */

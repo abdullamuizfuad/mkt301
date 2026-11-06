@@ -43,8 +43,8 @@ function paperTile(){if(typeof ppLine!=='function')return null;const L=ME&&ME.si
 function tilesHTML(){const T=(typeof homeTiles==='function'?homeTiles():[]).concat([paperTile()].filter(Boolean));
   return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile${x[4]?' locked':''}" href="${x[3]}"${x[3]==='#/paper'?' id="tpaper"':''}><span class="em">${x[0]}</span><span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></span></a>`).join('')}</div>`}
 function home(){if(!U)return;rollDay();if(ME.sid===LECTURER)return lectHome();
-  shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}${inboxHTML()}<div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
-  const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)};if(typeof wildHome==='function')wildHome()}
+  shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}${inboxHTML()}<div id="tfun"></div><div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
+  const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)};if(typeof wildHome==='function')wildHome();if(typeof funHome==='function')funHome()}
 
 /* ---------- the lecturer's home: lecturer essentials only (the lecturer is never a player) ---------- */
 let LH=null;/* one read of users, reviews and reports, kept for 5 minutes: counts, the at-risk list and who was active recently */
@@ -77,9 +77,9 @@ function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
 
 /* ---------- Practice, backup ---------- */
 ROUTES.practice=()=>{
-  const L=ME.sid===LECTURER;shell('#/practice',`<h1>Practice</h1>${L?'<p class="muted" data-lect>Try any question yourself. Nothing you do here earns XP or reaches the class.</p>':''}${tilesHTML()}${typeof exPracticeHTML==='function'?exPracticeHTML():''}
+  const L=ME.sid===LECTURER;shell('#/practice',`<h1>Practice</h1>${L?'<p class="muted" data-lect>Try any question yourself. Nothing you do here earns XP or reaches the class.</p>':''}${tilesHTML()}${typeof exPracticeHTML==='function'?exPracticeHTML():''}${typeof funPracticeHTML==='function'?funPracticeHTML():''}
   ${L?'':`<h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></span></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><span><b class="lex">Flashcards</b><small class="muted">Key terms</small></span></a>${typeof CHIPS!=='undefined'&&CHIPS.length?`<a class="card zone ttile" href="#/chips"><span class="em">🧱</span><span><b class="lex">Build a paragraph</b><small class="muted">${CHIPS.length} questions</small></span></a>`:''}${wildCfg()?`<a class="card zone ttile" href="#/wild"><span class="em">🎁</span><span><b class="lex">6th-spot challenge</b><small class="muted">${wildWin().open?'Open now':'Opens '+esc(wildWhen(wildWin().opens))}</small></span></a>`:''}</div>
-  ${typeof socialCardHTML==='function'?socialCardHTML():''}`}`)};
+  ${typeof socialCardHTML==='function'?socialCardHTML():''}`}`);if(typeof funPracticeBind==='function')funPracticeBind()};
 ROUTES.backup=()=>{shell('#/backup',`<p><a href="#/">← Home</a></p><div class="card" id="bk"><div class="row" style="justify-content:space-between"><h1 style="margin:0;font-size:1.4rem">💾 Save my progress</h1><span class="tag" id="bkl"></span></div>
   <p class="muted" style="font-size:.9rem;margin:8px 0 12px">${cloudOn()?'Your progress saves to your account. A backup copy is an extra safety net.':'Your progress lives on this device only. Save a backup to move it to another phone or laptop, or to keep it safe before clearing your browser.'}</p>
   <div class="row"><button class="btn" id="bkd">⬇ Download backup</button><button class="btn ghost" id="bkc">📧 Email or copy…</button><button class="btn ghost" id="bkr">Restore</button></div>

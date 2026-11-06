@@ -29,6 +29,10 @@ function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)retur
     $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)}
 onHook('afterLoad',()=>{if(ME&&!ME.cloud)whatsNew()});onHook('cloud',whatsNew);
 const WHATSNEW=[
+  ['🙋','Ask a tutor and the Tutor badge','Stuck on an idea? Ask a short question under Practice → Ask a tutor. Classmates with the 🎓 Tutor badge answer, and earn XP when their answer helps. Reach the top levels and earn Expert badges to become a tutor yourself.'],
+  ...(typeof BOSS_ON==='function'&&BOSS_ON()?[['👹','Boss rounds and story mode','Finish a topic\'s Expert set to face its 10-minute Boss round: a short case, three decisions and a paragraph. Plus story mode: help a Maldivian juice start-up grow, one chapter per topic.']]:[]),
+  ['⚡','Speed runs, hard mode and streak duels','Race 20 questions against the clock for a personal best, switch on hard mode for double XP, or challenge a classmate to a 7-day streak duel.'],
+  ['🃏','Term cards, class goal and your Monday recap','Collect a card for every key term you know, help the class reach its weekly goal, see who improved most, and get a short recap of your week every Monday.'],
   ...(typeof EX_ON==='function'&&EX_ON()?[['🎓','Expert sets and new levels','Each topic now has an Expert set: harder case questions, paragraph builders and a short essay your lecturer marks. Master a topic\'s MCQs (80%+ on 15) to unlock its set. Above Marketing Consultant there are three new levels to reach: ⭐ Senior Consultant, ⭐⭐ Principal Consultant and ⭐⭐⭐ Marketing Partner.']]:[]),
   ['🏆','This week\'s leaderboard','The leaderboard now opens on "This week": XP earned since the last class, so everyone starts again at zero each week. "All time" is still one tap away.'],
   ['🧠','Review pays','Questions come back for a quick review after 1, 3, 7 and 14 days. Each one you remember earns +4 XP (up to 25 a day).'],

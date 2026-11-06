@@ -77,7 +77,7 @@ function notesPage(sub){if(typeof wildBusy==='function'&&wildBusy())return shell
   ${T.mistakes?`<div class="card mis" id="n-mis" style="margin-top:18px"><h3>Common mistakes</h3>${listHTML(T.mistakes)}</div>`:''}
   ${W?`<div class="card" id="n-ans" style="margin-top:18px"><h3>Answer like this</h3>${ansHTML}</div>`:''}
   <h2 id="n-chk" style="margin-top:18px">Check yourself</h2><p class="muted">Answer in your head or on paper first. Then open the answer.</p>
-  ${chkHTML}${pracHTML}${typeof exNoteHTML==='function'?exNoteHTML(k):''}
+  ${chkHTML}${pracHTML}${typeof exNoteHTML==='function'?exNoteHTML(k):''}${typeof tbNoteHTML==='function'?tbNoteHTML(k):''}
   ${T.prompts?`<div class="card" id="n-ai" style="margin-top:18px"><h3>Explore further with AI</h3><p class="muted">Copy a prompt, open Gemini, and paste it in. Read the reply with care. Check every idea against these notes and your textbook.</p>${aiHTML}</div>`:''}
   ${navHTML}`)}
  const el=$('main');$('#nst')&&($('#nst').onclick=()=>{if(award('notes:'+k,20,w+' studied'))countOnce('notes:'+k,'notes');notesPage(String(k));$('#n-prac').scrollIntoView({block:'center'})});
