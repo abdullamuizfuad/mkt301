@@ -232,8 +232,11 @@ function liveBoard(){
   $('#nkun')&&($('#nkun').onclick=()=>namePrompt(true));
   /* "This week" (XP since the last class started, the weekly challenge's window) comes first; "All time" is the second tab */
   let ROWS=null,tab=LS.get('lbtab','w')==='a'?'a':'w';const W=typeof wildWin==='function'?wildWin():null;
-  const draw=()=>{const el=$('#lbl');if(!el||!ROWS)return;document.querySelectorAll('[data-lbt]').forEach(b=>{const on=b.dataset.lbt===tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
-    const wk=tab==='w'&&W,rows=wk?ROWS.filter(r=>r.wk===W.id&&(r.w|0)>0).map(r=>Object.assign({},r,{x:r.w|0})).sort((a,b)=>b.x-a.x):ROWS;
+  const draw=()=>{const el=$('#lbl');if(!el||!ROWS)return;
+    /* until anyone's row carries this week's XP (the newest rules), open on All time unless the student chose This week */
+    const hasW=W&&ROWS.some(r=>r.wk===W.id),cur=tab==='w'&&!hasW&&!LS.get('lbtab',null)?'a':tab;document.querySelectorAll('[data-lbt]').forEach(b=>{const on=b.dataset.lbt===cur;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
+    const mine=ME.sid!==LECTURER&&W&&typeof weekXP==='function'?weekXP(U,W.from,Date.now())|0:0;
+    const wk=cur==='w'&&W,rows=wk?ROWS.map(r=>r.id===ME.sid?Object.assign({},r,{w:Math.max(r.wk===W.id?r.w|0:0,mine),wk:W.id}):r).filter(r=>r.wk===W.id&&(r.w|0)>0).map(r=>Object.assign({},r,{x:r.w|0})).sort((a,b)=>b.x-a.x):ROWS;
     $('#lbw').textContent=wk?'XP earned since class on '+wildWhen(W.from)+'. Everyone starts again at zero when the next class starts.':'Total XP since the start of term.';
     const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r av ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(showName(r.n,r.id))}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span>${typeof avatarSVG==='function'?avatarSVG(r.a||avFor(r.id),36,''):''}<div style="flex:1;min-width:0"><b>${nameLine(r.n,r.u,r.id)}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):`<p class="muted">${wk?'No XP this week yet. Practise to be first on this week\'s board.':'No scores yet. Earn some XP and you will appear here.'}</p>`;
     if(lec)el.querySelectorAll('[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStudent(r.dataset.sid)}}})};
