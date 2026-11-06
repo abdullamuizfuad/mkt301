@@ -320,7 +320,7 @@ function actTops(a){if(!a)return [];if(a.k==='plans'){const I=typeof qIndex==='f
 const actKey=a=>JSON.stringify(a||{k:'free'});
 /* is this student in tutorial mode now? */
 function tutOn(){return !!(typeof ME!=='undefined'&&ME&&ME.sid!==LECTURER&&!VIEWAS&&PR.joined&&sessLive()&&PR.sess&&PR.sess.act&&PR.sess.act.k&&PR.sess.act.k!=='free')}
-function tutAllowed(h,a){const r=h.join('/');if(h[0]==='tutorial')return true;if(h[0]==='notes'&&(!h[1]||actTops(a).map(String).includes(String(h[1]))))return true;
+function tutAllowed(h,a){const r=h.join('/');if(h[0]==='tutorial')return true;if(typeof exTutAllowed==='function'&&exTutAllowed(h,actTops(a)))return true;if(h[0]==='notes'&&(!h[1]||actTops(a).map(String).includes(String(h[1]))))return true;
   if(a.k==='mcq')return h[0]==='mcq';if(a.k==='chips')return h[0]==='chips'&&(!h[1]||(a.topics||[]).map(String).includes(String(h[1])));if(a.k==='case')return h[0]==='case'&&h[1]===a.id;if(a.k==='notes')return h[0]==='notes';return false}
 function tutGuard(h){const on=tutOn();document.body.classList.toggle('tut',on);if(!on)return '';return tutAllowed(h,PR.sess.act)?'':'#/tutorial'}
 /* the lecturer changed the activity: joined students switch live */
@@ -333,7 +333,7 @@ function tutPage(){if(!tutOn()){document.body.classList.remove('tut');return hom
   const go={mcq:'#/mcq',chips:'#/chips/'+((a.topics||[])[0]||''),case:'#/case/'+a.id,notes:'#/notes/'+((a.topics||[])[0]||'')}[a.k];
   shell('#/',`<div class="card"><div class="row" style="justify-content:space-between"><span class="live"><i></i>LIVE</span><button class="btn ghost sm" id="tutlv">Leave session</button></div><h1 style="margin:6px 0 2px">${esc(S.name)}</h1><p class="muted" style="margin:0">Your lecturer has set this activity. Stay on it until they change it.</p></div>
   <div class="card" style="margin-top:14px"><h2 style="margin:0 0 6px">🎯 ${esc(actLabel(a))}</h2>${a.k==='chips'&&(a.topics||[]).length>1?`<div class="row">${a.topics.map(t=>`<a class="btn" href="#/chips/${t}">🧱 ${w} ${t}</a>`).join('')}</div>`:a.k==='notes'&&(a.topics||[]).length>1?`<div class="row">${a.topics.map(t=>`<a class="btn" href="#/notes/${t}">📖 ${w} ${t}</a>`).join('')}</div>`:go?`<a class="btn" id="tutgo" href="${go}">▶ Start</a>`:''}
-  ${notes?`<p style="margin:10px 0 0">${notes}</p>`:''}</div><div id="qs" style="margin-top:14px"></div>
+  ${notes?`<p style="margin:10px 0 0">${notes}</p>`:''}</div>${typeof exTutHTML==='function'?exTutHTML(tops):''}<div id="qs" style="margin-top:14px"></div>
   ${(S.fb||[]).length?`<div class="card" style="margin-top:14px"><h3 style="margin:0 0 6px">💬 From your lecturer</h3><ul class="sxfb">${sxFbList(S.fb)}</ul></div>`:''}`);
   $('#tutlv').onclick=tutLeave;
   const g=$('#tutgo');if(g&&a.k==='mcq')g.onclick=e=>{const key=S.id+'|'+actKey(a);if(U.tutMq!==key||!U.mq||U.mq.done){const tp=(a.topics||[]).length?a.topics:undefined;U.mtopics=tp||U.mtopics;startMcq(drawMcq(tp||U.mtopics,a.n||10),{topics:tp||U.mtopics||[]});U.tutMq=key;save()}};

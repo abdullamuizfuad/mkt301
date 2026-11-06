@@ -87,12 +87,14 @@ __EMAILS__
     }
     function validRow(sid) {
       let d = request.resource.data;
-      return d.keys().hasOnly(['n', 'x', 'l', 'b', 's', 't', 'u', 'a'])
+      return d.keys().hasOnly(['n', 'x', 'l', 'b', 's', 't', 'u', 'a', 'w', 'wk'])
         && str(d.n, 80) && validName(sid, d.n)
         && d.x is int && d.x >= 0 && d.x <= 50000
         && d.l is int && d.b is int && d.s is int && d.t == request.time
         && (!('u' in d) || (d.u is string && validUser(sid, d.u)))
         && (!('a' in d) || (str(d.a, 40) && d.a.matches('^[a-z0-9]*$')))
+        && (!('w' in d) || (d.w is int && d.w >= 0 && d.w <= d.x))
+        && (!('wk' in d) || str(d.wk, 12))
         && d.x <= get(/databases/$(database)/documents/users/$(sid)).data.xp;
     }
     function xpRate() {

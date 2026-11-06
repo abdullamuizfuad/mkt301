@@ -24,6 +24,8 @@ function wildWin(now){now=now==null?Date.now():now;const W=wildCfg();if(!W)retur
 const wildPrev=()=>{const w=wildWin();return w?wildWin(w.closes-7*864e5-1):null};/* last week's window (closed) */
 const mvHour=t=>new Date((t==null?Date.now():t)+MV).toISOString().slice(0,13);
 const wildWhen=t=>{const d=new Date(t+MV);return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()]+' '+d.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()]+', '+((d.getUTCHours()+11)%12+1)+':'+String(d.getUTCMinutes()).padStart(2,'0')+(d.getUTCHours()<12?' am':' pm')};
+/* probe the newest rules early, so the leaderboard row can carry this week's XP (w, wk) */
+onHook('cloud',()=>{if(ME&&ME.sid!==LECTURER&&cloudOn()&&typeof sessR3==='function')sessR3().then(()=>{if(PR.r3&&CLOUD.push)CLOUD.push()}).catch(()=>{})});
 /* XP per hour (GMT+5), for the weekly top 5 */
 onHook('award',(key,xp)=>{if(!U||!xp)return;U.xph=U.xph||{};const h=mvHour();U.xph[h]=(U.xph[h]|0)+xp;const cut=mvHour(Date.now()-21*864e5);Object.keys(U.xph).forEach(k=>{if(k<cut)delete U.xph[k]})});
 function weekXP(u,from,to){const H=u.xph||{},a=mvHour(from),b=mvHour(to),hd=new Set(Object.keys(H).map(k=>k.slice(0,10)));let x=0;

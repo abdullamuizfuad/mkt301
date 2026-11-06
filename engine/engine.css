@@ -521,3 +521,11 @@ body.va main :is(textarea,input,select,.chip,.mopt,[data-a]){cursor:not-allowed}
 @media (min-width:900px){.wlive .wbig h2{font-size:1.8rem}.wlive .rdrow{font-size:1.15rem;padding:10px 0}}
 /* the top bar never pushes the page sideways on a narrow phone (long XP, a bell count) */
 .hud{min-width:0}@media (max-width:440px){.top .wrap{gap:8px}.hud{gap:5px}.hud .pill{padding:5px 7px}.themebtn{margin-left:4px}}
+/* Expert sets (engine/expert.js) */
+.exgrid{gap:12px}.exc{margin:0}.exc h3{font-size:1rem}.exc .exlock{margin:8px 0 6px;font-size:.88rem}.exc .exprog{font-size:.82rem;margin:6px 0 0}
+.exc.ex-locked,.exc.ex-soon{opacity:.92;border-style:dashed}.exc.ex-open{border-color:var(--gold)}.exc.ex-done{border-color:var(--green)}
+.tag.good{background:color-mix(in srgb,var(--green) 22%,transparent);color:var(--ink)}
+#exq .mopts{display:grid;gap:8px;margin-top:10px}#exq .mopt{text-align:left;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:inherit;font:inherit;cursor:pointer}
+#exq .mopt.ok{border-color:var(--green);background:color-mix(in srgb,var(--green) 18%,transparent)}#exq .mopt.bad{border-color:var(--red);background:color-mix(in srgb,var(--red) 18%,transparent)}
+.exap{border-top:1px solid var(--line);padding:8px 0}.exap summary{cursor:pointer}.exoffer{border-color:var(--gold)}
+.lbtabs{display:flex;gap:6px}.lbtabs .tab{font:600 .88rem Lexend;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink2);cursor:pointer}.lbtabs .tab.on{background:var(--teal);border-color:var(--teal);color:#fff}

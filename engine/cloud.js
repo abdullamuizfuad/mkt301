@@ -68,7 +68,7 @@ const CLOUD=(()=>{
         if(C.rules2){
           /* combined rules: official name, @username and avatar; XP may only climb ~2 XP a second since the last save, so the board catches up in steps */
           const cur=boardX,nx=cur==null?Math.min(x,5000):x>cur?Math.min(x,cur+3000,cur+Math.max(0,Math.floor((Date.now()-boardT)/550))):x;
-          try{await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,80),u:String(r.u||''),a:String(r.a||''),x:nx},base));boardX=nx;lagN=0;if(nx!==cur)boardT=Date.now()}
+          try{await F.setDoc(F.doc(db,'board',s.sid),Object.assign({n:String(r.n||'').slice(0,80),u:String(r.u||''),a:String(r.a||''),x:nx},base,r.wk?{w:Math.min(r.w|0,nx),wk:String(r.wk).slice(0,12)}:{}));boardX=nx;lagN=0;if(nx!==cur)boardT=Date.now()}
           catch(e){lagN++;if(C.isNetwork(e))throw e;console.warn('Leaderboard not updated yet',e);
             /* another device (or tab) may have written the row: read it again so the next step starts from the real value */
             try{const b=await F.getDoc(F.doc(db,'board',s.sid));boardX=b.exists()?b.data().x:null;boardT=b.exists()&&b.data().t&&b.data().t.toMillis?Math.min(Date.now(),b.data().t.toMillis()):Date.now()}catch(e2){boardT=Date.now()}

@@ -33,7 +33,7 @@ function todayRowHTML(){rollDay();const t=stToday(U),ms=missions(),done=ms.filte
   return `<div class="card trow" id="trow"><div class="tchips">
   <a class="tchip" href="#/progress/screen" id="tst"><span class="tring" style="--p:${Math.min(100,t/ST.GOAL*100)}"></span><span><b>${t>=ST.GOAL?'Goal met ✓':Math.floor(t/60)+'/20'}</b><small>min today</small></span></a>
   <button type="button" class="tchip" id="tmb" aria-expanded="false" aria-controls="tml" data-va-ok><span class="tico">🎯</span><span><b>${U.day.done?'Done ✓':done+'/3'}</b><small>missions ▾</small></span></button>
-  <a class="tchip" href="#/review" id="trv"><span class="tico">🧠</span><span><b>${due}</b><small>to review</small></span></a></div>
+  <a class="tchip" href="#/review" id="trv"><span class="tico">🧠</span><span><b>${due}</b><small>to review${due&&typeof REV_XP!=='undefined'?' · +'+REV_XP+' XP each':''}</small></span></a></div>
   <div id="tml" class="tml" hidden><p class="muted" style="font-size:.85rem;margin:10px 0 0">${U.day.done?'✅ Done for today. New missions tomorrow.':`Complete all three for +${MBONUS[U.day.t]} XP (${TIERS[U.day.t]}). New missions every day.`}</p>${missionRowsHTML()}</div></div>`}
 function inviteHTML(){const n=typeof NOTE!=='undefined'?NOTE.filter(x=>!x.seen).length:0;
   return n?`<a class="card zone tinv" href="#/notifs" id="tinv"><span class="em">🔔</span><span style="flex:1"><b class="lex">${n} new notification${n===1?'':'s'}</b><br><span class="muted" style="font-size:.85rem">Challenge invites and results</span></span><span class="btn sm">Open</span></a>`:''}
@@ -77,7 +77,7 @@ function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
 
 /* ---------- Practice, backup ---------- */
 ROUTES.practice=()=>{
-  const L=ME.sid===LECTURER;shell('#/practice',`<h1>Practice</h1>${L?'<p class="muted" data-lect>Try any question yourself. Nothing you do here earns XP or reaches the class.</p>':''}${tilesHTML()}
+  const L=ME.sid===LECTURER;shell('#/practice',`<h1>Practice</h1>${L?'<p class="muted" data-lect>Try any question yourself. Nothing you do here earns XP or reaches the class.</p>':''}${tilesHTML()}${typeof exPracticeHTML==='function'?exPracticeHTML():''}
   ${L?'':`<h2 style="margin-top:22px">Quick recall</h2><div class="ttiles"><a class="card zone ttile" href="#/review"><span class="em">🧠</span><span><b class="lex">Review</b><small class="muted">${U?srsDue().length:0} due today</small></span></a><a class="card zone ttile" href="#/cards"><span class="em">🃏</span><span><b class="lex">Flashcards</b><small class="muted">Key terms</small></span></a>${typeof CHIPS!=='undefined'&&CHIPS.length?`<a class="card zone ttile" href="#/chips"><span class="em">🧱</span><span><b class="lex">Build a paragraph</b><small class="muted">${CHIPS.length} questions</small></span></a>`:''}${wildCfg()?`<a class="card zone ttile" href="#/wild"><span class="em">🎁</span><span><b class="lex">6th-spot challenge</b><small class="muted">${wildWin().open?'Open now':'Opens '+esc(wildWhen(wildWin().opens))}</small></span></a>`:''}</div>
   ${typeof socialCardHTML==='function'?socialCardHTML():''}`}`)};
 ROUTES.backup=()=>{shell('#/backup',`<p><a href="#/">← Home</a></p><div class="card" id="bk"><div class="row" style="justify-content:space-between"><h1 style="margin:0;font-size:1.4rem">💾 Save my progress</h1><span class="tag" id="bkl"></span></div>

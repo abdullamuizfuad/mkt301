@@ -223,16 +223,22 @@ async function rowKey(sid){return (await sha(ROSTER.salt+'|'+sid)).slice(0,12)}
 function liveBoard(){
   shell('#/board',`<div class="row" style="justify-content:space-between"><h1 style="margin:0">Leaderboard</h1><span class="live"><i></i>LIVE</span></div>
   <p class="muted">Scores update as classmates earn XP. Everyone appears under their name from the class list.${ME.sid===LECTURER?' <b data-lect>Lecturer: tap a student to open their profile.</b>':''}</p>
-  <div class="grid g2"><div class="card lb" id="lbl"><p class="muted">Loading the class…</p></div>
+  <div class="grid g2"><div><div class="tabs lbtabs" role="tablist"><button type="button" class="tab" data-lbt="w" role="tab">This week</button><button type="button" class="tab" data-lbt="a" role="tab">All time</button></div><p class="muted" id="lbw" style="font-size:.84rem;margin:6px 0"></p><div class="card lb" id="lbl"><p class="muted">Loading the class…</p></div></div>
   <div class="card">${ME.sid===LECTURER?'<h2>About the board</h2>':`<h2>You on the board</h2><p style="margin:0 0 6px">Your score: <b>${U.xp} XP</b> · ${esc(level(U.xp).name)} · ${Object.keys(U.badges).length} badges</p>`}
    ${ME.sid===LECTURER?'<p class="muted" style="font-size:.9rem" data-lect>The lecturer account is not shown on the board.</p>':`
    <p style="margin:6px 0">You appear as <b>${CLOUD.rules2?nameLine(U.dn,U.un,ME.sid):esc(defaultNick(ME.name))}</b></p>
    ${CLOUD.rules2&&U.dn?`<button class="btn ghost sm" id="nkun">🪪 ${U.un?'Change my @username':'Pick my @username'}</button>`:''}
    <p class="muted" style="font-size:.85rem;margin-top:12px">No need to send anything: your score updates automatically. ${syncChip()}</p>`}</div></div>`);
   $('#nkun')&&($('#nkun').onclick=()=>namePrompt(true));
-  CLOUD.watchBoard(rows=>{const el=$('#lbl');if(!el)return;rows=rows.filter(r=>r.id!==LECTURER&&termNow(r));
-    const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r av ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(showName(r.n,r.id))}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span>${typeof avatarSVG==='function'?avatarSVG(r.a||avFor(r.id),36,''):''}<div style="flex:1;min-width:0"><b>${nameLine(r.n,r.u,r.id)}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):'<p class="muted">No scores yet. Earn some XP and you will appear here.</p>';
-    if(lec)el.querySelectorAll('[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStudent(r.dataset.sid)}}})},
+  /* "This week" (XP since the last class started, the weekly challenge's window) comes first; "All time" is the second tab */
+  let ROWS=null,tab=LS.get('lbtab','w')==='a'?'a':'w';const W=typeof wildWin==='function'?wildWin():null;
+  const draw=()=>{const el=$('#lbl');if(!el||!ROWS)return;document.querySelectorAll('[data-lbt]').forEach(b=>{const on=b.dataset.lbt===tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
+    const wk=tab==='w'&&W,rows=wk?ROWS.filter(r=>r.wk===W.id&&(r.w|0)>0).map(r=>Object.assign({},r,{x:r.w|0})).sort((a,b)=>b.x-a.x):ROWS;
+    $('#lbw').textContent=wk?'XP earned since class on '+wildWhen(W.from)+'. Everyone starts again at zero when the next class starts.':'Total XP since the start of term.';
+    const lec=ME.sid===LECTURER;el.innerHTML=rows.length?rows.map((r,i)=>`<div class="r av ${r.id===ME.sid?'me':''}${lec?' click':''}"${lec?` data-sid="${esc(r.id)}" role="button" tabindex="0" aria-label="Open the profile of ${esc(showName(r.n,r.id))}"`:''}><span class="pos ${i<3?'p'+(i+1):''}">${i<3?['🥇','🥈','🥉'][i]:i+1}</span>${typeof avatarSVG==='function'?avatarSVG(r.a||avFor(r.id),36,''):''}<div style="flex:1;min-width:0"><b>${nameLine(r.n,r.u,r.id)}${r.id===ME.sid?' <span class="tag">You</span>':''}</b><div class="muted" style="font-size:.8rem">${esc(LEVELS[r.l]?.[1]||'')} · ${r.b} badge${r.b===1?'':'s'} · 🔥 ${r.s}</div></div><b class="lex" style="color:var(--gold)">${r.x} XP</b></div>`).join(''):`<p class="muted">${wk?'No XP this week yet. Practise to be first on this week\'s board.':'No scores yet. Earn some XP and you will appear here.'}</p>`;
+    if(lec)el.querySelectorAll('[data-sid]').forEach(r=>{r.onclick=()=>openStudent(r.dataset.sid);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStudent(r.dataset.sid)}}})};
+  document.querySelectorAll('[data-lbt]').forEach(b=>b.onclick=()=>{tab=b.dataset.lbt;LS.set('lbtab',tab);draw()});
+  CLOUD.watchBoard(rows=>{ROWS=rows.filter(r=>r.id!==LECTURER&&termNow(r));draw()},
     e=>{const el=$('#lbl');if(el)el.innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`})}
 async function boardPage(){if(cloudOn())return liveBoard();
   const rows=(LEADERBOARD.rows||[]).slice().sort((a,b)=>b.x-a.x),mine=await rowKey(ME.sid);
@@ -293,7 +299,9 @@ const openStudent=sid=>{PFROM=location.hash||'#/lecturer';location.hash='#/stude
 const SYNC={synced:['ok','☁️ Saved to your account'],saving:['','⏳ Saving…'],syncing:['','⏳ Syncing…'],offline:['bad','📴 Offline: saves when you reconnect'],error:['bad','⚠️ Couldn\'t save, will retry'],off:['','']};
 const syncChip=()=>{const v=SYNC[CLOUD.state]||SYNC.off;return v[1]?`<span class="sync ${v[0]}" id="sync">${v[1]}</span>`:''};
 /* leaderboard row: everyone appears under their official name (directory) once the combined rules are published; until then a short form of the sign-in name */
-const rowOf=sid=>sid===LECTURER?null:{n:CLOUD.rules2?(U.dn||''):defaultNick(ME.name).slice(0,24),u:U.un||'',a:U.av||'',x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,s:streak(U)};
+const rowOf=sid=>{if(sid===LECTURER)return null;const r={n:CLOUD.rules2?(U.dn||''):defaultNick(ME.name).slice(0,24),u:U.un||'',a:U.av||'',x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,s:streak(U)};
+  /* this week's XP for the "This week" board: only once the newest rules (which allow w and wk) are published */
+  const W=typeof PR!=='undefined'&&PR.r3===true&&typeof wildWin==='function'&&typeof weekXP==='function'?wildWin():null;if(W){r.w=Math.max(0,weekXP(U,W.from,Date.now())|0);r.wk=W.id}return r};
 async function cloudSync(){const sid=ME.sid;
   if(!CLOUD.ok){toast('📴','Saving on this device only','Your account could not be reached. Sign in again when you are online.');return}
   const u=await CLOUD.current();if(!ME||ME.sid!==sid)return;
@@ -402,7 +410,7 @@ const tk=(q,o)=>isB(o)?bArea(q):o.cid+'|'+(q.skill||q.topic);
 function tkLabel(k){if(k[0]===CRS.bPfx)return bLabel(k);
   const [cid,sk]=k.split('|'),c=CASE_ALL.find(x=>x.id===cid);return sk+(c?' ('+caseName(c)+')':'')}
 function qIndex(){if(QIDX)return QIDX;QIDX={};CASE_ALL.forEach(c=>c.questions.forEach(q=>QIDX[q.id]={q,area:'c:'+c.id,label:caseName(c)+': '+q.skill}));
-  BANK_B_ALL.forEach(q=>QIDX[q.id]={q,area:bArea(q),label:bQLabel(q)});return QIDX}
+  BANK_B_ALL.forEach(q=>QIDX[q.id]={q,area:bArea(q),label:bQLabel(q)});if(typeof qIndexMore==='function')qIndexMore(QIDX);return QIDX}
 function namesFor(q,o){const c=o&&o.cid?CASE_ALL.find(x=>x.id===o.cid):null,n=[];
   if(c){n.push(...caseNames(c),...c.title.split(/\s+/).filter(w=>w.length>3));(c.boardroom||[]).forEach(a=>n.push(a.who))}
   (String(q.q).match(/\b[A-Z][a-zA-Z]{2,}(?:\s[A-Z][a-zA-Z]+)*/g)||[]).slice(1).forEach(x=>n.push(x));return [...new Set(n)]}

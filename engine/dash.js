@@ -41,7 +41,10 @@ const qAreaOf=id=>typeof qArea==='function'?qArea(id):((qIndex()[id]||{}).area||
 function srsAdd(id,wrong){U.srs=U.srs||{};const s=U.srs[id];if(s&&!wrong&&s.s<SRS_GAP.length)return;
   U.srs[id]={s:0,due:addDays(today(),SRS_GAP[0]),n:(s&&s.n)|0}}
 function srsDue(u){u=u||U;const t=today();return Object.entries(u.srs||{}).filter(([id,s])=>s.due&&s.due<=t&&revOf(id)).sort((a,b)=>a[1].due<b[1].due?-1:1).map(([id])=>id)}
-function srsDone(id,ok){ansLog(id,ok?1:0,'rev');const s=U.srs[id]||{s:0,n:0},due=s.due||today();award('rev:'+id+':'+due,ok?4:2,'Review done',1);countOnce('rev:'+id+':'+due,'reviews');
+/* review XP: +REV_XP for each question remembered when it is due (once per due date), at most REV_CAP rewards a day; forgetting earns nothing */
+const REV_XP=4,REV_CAP=25;
+function srsDone(id,ok){ansLog(id,ok?1:0,'rev');const s=U.srs[id]||{s:0,n:0},due=s.due||today();if(!U.revx||U.revx.d!==today())U.revx={d:today(),n:0};
+  if(ok&&U.revx.n<REV_CAP&&award('rev:'+id+':'+due,REV_XP,'Review remembered',1))U.revx.n++;countOnce('rev:'+id+':'+due,'reviews');
   s.n=(s.n|0)+1;if(ok){s.s++;s.due=s.s<SRS_GAP.length?addDays(today(),SRS_GAP[s.s]):null}else{s.s=0;s.due=addDays(today(),1)}U.srs[id]=s}
 function confNote(id,sure,ok){U.conf=U.conf||{};const a=qAreaOf(id)||'_',r=U.conf[a]||(U.conf[a]=[0,0,0,0]);if(sure){r[0]++;if(ok)r[1]++}else{r[2]++;if(ok)r[3]++}}
 /* written questions: the question and its key ideas (good chips) */
