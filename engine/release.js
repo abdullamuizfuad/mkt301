@@ -29,6 +29,9 @@ function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)retur
     $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)}
 onHook('afterLoad',()=>{if(ME&&!ME.cloud)whatsNew()});onHook('cloud',whatsNew);
 const WHATSNEW=[
+  ...(typeof EX_ON==='function'&&EX_ON()?[['🎓','Expert sets and new levels','Each topic now has an Expert set: harder case questions, paragraph builders and a short essay your lecturer marks. Master a topic\'s MCQs (80%+ on 15) to unlock its set. Above Marketing Consultant there are three new levels to reach: ⭐ Senior Consultant, ⭐⭐ Principal Consultant and ⭐⭐⭐ Marketing Partner.']]:[]),
+  ['🏆','This week\'s leaderboard','The leaderboard now opens on "This week": XP earned since the last class, so everyone starts again at zero each week. "All time" is still one tap away.'],
+  ['🧠','Review pays','Questions come back for a quick review after 1, 3, 7 and 14 days. Each one you remember earns +4 XP (up to 25 a day).'],
   ['🎓','Past tutorial sessions','After each live session your lecturer publishes a reflection: what was covered, what the class did well and the questions to look at again, with links to the notes. You also see your own minutes, XP and score. Find it under More.'],
   ['🔴','XP and feedback in live sessions','When you join a live tutorial session, the bar shows the XP you have earned in it and any feedback your lecturer sends.'],
   ['🎁','The 6th-spot challenge','Every week your lecturer brings a gift for the top 5 students by XP earned that week. Everyone else gets one 20-minute challenge in the 24 hours before class: the best score wins the 6th gift. Read the notes on the two topics before you start.'],

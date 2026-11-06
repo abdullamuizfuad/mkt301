@@ -202,7 +202,6 @@ XP and activity per live tutorial session, in `engine/presence.js`. No rules cha
 - **Tests:**
   - Site (`tools/tests/sessxp-site.js`, shared by both repos): `sxlog`, `sxwin`, `sxcats`, `sxhourly`, `sxbar`, `sxreport`.
   - Cloud (`firebase.js`): `sessxp`.
-
 ### Session analytics (live feedback, reflections, attendance)
 
 - **`U.qa` and `U.qaSince`.** (`U.ans` already holds submitted typed answers, so the log has its own name.) `U.qa` logs every practice answer as `[seconds, question id, ok (1/0 or a 0–1 score), pick]`, using `ansLog()` in engine/presence.js. It keeps 45 days and at most 3,000 entries. Logged answers:
@@ -225,3 +224,17 @@ XP and activity per live tutorial session, in `engine/presence.js`. No rules cha
   - Attendance for the whole class list (Present / Late / Partial / Absent), with lecturer overrides saved in `lect/att`, filter and sort, Copy names and a CSV.
   - The reflection editor, or "Build and publish" for sessions that ended before this release.
 - **Rules.** Session doc keys gain `nj` / `fb` / `refl`, plus the `lect/{doc}` and `me/{sid}` subcollections. On the older rules everything that writes stays hidden (`sessR3()` probes `sessions/_probe/me/<own ID>`).
+
+## Top students (Expert sets, levels, review XP, weekly board)
+
+- **Expert sets** (`engine/expert.js`, content in MKT101 `bank-expert.js`, switched on by `CRS.expert`). One set per topic: 10 case MCQs (+4 XP, `xmcq:<id>:<day>`), 2 paragraph builders (up to +10, `xchip:<id>:<day>`) and 1 short essay (the written-answer card; it joins the marking queue, marks give up to +30; `xessay:<id>` counts it).
+  - Every student sees every set on Practice, #/expert and each topic's notes page. States (`data-st`): `soon` (not approved: lock and progress still shown), `locked` (🔒, progress towards 80%+ on 15 MCQs), `open`, `done`; the lecturer sees `preview` (no XP).
+  - Unlock = the MCQ part of topic mastery (`expertProg` → `mastery(u,t).mcq`), as the lecturer chose (option A). A toast celebrates it once (`U.exu`).
+  - Approval: Lecturer tab card "🎓 Expert sets to approve" writes `meta/expert` `{t8:true,…}` (no rules change); students cache it in localStorage.
+  - Progress: `U.exs[topic]={m:{id:1|0 first try},c:{id:best share}}`. Badges "Expert: Topic N" (finished at 70%+) and "Grand Expert".
+  - Essays join `qIndex()` through the course hook `qIndexMore`, and `tools/marking/lib.mjs` loads them for Claude marking.
+  - Tutorial sessions: a joined student who has mastered the session's topic is offered "🎓 Try the Expert set instead" (`exTutHTML`, `exTutAllowed`).
+- **Levels (MKT101):** ⭐ Senior Consultant 7,000 · ⭐⭐ Principal Consultant 9,000 · ⭐⭐⭐ Marketing Partner 12,000 (Marketing Director and CMO already existed lower down, so the new names differ). Level badges follow automatically.
+- **Review XP:** +4 when a due question is remembered (`rev:<id>:<due>`), nothing when forgotten, at most 25 a day (`U.revx`). The Today row shows "+4 XP each".
+- **Leaderboard:** "This week" first (XP since the last class start, `wildWin().from`), "All time" second. The board row carries `w`/`wk` only once the newest rules are published (`PR.r3`, probed on the `cloud` hook); the rules allow `w` (int, 0…x) and `wk`.
+- Tests: `tools/tests/expert-site.js` (excards, exunlock, exxp, exessay, exlevels, exrev, exweek, extut, exlect).
