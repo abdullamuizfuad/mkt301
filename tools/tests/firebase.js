@@ -474,6 +474,7 @@ async wildTools(){if(!R2)return;const P='mkt301'.toUpperCase(),run=(f,a)=>spawnS
   const c=run('close.mjs',['--id='+id,'--at='+cls+'T17:00:00+05:00']);ok(c.status===0,'close.mjs failed: '+c.stdout+c.stderr);
   const r=(await fsDoc('wild',id)).res.mapValue.fields;ok(r[C]&&/match|fast/.test(r[C].mapValue.fields.f.stringValue)&&r[B].mapValue.fields.r.integerValue,'results or flags wrong: '+JSON.stringify(r).slice(0,300))},
 };
+Object.assign(T,require('./fun-cloud.js')({page,ok,signIn,tourOff,ensure,fsDoc,waitFor,A,B,L,PIN,PINB,PINL,R2,RULES:process.env.RULES}));
 async function waitFor(p,fn,arg,t=15000){const t0=Date.now();while(Date.now()-t0<t){if(await p.evaluate(fn,arg).catch(()=>false))return;await p.waitForTimeout(250)}throw new Error('timed out waiting for '+String(fn).slice(0,90))}
 async function waitDoc(col,id,test,t=15000){const t0=Date.now();let d=null;while(Date.now()-t0<t){d=await fsDoc(col,id);if(d&&(!test||test(d)))return d;await new Promise(r=>setTimeout(r,300))}return null}
 async function ensure(p,sid,pin){await p.evaluate(async([s,k])=>{try{await CLOUD.create(s,k)}catch(e){}try{await CLOUD.signOut()}catch(e){}},[sid,pin]);await p.reload();await p.waitForTimeout(400)}

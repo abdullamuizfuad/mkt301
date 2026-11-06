@@ -87,7 +87,7 @@ __EMAILS__
     }
     function validRow(sid) {
       let d = request.resource.data;
-      return d.keys().hasOnly(['n', 'x', 'l', 'b', 's', 't', 'u', 'a', 'w', 'wk'])
+      return d.keys().hasOnly(['n', 'x', 'l', 'b', 's', 't', 'u', 'a', 'w', 'wk', 'tu', 'hp'])
         && str(d.n, 80) && validName(sid, d.n)
         && d.x is int && d.x >= 0 && d.x <= 50000
         && d.l is int && d.b is int && d.s is int && d.t == request.time
@@ -95,6 +95,8 @@ __EMAILS__
         && (!('a' in d) || (str(d.a, 40) && d.a.matches('^[a-z0-9]*$')))
         && (!('w' in d) || (d.w is int && d.w >= 0 && d.w <= d.x))
         && (!('wk' in d) || str(d.wk, 12))
+        && (!('tu' in d) || (str(d.tu, 40) && d.tu.matches('^[0-9,]*$')))
+        && (!('hp' in d) || (d.hp is int && d.hp >= 0 && d.hp <= 999))
         && d.x <= get(/databases/$(database)/documents/users/$(sid)).data.xp;
     }
     function xpRate() {
@@ -124,7 +126,7 @@ __EMAILS__
     match /sessions/{id} {
       allow read: if onRoster();
       allow create, update: if isLecturer()
-        && request.resource.data.keys().hasOnly(['name', 'startedAt', 'endsAt', 'active', 'endedAt', 'rep', 'nj', 'fb', 'refl', 'wk', 'grp', 'act'])
+        && request.resource.data.keys().hasOnly(['name', 'startedAt', 'endsAt', 'active', 'endedAt', 'rep', 'nj', 'fb', 'refl', 'wk', 'grp', 'act', 'ment'])
         && str(request.resource.data.name, 80)
         && request.resource.data.active is bool
         && request.resource.data.startedAt is timestamp && request.resource.data.endsAt is timestamp
@@ -134,7 +136,8 @@ __EMAILS__
         && (!('refl' in request.resource.data) || request.resource.data.refl is map)
         && (!('wk' in request.resource.data) || request.resource.data.wk is int)
         && (!('grp' in request.resource.data) || (request.resource.data.grp is int && request.resource.data.grp >= 1 && request.resource.data.grp <= 3))
-        && (!('act' in request.resource.data) || request.resource.data.act is map);
+        && (!('act' in request.resource.data) || request.resource.data.act is map)
+        && (!('ment' in request.resource.data) || (request.resource.data.ment is map && request.resource.data.ment.size() <= 40));
       allow delete: if isLecturer();
 
       // The lecturer's own records for the session: lect/rep (per-student rows) and lect/att (attendance overrides).
@@ -228,10 +231,12 @@ __EMAILS__
       allow create: if onRoster() && request.resource.data.by == me()
         && request.resource.data.keys().hasOnly(['by', 'p', 'mode', 'items', 't', 'exp', 'st'])
         && request.resource.data.p is list && request.resource.data.p.size() >= 2 && request.resource.data.p.size() <= 6
-        && me() in request.resource.data.p && request.resource.data.mode in ['live', 'open']
+        && me() in request.resource.data.p
         && request.resource.data.items is list && request.resource.data.items.size() <= 15
-        && request.resource.data.t == request.time && request.resource.data.st == 'wait'
-        && request.resource.data.exp is timestamp && request.resource.data.exp <= request.time + duration.value(25, 'h');
+        && request.resource.data.t == request.time && request.resource.data.st == 'wait' && request.resource.data.exp is timestamp
+        && ((request.resource.data.mode in ['live', 'open'] && request.resource.data.exp <= request.time + duration.value(25, 'h'))
+          // a 7-day streak duel between two classmates (engine/fun.js), with one day to claim the result
+          || (request.resource.data.mode == 'streak' && request.resource.data.p.size() == 2 && request.resource.data.exp <= request.time + duration.value(193, 'h')));
       allow read: if isLecturer() || (onRoster() && me() in resource.data.p);
       allow update: if onRoster() && resource.data.by == me()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'go'])
@@ -289,6 +294,57 @@ __EMAILS__
           && request.resource.data.t == request.time;
         allow delete: if isLecturer();
       }
+    }
+
+    // Ask a tutor (engine/fun.js): a student asks a short question on a topic; classmates who are tutors reply; the asker marks a reply
+    // "helped me". Text only, no links, at most 3 questions a day (the id is <SID>_<Maldives day number>_<1-3>) and 3 replies per thread
+    // per person (<SID>_<1-3>). The lecturer hides or deletes anything. Every class member can read the board.
+    function mvDayNo() { return int(math.floor((request.time.toMillis() + 18000000) / 86400000)); }
+    function noLink(s) { return !s.lower().matches('.*(https?:|www[.]|[.](com|net|org|mv|io|ly|me|co|app|link)([/ ]|$)).*'); }
+    function helpDoc(id) { return get(/databases/$(database)/documents/help/$(id)).data; }
+    match /help/{id} {
+      allow read: if onRoster();
+      allow create: if onRoster() && !isLecturer() && id.matches('^' + me() + '_' + string(mvDayNo()) + '_[1-3]$')
+        && request.resource.data.keys().hasOnly(['by', 'n', 'tp', 'q', 'at', 'st'])
+        && request.resource.data.by == me() && str(request.resource.data.n, 80) && request.resource.data.tp is int
+        && str(request.resource.data.q, 300) && request.resource.data.q.size() >= 10 && noLink(request.resource.data.q)
+        && request.resource.data.at == request.time && request.resource.data.st == 'open';
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st'])
+        && ((isLecturer() && request.resource.data.st in ['open', 'hid', 'closed'])
+          || (onRoster() && resource.data.by == me() && resource.data.st == 'open' && request.resource.data.st == 'closed'));
+      allow delete: if isLecturer();
+      match /r/{rid} {
+        allow read: if onRoster();
+        allow create: if onRoster() && !isLecturer() && rid.matches('^' + me() + '_[1-3]$')
+          && helpDoc(id).st == 'open' && helpDoc(id).by != me()
+          && request.resource.data.keys().hasOnly(['by', 'n', 'tx', 'at', 'ok', 'st'])
+          && request.resource.data.by == me() && str(request.resource.data.n, 80)
+          && str(request.resource.data.tx, 500) && request.resource.data.tx.size() >= 5 && noLink(request.resource.data.tx)
+          && request.resource.data.at == request.time && request.resource.data.ok == false && request.resource.data.st == 'ok';
+        allow update: if (onRoster() && helpDoc(id).by == me() && resource.data.ok == false
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['ok']) && request.resource.data.ok == true)
+          || (isLecturer() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st']) && request.resource.data.st in ['ok', 'hid']);
+        allow delete: if isLecturer();
+      }
+    }
+
+    // Teach-backs (k 'tb': a short explanation) and questions written by students (k 'qw': an MCQ), for the lecturer to approve.
+    // The writer owns the draft (at most 9 of each, id <SID>_<k>_<1-9>) and can't approve it; approved ones (st 'ok') are visible to the class.
+    match /subs/{id} {
+      allow read: if isLecturer() || (onRoster() && (resource.data.by == me() || resource.data.st == 'ok'));
+      allow create: if onRoster() && !isLecturer() && id.matches('^' + me() + '_(tb|qw)_[1-9]$') && validSub(id);
+      allow update: if (onRoster() && !isLecturer() && resource.data.by == me() && resource.data.st in ['sub', 'no'] && validSub(id))
+        || (isLecturer() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st', 'note'])
+          && request.resource.data.st in ['sub', 'ok', 'no'] && (!('note' in request.resource.data) || str(request.resource.data.note, 300)));
+      allow delete: if isLecturer() || (onRoster() && resource.data.by == me() && resource.data.st != 'ok');
+    }
+    function validSub(id) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['by', 'n', 'un', 'k', 'tp', 'tx', 'q', 'o', 'why', 'st', 'at'])
+        && d.by == me() && str(d.n, 80) && (!('un' in d) || str(d.un, 24)) && d.k in ['tb', 'qw'] && id.matches('^[^_]+_' + d.k + '_[1-9]$')
+        && d.tp is int && d.st == 'sub' && d.at == request.time
+        && (!('tx' in d) || (str(d.tx, 700) && noLink(d.tx))) && (!('q' in d) || (str(d.q, 300) && noLink(d.q)))
+        && (!('o' in d) || (d.o is list && d.o.size() == 4)) && (!('why' in d) || str(d.why, 300));
     }
 
     // The weekly 6th-spot challenge (engine/wild.js). Only the lecturer writes the week's document: topics, questions, the week's
