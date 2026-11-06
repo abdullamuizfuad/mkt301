@@ -29,6 +29,7 @@ function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)retur
     $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)}
 onHook('afterLoad',()=>{if(ME&&!ME.cloud)whatsNew()});onHook('cloud',whatsNew);
 const WHATSNEW=[
+  ['🎉','Celebrations and your daily streak fire','New levels and badges now arrive with confetti. Each day, one activity or 5 minutes of study keeps your 🔥 streak alive. And there may be a few secret levels to discover…'],
   ['🙋','Ask a tutor and the Tutor badge','Stuck on an idea? Ask a short question under Practice → Ask a tutor. Classmates with the 🎓 Tutor badge answer, and earn XP when their answer helps. Reach the top levels and earn Expert badges to become a tutor yourself.'],
   ...(typeof BOSS_ON==='function'&&BOSS_ON()?[['👹','Boss rounds and story mode','Finish a topic\'s Expert set to face its 10-minute Boss round: a short case, three decisions and a paragraph. Plus story mode: help a Maldivian juice start-up grow, one chapter per topic.']]:[]),
   ['⚡','Speed runs, hard mode and streak duels','Race 20 questions against the clock for a personal best, switch on hard mode for double XP, or challenge a classmate to a 7-day streak duel.'],

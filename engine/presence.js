@@ -69,7 +69,7 @@ function stFlush(full){if(typeof ME==='undefined'||!ME||!U||VIEWAS)return;const 
   const s=Math.floor(PR.pend),sx=Math.floor(PR.pendx);PR.pend-=s;PR.pendx-=sx;
   if(s){U.st[d]=(U.st[d]|0)+s}if(sx){U.stx[d]=(U.stx[d]|0)+sx}
   const ks=Object.keys(U.st).sort();while(ks.length>ST.KEEP){const k=ks.shift();U.stArch=(U.stArch|0)+(U.st[k]|0);delete U.st[k];delete U.stx[k]}
-  let got=false;
+  let got=false;if(typeof stDay==='function')stDay();
   if((U.st[d]|0)>=ST.GOAL&&award('stgoal:'+d,ST.GOAL_XP,'Daily goal: 20 minutes of practice')){countOnce('stgoal:'+d,'stgoal');got=true}
   const nb=Math.min(ST.BLOCKS,Math.floor((U.stx[d]|0)/ST.BLOCK));
   for(let b=1;b<=nb;b++)if(award('stblock:'+d+':'+b,ST.BLOCK_XP,'20 minutes of practice'))got=true;

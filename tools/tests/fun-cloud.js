@@ -67,4 +67,11 @@ async funAgg(){if(!R2)return;const l=await who(L,PINL,'Abdulla Muiz Fuad',{w:128
 async funBonus(){if(!R2)return;const a=await who(A,PIN),x0=await a.evaluate(()=>U.xp);const l=await who(L,PINL,'Abdulla Muiz Fuad',{w:1280,h:900});
   await l.evaluate(()=>CLOUD.put('reviews/S081441',{m:{bonus_ment_t1:{q:'mentor',xp:15,fb:'Mentor bonus: thank you for helping!',at:isoNow(),by:'lecturer'}}},true));
   await waitFor(a,x=>U.xp>=x+15,x0);ok(await a.evaluate(()=>!!U.badges.mentor),'no Mentor badge');await a.done();await l.done()},
+/* "Encourage top students": goes only to the students the lecturer ticked, as a note; the student sees a gold celebration */
+async cheerEnc(){if(!R2)return;const b0=await who(B,PINB);await b0.done();const a0=await who(A,PIN);await a0.done();
+  const l=await who(L,PINL,'Abdulla Muiz Fuad',{w:1280,h:900});await l.go('#/lecturer');await l.waitForSelector('#enl [data-es]',{timeout:15000});
+  for(const c of await l.$$('#enl [data-es]:checked'))await c.uncheck();await l.check(`#enl [data-es="${B}"]`);await l.fill('#entx','Brilliant work this week! 🌟 Keep going.');await l.click('#engo');
+  await waitFor(l,()=>/Sent to 1 student/.test(document.querySelector('#enmsg').textContent));
+  const rb=await fsDoc('reviews',B),ra=await fsDoc('reviews',A),has=d=>!!d&&Object.keys(((d.m||{}).mapValue||{}).fields||{}).some(k=>/^note_enc_/.test(k));ok(has(rb)&&!has(ra),'sent to the wrong students');
+  const b=await who(B,PINB,null,{celeb:1});for(let i=0;i<60&&!await b.$('.celeb.gold');i++){if(await b.$('.celeb #celok'))await b.click('#celok');await b.waitForTimeout(300)}ok(await b.$('.celeb.gold'),'no gold celebration');ok((await b.textContent('.celeb')).includes('Brilliant work this week'),'no gold celebration');await b.done();await l.done()},
 };};
