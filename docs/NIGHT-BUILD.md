@@ -275,3 +275,13 @@ Settings: `CRS.fun` (MKT101 `{boss, story, tutorLvl:9, tutorEx:3, goal:3000}`, M
 - **Rules** (one update): board `tu`/`hp`; sessions `ment`; challenges `mode:'streak'`; new `help` (+ `r`) and `subs` blocks. The site
   probes `help/_probe` (`funOK()`); on older rules the writing parts stay hidden.
 - **Tests**: site `tools/tests/fun-site.js`; cloud `tools/tests/fun-cloud.js` (rules, Ask a tutor end to end, teach-back, figures, mentor bonus).
+
+## Class activity
+
+- **Card "📊 Class activity"** (`engine/activity.js`, lecturer only, folding `lfBlock` card `actc`, reads users/ on open, Refresh button). Range: full semester (since 28 Oct 2026), this week, any past week (Mon–Sun, GMT+5, with tutorial week numbers from `termWeek`) or a custom from–to.
+  - Calendar heatmap (active students per day; tap a day for students, answers, XP, study hours), totals, activity mix per week (stacked bars), busy times by hour (from 4 Nov: `U.qa` + `U.al`).
+  - Students table: Top 5 / 10 / 20 / Everyone; sort by XP, study hours, days active, answers, MCQ accuracy or XP per hour; tap a row for daily hours and XP, profile and View as student.
+  - CSV: this list, everyone, and a daily class CSV.
+  - Sources: `U.days`, `U.cnt` (dated counted actions; MCQ first-try accuracy from the `mcqRight` counter), `U.al` (actions not counted), `U.st` + `U.stw`, `U.xpd` (from 29 Oct; "Full semester" XP is the total). `ACT_PRE` maps key prefixes to categories.
+- **Timed writing as study time** (`U.stw`, presence.js `twStart/twTake/twStop/stwAdd`). A writing timer (core.js `timer`) and practice-paper sections answered on paper (paper.js `ppSubmit`) add their time on Done (≥40% of the time), capped at the timer's length, minus the on-screen seconds already in `U.st` during it (`PR.act`, taken every 10 s and on pause). It never earns screen-time XP (goal and 20-minute blocks stay on `U.st`). Shown as "incl. timed writing" on the screen-time card, My progress and the lecturer profile.
+- Tests: `tools/tests/activity-site.js` (actrange, acttop, actheat, twcredit).

@@ -29,6 +29,7 @@ function whatsNew(){if(LS.get('ver','')!==APP_VERSION||window.__noWhatsNew)retur
     $('#wnok').onclick=closeModal;$('#wnmore').onclick=()=>closeModal()};setTimeout(show,900)}
 onHook('afterLoad',()=>{if(ME&&!ME.cloud)whatsNew()});onHook('cloud',whatsNew);
 const WHATSNEW=[
+  ['✍️','Timed writing counts as study time','Writing an answer on paper with the timer running? That time now counts as study time even if your phone screen locks, once you tap Done (after at least 40% of the time). It shows as "incl. timed writing" on your screen-time card. The daily goal and 20-minute bonuses still count on-screen time only.'],
   ['🎉','Celebrations and your daily streak fire','New levels and badges now arrive with confetti. Each day, one activity or 5 minutes of study keeps your 🔥 streak alive. And there may be a few secret levels to discover…'],
   ['🙋','Ask a tutor and the Tutor badge','Stuck on an idea? Ask a short question under Practice → Ask a tutor. Classmates with the 🎓 Tutor badge answer, and earn XP when their answer helps. Reach the top levels and earn Expert badges to become a tutor yourself.'],
   ...(typeof BOSS_ON==='function'&&BOSS_ON()?[['👹','Boss rounds and story mode','Finish a topic\'s Expert set to face its 10-minute Boss round: a short case, three decisions and a paragraph. Plus story mode: help a Maldivian juice start-up grow, one chapter per topic.']]:[]),
