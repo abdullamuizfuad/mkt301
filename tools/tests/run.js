@@ -374,6 +374,7 @@ Object.assign(T,require('./sessxp-site.js')({page,ok,STUDENT,LECT,shot}));
 Object.assign(T,require('./expert-site.js')({page,ok,STUDENT,LECT,shot}));
 Object.assign(T,require('./fun-site.js')({page,ok,STUDENT,LECT,shot}));
 Object.assign(T,require('./cheer-site.js')({page,ok,STUDENT,LECT,shot}));
+Object.assign(T,require('./activity-site.js')({page,ok,STUDENT,LECT,shot}));
 (async()=>{const server=spawn('python3',['-m','http.server',String(PORT)],{cwd:ROOT,stdio:'ignore'});await new Promise(r=>setTimeout(r,800));
   browser=await chromium.launch({headless:!ARGS.headed});
   for(const [name,fn] of Object.entries(T)){if(ARGS.only&&!String(ARGS.only).split(',').includes(name))continue;const t0=Date.now();

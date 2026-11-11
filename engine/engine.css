@@ -551,3 +551,10 @@ body.hard .hints,body.hard [data-hint],body.hard .nref{display:none!important}
 @keyframes celin{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes flame{from{transform:scale(1) rotate(-4deg)}to{transform:scale(1.15) rotate(4deg)}}
 @media (prefers-reduced-motion:reduce){.celc,.celi.flame{animation:none}}
+/* lecturer: class activity card (engine/activity.js) */
+.actctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.actctl select,.actctl input{max-width:100%}
+.actstats{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}
+.actscroll{overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.actleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.78rem;color:var(--muted);margin:6px 0 0}.actleg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.acttbl td,.acttbl th{white-space:nowrap}.acttbl tr.actdet td{white-space:normal;background:var(--w06)}
+#actc h3{margin:16px 0 6px}

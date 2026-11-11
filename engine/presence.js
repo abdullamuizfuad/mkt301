@@ -27,10 +27,23 @@ function stDays(u,n){const st=(u&&u.st)||{},out=[],d=new Date();d.setHours(12,0,
 const stToday=u=>((u&&u.st)||{})[stYmd(new Date())]|0;
 const stWeek=u=>stDays(u,7).reduce((t,x)=>t+x[1],0);
 const stTotal=u=>Object.values((u&&u.st)||{}).reduce((t,s)=>t+(s|0),0)+((u&&u.stArch)|0);
+/* ---------- timed writing (U.stw): a finished writing timer counts as study time even with the phone locked ----------
+   PR.act = active on-screen seconds counted in this page so far. A timer keeps twOs (its on-screen seconds, taken in steps) so that,
+   when the answer is finished, only the writing time NOT already in U.st is added (no double count). U.stw never earns screen-time XP. */
+function twStart(T){T.twPid=PR.pid;T.twA0=PR.act}
+function twTake(T){if(T.twPid===PR.pid&&T.twA0!=null)T.twOs=(T.twOs||0)+Math.max(0,PR.act-T.twA0);T.twPid=PR.pid;T.twA0=PR.act}
+function twStop(T){twTake(T);T.twA0=null}
+/* add `sec` seconds of writing (capped at `cap`), minus `os` already counted on screen; returns the seconds added */
+function stwAdd(sec,cap,os){if(typeof ME==='undefined'||!ME||!U||VIEWAS||ME.sid===LECTURER)return 0;const add=Math.max(0,Math.round(Math.min(sec,cap)-(os||0)));if(!add)return 0;
+  const d=today();U.stw=U.stw||{};U.stw[d]=(U.stw[d]|0)+add;const ks=Object.keys(U.stw).sort();while(ks.length>ST.KEEP)delete U.stw[ks.shift()];return add}
+const stwToday=u=>((u&&u.stw)||{})[stYmd(new Date())]|0;
+const stwWeek=u=>stDays(u,7).reduce((t,[k])=>t+((((u&&u.stw)||{})[k])|0),0);
+const stwTotal=u=>Object.values((u&&u.stw)||{}).reduce((t,s)=>t+(s|0),0);
+const stwNote=(u,sc)=>{const w=sc==='week'?stwWeek(u):sc==='today'?stwToday(u):stwTotal(u);return w>=60?`incl. ${stFmt(w)} timed writing`:''};
 const stFmt=s=>{s=Math.round(s/60);return s<60?s+' min':Math.floor(s/60)+' h'+(s%60?' '+s%60+' min':'')};
 
 /* ---------- state ---------- */
-const PR={last:Date.now(),lt:Date.now(),pend:0,pendx:0,lastSave:Date.now(),fc:0,gap:0,next:ST.BRK,brk:0,
+const PR={act:0,pid:Math.random().toString(36).slice(2),last:Date.now(),lt:Date.now(),pend:0,pendx:0,lastSave:Date.now(),fc:0,gap:0,next:ST.BRK,brk:0,
   sess:null,sessOn:false,joined:false,st:'',stAt:0,awayAt:0,wrote:0,sec:'',secAt:0,secDirty:false,sessList:null,started:false,iv:null};
 const presTimerOn=()=>[...document.querySelectorAll('[data-a="tgo"]')].some(b=>/pause/i.test(b.textContent||''));
 const presMicOn=()=>typeof MIC!=='undefined'&&!!MIC;
@@ -58,7 +71,7 @@ function presTick(){if(typeof ME==='undefined'||!ME||!U||VIEWAS)return;const now
   const vis=presVisible(),busy=presTimerOn()||presMicOn(),active=!PR.brk&&vis&&(busy||now-PR.last<ST.IDLE*1000);
   if(PR.brk){if(now>=PR.brk)presBreakEnd();else presBreakPaint()}
   const inSess=PR.joined&&sessLive();
-  if(active){const a=Math.min(dt,5);PR.pend+=a;if(!inSess)PR.pendx+=a;PR.fc+=a;PR.gap=0}
+  if(active){const a=Math.min(dt,5);PR.pend+=a;PR.act+=a;if(!inSess)PR.pendx+=a;PR.fc+=a;PR.gap=0}
   else{PR.gap+=dt;if(PR.gap>=ST.GAP){PR.fc=0;PR.next=ST.BRK}}
   if(PR.pend>=60||now-PR.lastSave>300000)stFlush(now-PR.lastSave>300000);
   if(!PR.brk&&PR.fc>=PR.next&&!window.__presNoBreak&&!sessLive()&&!document.querySelector('.modal')&&!presBusyNow())presBreakAsk();
@@ -102,7 +115,8 @@ function stCardHTML(){if(!U)return '';const days=stDays(U,7),t=stToday(U),wk=stW
   <div class="stcol"><div class="stats" style="grid-template-columns:repeat(3,1fr);margin-top:0"><div class="stat"><b>${stFmt(t)}</b><span>today</span></div><div class="stat"><b>${stFmt(wk)}</b><span>this week</span></div><div class="stat"><b>${stFmt(tot)}</b><span>total</span></div></div>
   <div class="stbars" aria-label="Minutes per day, last 7 days">${days.map(([k,s])=>{const d=new Date(k+'T12:00');return `<div title="${k}: ${stFmt(s)}"><i style="height:${Math.max(2,Math.round(s/mx*100))}%" class="${s>=ST.GOAL?'goal':''}"></i><span>${dn[d.getDay()]}</span></div>`}).join('')}</div></div></div>
   <p class="muted" style="font-size:.84rem;margin:10px 0 0">${nb?`Next badge: ${nb.ico} <b>${nb.name}</b> · ${stFmt(nh*3600-tot)} to go. `:'All hours badges earned! '}20-minute bonuses today: ${blocks}/${ST.BLOCKS} (+${ST.BLOCK_XP} XP each, outside live sessions).</p>
-  <p class="muted" style="font-size:.78rem;margin:4px 0 0">Counts only while the portal is on screen and you're active. It pauses after 2 minutes without a tap or keypress, except while a writing timer is running.</p></div>`}
+${stwTotal(U)>=60?`<p class="muted stwline" style="font-size:.84rem;margin:8px 0 0">✍️ Study time incl. timed writing: today ${stFmt(stToday(U)+stwToday(U))} · this week ${stFmt(stWeek(U)+stwWeek(U))} · total ${stFmt(stTotal(U)+stwTotal(U))} (${stFmt(stwTotal(U))} of it on a writing timer).</p>`:''}
+  <p class="muted" style="font-size:.78rem;margin:4px 0 0">Counts only while the portal is on screen and you're active. It pauses after 2 minutes without a tap or keypress, except while a writing timer is running. A finished timed answer also counts the writing time with the screen off.</p></div>`}
 
 /* ---------- live sessions: student side ---------- */
 function presSession(s){const was=PR.sess;PR.sess=s;PR.sessOn=sessLive();
@@ -525,7 +539,7 @@ function presProfileHTML(u,sid,bare){const days=stDays(u,28),mx=Math.max(ST.GOAL
   const own=ME&&ME.sid===sid&&cloudOn()?'<p style="margin:8px 0 0"><a href="#/sessions">🎓 Past tutorial sessions →</a></p>':'';
   if(bare===2)return `<h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${presSessRows(ss,held,sid,u)}${own}`;
   return `${bare?'<div>':'<div class="card psec"><h2>Screen time & live sessions</h2>'}
-  <div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>${stFmt(stToday(u))}</b><span>today</span></div><div class="stat"><b>${stFmt(stWeek(u))}</b><span>this week</span></div><div class="stat"><b>${stFmt(stTotal(u))}</b><span>total</span></div><div class="stat"><b>${goals}</b><span>daily goals met</span></div></div>
+  <div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>${stFmt(stToday(u))}</b><span>today</span></div><div class="stat"><b>${stFmt(stWeek(u))}</b><span>this week</span></div><div class="stat"><b>${stFmt(stTotal(u))}</b><span>total</span></div><div class="stat"><b>${goals}</b><span>daily goals met</span></div></div>${stwTotal(u)>=60?`<p class="muted stwline" style="font-size:.84rem;margin:8px 0 0">✍️ Study time incl. timed writing: today ${stFmt(stToday(u)+stwToday(u))} · this week ${stFmt(stWeek(u)+stwWeek(u))} · total ${stFmt(stTotal(u)+stwTotal(u))} (${stFmt(stwTotal(u))} of it on a writing timer).</p>`:''}
   <div class="stbars wide" aria-label="Minutes per day, last 4 weeks">${days.map(([k,s])=>`<div title="${k}: ${stFmt(s)}"><i style="height:${Math.max(2,Math.round(s/mx*100))}%" class="${s>=ST.GOAL?'goal':''}"></i></div>`).join('')}</div>
   <p class="muted" style="font-size:.78rem;margin:2px 0 10px">Active minutes per day, last 4 weeks (green = 20-minute goal met). Screen time is tracked from ${esc(Object.keys(u.st||{}).sort()[0]||'its first use')}.</p>
   <h3>Live sessions <span class="tag">${ss.length}/${held}</span></h3>${presSessRows(ss,held,sid,u)}</div>`}

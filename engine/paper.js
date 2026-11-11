@@ -21,8 +21,11 @@ function ppSpec(P){const k=ME.sid+'|'+P.id;if(PP_SPEC[k])return PP_SPEC[k];const
 const ppDue=P=>P.ss+ppSpec(P)[P.si].mins*PP_MIN+(P.bonus|0);
 /* submit the current section (by the student, or because its time ran out at `at`) */
 function ppSubmit(P,at,auto){const S=ppSpec(P),due=ppDue(P),t=Math.min(at,due),left=Math.max(0,due-t);
+  /* a section answered on paper counts as timed writing (presence.js U.stw): its time, capped at the allowance, minus what was on screen */
+  if(typeof twStop==='function'){twStop(P);const paper=S[P.si].items.some(it=>it.kind!=='mcq'&&(P.a[it.id]||{}).mode==='paper'&&(P.a[it.id]||{}).paper);
+    if(paper&&t-P.ss>=(due-P.ss)*MINPCT)stwAdd((t-P.ss)/1000,(due-P.ss)/1000,P.twOs);P.twOs=0}
   P.sub.push({at:t,used:t-P.ss,al:due-P.ss,left,auto:auto?1:0});if(!auto)P.bonus=left;else P.bonus=0;
-  if(P.si+1<S.length){P.si++;P.ss=t}else{P.end=t;P.si=S.length}}
+  if(P.si+1<S.length){P.si++;P.ss=t;if(typeof twStart==='function')twStart(P)}else{P.end=t;P.si=S.length}}
 /* catch up after the page was closed: sections whose time ran out are submitted in turn */
 function ppCatchUp(P){let n=0;while(!P.end&&Date.now()>=ppDue(P)){ppSubmit(P,ppDue(P),1);n++}return n}
 function ppBuzz(){try{const A=window.AudioContext||window.webkitAudioContext,ac=new A();[0,.45,.9].forEach(t=>{const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=660;
@@ -84,7 +87,8 @@ function ppSitting(P){const S=ppSpec(P),sec=S[P.si];
       modal('Time is up',`<div style="text-align:center"><div style="font-size:2.6rem">⏰</div><h2 style="margin:6px 0">Time is up</h2><p>${esc(sec.title)} was submitted as it stood.${P.end?' That was the last section.':' The next section has started.'}</p><button class="btn" id="ppok">OK</button></div>`);$('#ppok').onclick=closeModal;return}
     $('#pptm').textContent=ppFmt(ms);$('#pptm').className='timer lex'+(ms<=60e3?' over':ms<=5*PP_MIN?' warn':'');
     if(!warned&&ms<=5*PP_MIN){warned=true;toast('⏳','5 minutes left',sec.title)}};
-  tick();PPT=setInterval(tick,500);
+  if(typeof twStart==='function'&&P.twPid!==PR.pid)twStart(P);
+  tick();PPT=setInterval(()=>{if(typeof twTake==='function'&&Date.now()-(P.twAt||0)>10000){twTake(P);P.twAt=Date.now()}tick()},500);
   $('#ppsub').onclick=()=>{const n=sec.items.filter(it=>!ppDone(it,P.a[it.id])).length,carry=ppDue(P)-Date.now();
     if(!confirm(`${n?n+' question'+(n===1?' is':'s are')+' not answered. ':''}Submit ${sec.title}? You can't change these answers afterwards.${P.si+1<S.length?`\n\n${ppMins(carry)} minute${ppMins(carry)===1?'':'s'} will be added to the next section.`:''}`))return;
     clearInterval(PPT);stopMic();ppSubmit(P,Date.now(),0);save();if(P.end)toast('🏁','Paper finished','Now check your answers');route();scrollTo(0,0)};

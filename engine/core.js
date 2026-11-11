@@ -209,11 +209,14 @@ function timer(id,total,el,done,tick){
   const left=()=>T.end?Math.round((T.end-Date.now())/1000):T.left;
   const fmt=s=>{const a=Math.abs(s);return (s<0?'+':'')+Math.floor(a/60)+':'+String(a%60).padStart(2,'0')};
   const paint=()=>{const s=left();disp.textContent=fmt(s);disp.className='timer'+(s<0?' over':s<=60?' warn':'');go.textContent=T.end?'Pause':(T.left<total?'Resume':'Start');tick&&tick(s)};
-  clearInterval(TIMERS[id]);TIMERS[id]=setInterval(()=>{if(!document.body.contains(disp))return clearInterval(TIMERS[id]);paint()},500);paint();
-  go.onclick=()=>{if(T.end){T.left=left();T.end=null}else T.end=Date.now()+T.left*1000;LS.set(key,T);paint()};
-  el.querySelector('[data-a="tstop"]').onclick=()=>{T.left=total;T.end=null;LS.set(key,T);paint()};
+  /* timed writing as study time (presence.js): keep this timer's on-screen seconds, so a locked screen still counts on Done */
+  const tw=typeof twStart==='function';if(tw&&T.end&&T.twPid!==PR.pid){twStart(T);LS.set(key,T)}
+  clearInterval(TIMERS[id]);TIMERS[id]=setInterval(()=>{if(!document.body.contains(disp))return clearInterval(TIMERS[id]);if(tw&&T.end&&Date.now()-(T.twAt||0)>10000){twTake(T);T.twAt=Date.now();LS.set(key,T)}paint()},500);paint();
+  go.onclick=()=>{if(T.end){T.left=left();T.end=null;if(tw)twStop(T)}else{T.end=Date.now()+T.left*1000;if(tw)twStart(T)}LS.set(key,T);paint()};
+  el.querySelector('[data-a="tstop"]').onclick=()=>{T.left=total;T.end=null;T.twOs=0;T.twA0=null;LS.set(key,T);paint()};
   el.querySelector('[data-a="done"]').onclick=()=>{const used=total-left(),ok=used>=total*MINPCT;
     if(!ok&&!confirm(`Only ${Math.floor(used/60)} min ${used%60} s on the clock.\n\nTimed XP needs at least ${minMins(total)} minutes of writing. Finish without XP?`))return;
+    if(ok&&tw){if(T.end)twStop(T);stwAdd(used,total,T.twOs)}
     LS.del(key);clearInterval(TIMERS[id]);done(ok)}}
 const noTimeXP=t=>toast('⏱️','No XP this time','Write for at least '+minMins(t)+' minutes to earn timed XP');
 async function scoreCode(){const p={v:1,s:ME.sid,n:String(U.dn||defaultNick(ME.name)).slice(0,24),x:U.xp,l:level(U.xp).i,b:Object.keys(U.badges).length,d:today()};
