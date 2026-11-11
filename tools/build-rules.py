@@ -46,6 +46,13 @@ __EMAILS__
       allow write: if isLecturer();
     }
 
+    // Guest preview (engine/guest.js): anyone may read the anonymised class board (no names, usernames, avatars or IDs);
+    // only the lecturer's class-figures job (tools/agg/run.mjs) writes it.
+    match /public/{id} {
+      allow read: if true;
+      allow write: if isLecturer();
+    }
+
     // Each student's full progress: only they (and the lecturer) can read it.
     match /users/{sid} {
       allow read: if isOwner(sid) || isLecturer();

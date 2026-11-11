@@ -18,3 +18,10 @@ const A=aggCompute(U,groups,{target:(meta.goal&&meta.goal.target)||goalDef});
 console.log(`✓ Week of ${A.wk}: class goal ${A.goal.n}/${A.goal.target}${A.goal.done?' (reached)':''} · most improved: ${A.imp.top.length} student(s) · territories: ${Object.keys(A.terr).length} topic(s), ${A.teams.length} team(s) · ${U.length} students`);
 if(dry){console.log('(dry run: nothing written)');process.exit(0)}
 await putDoc(token,'meta/agg',A);console.log('✓ meta/agg written');
+/* Guest preview board (engine/guest.js): the whole class without names, usernames, avatars or IDs. Needs the `public` rules block;
+   until it is published the write is refused and the class figures above are still written. */
+try{const board=await list(token,'board'),num=v=>Number.isFinite(+v)?Math.max(0,Math.round(+v)):0;
+  const rows=Object.entries(board).filter(([id])=>id!=='S000001'&&id!=='S000000').map(([,r])=>{const t=Date.parse(r.t||'');return {x:num(r.x),l:num(r.l),b:num(r.b),s:num(r.s),w:num(r.w),wk:String(r.wk||''),t:Number.isFinite(t)?t:0}})
+    .sort((a,b)=>b.x-a.x);
+  await putDoc(token,'public/board',{at:new Date().toISOString(),rows});console.log(`✓ public/board written (${rows.length} anonymous rows)`)}
+catch(e){console.log('… public/board not written: '+e.message+' (publish the rules with the public block)')}

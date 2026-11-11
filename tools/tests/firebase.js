@@ -481,6 +481,12 @@ async function waitDoc(col,id,test,t=15000){const t0=Date.now();let d=null;while
 async function ensure(p,sid,pin){await p.evaluate(async([s,k])=>{try{await CLOUD.create(s,k)}catch(e){}try{await CLOUD.signOut()}catch(e){}},[sid,pin]);await p.reload();await p.waitForTimeout(400)}
 
 
+/* Guest preview: a signed-out visitor can read the anonymised public/board, but not the named board */
+T.guestPublic=async()=>{if(!/match \/public\//.test(process.env.RULES?fs.readFileSync(process.env.RULES,'utf8'):''))return;
+  await fsPut('public','board',{at:new Date().toISOString(),rows:[{x:120,l:1,b:2,s:3,w:0,wk:'',t:Date.now()}]});
+  const p=await page({allow:/permission|PERMISSION|insufficient|Failed to load resource|400|403/});
+  const r=await p.evaluate(async()=>{const o={};try{o.pub=(await CLOUD.docs('public')).length}catch(e){o.pub='err '+e.message}try{await CLOUD.docs('board');o.board='read'}catch(e){o.board='denied'}return o});
+  ok(r.pub===1,'public board not readable signed out: '+JSON.stringify(r));ok(r.board==='denied','named board readable signed out: '+JSON.stringify(r));await p.done()};
 (async()=>{const server=spawn('python3',['-m','http.server',String(PORT)],{cwd:ROOT,stdio:'ignore'});await new Promise(r=>setTimeout(r,800));
   browser=await chromium.launch();
   for(const [name,fn] of Object.entries(T)){if(ARGS.only&&!String(ARGS.only).split(',').includes(name))continue;const t0=Date.now();
