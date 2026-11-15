@@ -156,7 +156,7 @@ lcard('wildc',el=>{rulesOK().then(async ok=>{if(!ok)return;el.hidden=false;const
   catch(e){$('#whist').innerHTML=`<p class="err">${esc(CLOUD.say(e))}</p>`}})});
 
 /* ---------- home: a card while a challenge is open (students), and the live screen (lecturer) ---------- */
-async function wildHome(){const el=$('#twild');if(el)el.innerHTML='';if(!el||!ME||!wildCfg())return;if(!(await rulesOK()))return;const win=wildWin();let D=null;try{D=await CLOUD.get('wild/'+win.id)}catch(e){return}
+async function wildHome(){const el=$('#twild');if(el)el.innerHTML='';if(!el||!ME||!wildCfg()||CRS.wildOff)return;if(!(await rulesOK()))return;const win=wildWin();let D=null;try{D=await CLOUD.get('wild/'+win.id)}catch(e){return}
   const box=$('#twild');if(!box)return;const L=ME.sid===LECTURER;
   if(L){box.innerHTML=`<a class="card zone tinv" href="#/wild/live" data-lect><span class="em">🎁</span><span style="flex:1"><b class="lex">6th-spot challenge</b><br><span class="muted" style="font-size:.85rem">${win.open?(D&&D.st!=='plan'?'Open now · closes '+esc(wildWhen(win.closes)):'Window open: tap to open this week\'s challenge'):'Next opens '+esc(wildWhen(win.opens))}</span></span><span class="btn sm">${win.open?'Live':'Open'}</span></a>`;return}
   if(!D||D.st==='plan'&&!win.open)return;const mine=(U.wild||{})[win.id],t5=(D.t5||[]).includes(ME.sid);if(!win.open||D.st!=='open')return;

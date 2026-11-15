@@ -5,7 +5,7 @@ const CRS={
   id:'mkt301',CODE:'MKT301',name:'MKT301 Arena',ls:'mkt301_',repo:'mkt301',
   title:'International Marketing',
   /* the weekly 6th-spot challenge (engine/wild.js): class starts Tuesday 4:00 pm (GMT+5); the challenge is open the 24 hours before */
-  wild:{day:2,hour:16},
+  wild:{day:2,hour:16},wildOff:true,/* the 6th-spot challenge ended on 15 Nov 2026: the window still sets the "This week" leaderboard */
   /* topics the lecturer has already chosen for a week (used when no other topics are saved before it opens) */
   wildPlan:{'w2026-11-03':['10','11']},
   themeColor:{light:'#f7f2e8',dark:'#0b1026'},

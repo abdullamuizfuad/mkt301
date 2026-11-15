@@ -43,8 +43,8 @@ function paperTile(){if(typeof ppLine!=='function')return null;const L=ME&&ME.si
 function tilesHTML(){const T=(typeof homeTiles==='function'?homeTiles():[]).concat([paperTile()].filter(Boolean));
   return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile${x[4]?' locked':''}" href="${x[3]}"${x[3]==='#/paper'?' id="tpaper"':''}><span class="em">${x[0]}</span><span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></span></a>`).join('')}</div>`}
 function home(){if(!U)return;rollDay();if(ME.sid===LECTURER)return lectHome();
-  shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}${inboxHTML()}<div id="tfun"></div><div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
-  const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)};if(typeof wildHome==='function')wildHome();if(typeof funHome==='function')funHome()}
+  shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${typeof rtsHomeHTML==='function'?rtsHomeHTML():''}${inboxHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}<div id="tfun"></div><div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
+  const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)};if(typeof wildHome==='function')wildHome();if(typeof rtsHomeBind==='function')rtsHomeBind();if(typeof funHome==='function')funHome()}
 
 /* ---------- the lecturer's home: lecturer essentials only (the lecturer is never a player) ---------- */
 let LH=null;/* one read of users, reviews and reports, kept for 5 minutes: counts, the at-risk list and who was active recently */
@@ -68,7 +68,7 @@ function lectHome(){const first=esc(String(ME.name).split(' ')[0]),c=cloudOn();
   <div id="lhvap"></div><div id="twild" style="margin-top:12px"></div>
   ${c?`<div class="grid g2" style="margin-top:12px"><div class="card"><h2 style="margin:0 0 6px;font-size:1.05rem">⚠️ At risk</h2><div id="lhrisk"><p class="muted">Loading…</p></div></div><div class="card"><h2 style="margin:0 0 6px;font-size:1.05rem">🟢 Recently active</h2><div id="lhrecent"><p class="muted">Loading…</p></div></div></div>`:''}
   <h2 style="margin-top:22px">Previews</h2><p class="muted" style="margin-top:-4px;font-size:.9rem">Try the practice paper and any question yourself. Nothing you do here earns XP or reaches the class.</p></div>${tilesHTML()}`);
-  if(typeof wildHome==='function')wildHome();$('#lhva').onclick=()=>{const p=$('#lhvap');if(p.innerHTML)return;p.innerHTML=vaCardHTML();vaCardInit();setTimeout(()=>{const i=$('#vaq');if(i)i.focus()},50)};
+  if(typeof wildHome==='function')wildHome();if(typeof rtsHomeBind==='function')rtsHomeBind();$('#lhva').onclick=()=>{const p=$('#lhvap');if(p.innerHTML)return;p.innerHTML=vaCardHTML();vaCardInit();setTimeout(()=>{const i=$('#vaq');if(i)i.focus()},50)};
   if(!c)return;lectNums().then(N=>{const el=$('#lday');if(!el)return;['active','mark','reports','risk'].forEach(k=>{const b=el.querySelector(`[data-ln="${k}"]`);if(b)b.textContent=N[k]==null?'–':N[k]});
     const list=(rows,sub)=>rows.length?`<ol class="sumlist">${rows.map(r=>`<li><a href="#/student/${esc(r.id)}" data-sid="${esc(r.id)}">${esc(r.n)}</a> <span class="muted" style="font-size:.82rem">${esc(sub(r))}</span></li>`).join('')}</ol>`:'<p class="muted" style="margin:0">None.</p>';
     $('#lhrisk').innerHTML=list(N.riskL,r=>r.why);$('#lhrecent').innerHTML=list(N.recent,r=>ago(r.ts));
@@ -129,7 +129,7 @@ ROUTES.progress=h=>{if(ME.sid===LECTURER){shell('#/progress',`<h1>My progress</h
 /* ---------- More menu, and the phone tab bar (remove with CRS.tabbar=false) ---------- */
 function moreMenu(){const st=ME&&ME.sid!==LECTURER,N=NAV.map(n=>n[0]);
   const items=[['#/avatar','🧑‍🎨','My profile'],st&&['#/progress','📈','My progress'],st&&['#/badges','🏅','Badges'],N.includes('#/notes')&&['#/notes','📖','Study notes'],st&&['#/cards','🃏','Flashcards'],cloudOn()&&['#/sessions','🎓','Past tutorial sessions'],st&&['#/review','🧠','Review'],
-    typeof ppLine==='function'&&['#/paper','📝','Practice paper'],typeof wildCfg==='function'&&wildCfg()&&['#/wild','🎁','6th-spot challenge'],typeof CHIPS!=='undefined'&&CHIPS.length&&['#/chips','🧱','Build a paragraph'],st&&['#/backup','💾','Save my progress'],['help','❔','How it works'],['#/whatsnew','✨',"What's new"],['inst','📲','Install the app'],['#/privacy','🔒','Privacy'],['so','🚪','Sign out']].filter(Boolean);
+    typeof ppLine==='function'&&['#/paper','📝','Practice paper'],typeof wildCfg==='function'&&wildCfg()&&!CRS.wildOff&&['#/wild','🎁','6th-spot challenge'],typeof CHIPS!=='undefined'&&CHIPS.length&&['#/chips','🧱','Build a paragraph'],st&&['#/backup','💾','Save my progress'],['help','❔','How it works'],['#/whatsnew','✨',"What's new"],['inst','📲','Install the app'],['#/privacy','🔒','Privacy'],['so','🚪','Sign out']].filter(Boolean);
   const m=modal('More',`<h2 style="margin:0 0 10px">More</h2><div class="morelist">${items.map(x=>x[0][0]==='#'?`<a href="${x[0]}" data-mi="1"><span>${x[1]}</span>${x[2]}</a>`:`<button type="button" data-mi="${x[0]}"><span>${x[1]}</span>${x[2]}</button>`).join('')}</div>`);
   m.querySelectorAll('[data-mi]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.mi;closeModal();if(k==='help')tour(0);else if(k==='inst')installPop(0);else if(k==='so')signOut()}))}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-more]');if(b&&ME){e.preventDefault();moreMenu()}});

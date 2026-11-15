@@ -49,7 +49,10 @@ export async function patchReview(token,sid,entries){const mask=Object.keys(entr
 export function bank(){const ctx={};vm.createContext(ctx);
   const D=vm.runInContext(['cases.js','case-cbtl.js','case-tuna.js','bank-b.js'].map(f=>readFileSync(path.join(ROOT,f),'utf8')).join('\n')+';({CASES,BANK_B})',ctx);
   const Q={};D.CASES.forEach(c=>c.questions.forEach(q=>Q[q.id]={q,area:c.title+' (case): '+q.skill,context:c.title+': '+c.subtitle}));
-  D.BANK_B.forEach(q=>Q[q.id]={q,area:'Week '+q.week+': '+q.topic,context:'Short-answer practice'});return Q}
+  D.BANK_B.forEach(q=>Q[q.id]={q,area:'Week '+q.week+': '+q.topic,context:'Short-answer practice'});/* Replacement Tutorial Sessions (rts.js): written questions */
+  if(existsSync(path.join(ROOT,'rts.js'))){const R=vm.runInContext(readFileSync(path.join(ROOT,'rts.js'),'utf8')+';RTS_Q',ctx);
+    Object.values(R).forEach(q=>{if(q&&q.id)Q[q.id]={q,area:'Topic '+(q.t||q.week)+': '+q.topic,context:'Replacement tutorial session'+(q.scenario?': '+q.scenario:'')}})}
+  return Q}
 export const BANDS=['0: Off topic or missing','1: Lists a term or two','2: Lists several terms with little explanation','3: Explains the idea with some application',
   '4: Explains clearly and applies it to the example','5: Applies well and starts to evaluate','6: Applies to the case or example throughout and evaluates with a clear judgement'];
 export const readJSON=(f,d)=>existsSync(f)?JSON.parse(readFileSync(f,'utf8')):d;

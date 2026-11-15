@@ -47,7 +47,7 @@ const PR={act:0,pid:Math.random().toString(36).slice(2),last:Date.now(),lt:Date.
   sess:null,sessOn:false,joined:false,st:'',stAt:0,awayAt:0,wrote:0,sec:'',secAt:0,secDirty:false,sessList:null,started:false,iv:null};
 const presTimerOn=()=>[...document.querySelectorAll('[data-a="tgo"]')].some(b=>/pause/i.test(b.textContent||''));
 const presMicOn=()=>typeof MIC!=='undefined'&&!!MIC;
-const presBusyNow=()=>presTimerOn()||presMicOn()||(typeof presBusy==='function'&&!!presBusy());
+const presBusyNow=()=>presTimerOn()||presMicOn()||(typeof presBusy==='function'&&!!presBusy())||(typeof rtsActive==='function'&&!!rtsActive());
 const sessLive=()=>!!(PR.sess&&PR.sess.active&&(!PR.sess.endsAt||Date.now()<PR.sess.endsAt));
 const presVisible=()=>document.visibilityState==='visible'&&(typeof document.hasFocus!=='function'||document.hasFocus());
 
@@ -71,7 +71,7 @@ function presTick(){if(typeof ME==='undefined'||!ME||!U||VIEWAS)return;const now
   const vis=presVisible(),busy=presTimerOn()||presMicOn(),active=!PR.brk&&vis&&(busy||now-PR.last<ST.IDLE*1000);
   if(PR.brk){if(now>=PR.brk)presBreakEnd();else presBreakPaint()}
   const inSess=PR.joined&&sessLive();
-  if(active){const a=Math.min(dt,5);PR.pend+=a;PR.act+=a;if(!inSess)PR.pendx+=a;PR.fc+=a;PR.gap=0}
+  if(active){const a=Math.min(dt,5);PR.pend+=a;PR.act+=a;if(!inSess&&!(typeof rtsNoXP==='function'&&rtsNoXP()))PR.pendx+=a;PR.fc+=a;PR.gap=0}
   else{PR.gap+=dt;if(PR.gap>=ST.GAP){PR.fc=0;PR.next=ST.BRK}}
   if(PR.pend>=60||now-PR.lastSave>300000)stFlush(now-PR.lastSave>300000);
   if(!PR.brk&&PR.fc>=PR.next&&!window.__presNoBreak&&!sessLive()&&!document.querySelector('.modal')&&!presBusyNow())presBreakAsk();

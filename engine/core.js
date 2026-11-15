@@ -327,6 +327,7 @@ function applyMarks(m){U.rev=U.rev||{};U.gain=U.gain||{};let n=0,ch=0;
   for(const [key,v] of Object.entries(m||{})){if(!v||typeof v!=='object')continue;
     if(isBonus(key)){const bk='bonus:'+key;if(!U.log[bk]){U.fun=U.fun||{};if(/^bonus_ment_/.test(key))U.fun.ment=(U.fun.ment|0)+1;award(bk,Math.max(0,Math.min(30,v.xp|0)),String(v.fb||'Bonus from your lecturer').slice(0,80));U.notes[key]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};nn++;first=first||U.notes[key].fb}continue}
     if(isNote(key)){if(!U.notes[key]){U.notes[key]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};if(typeof cheerNote==='function'&&/^note_enc_/.test(key))cheerNote(key,U.notes[key].fb);else{nn++;first=first||U.notes[key].fb}}continue}
+    if(U.rtsVoid&&U.rtsVoid[key])continue;/* a Replacement Tutorial attempt the student restarted: its marks give no XP */
     const r={q:String(v.q||''),band:Math.max(0,Math.min(6,v.band|0)),xp:Math.max(0,Math.min(30,v.xp|0)),fb:String(v.fb||'').slice(0,600),at:String(v.at||''),by:v.by==='lecturer'?'lecturer':'claude'},k='review:'+key;
     const old=U.rev[key];U.rev[key]=r;
     if(!U.log[k]){countOnce(k,'reviewed');award(k,r.xp,'Marked by your lecturer');n++}
