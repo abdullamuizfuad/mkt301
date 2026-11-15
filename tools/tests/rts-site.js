@@ -5,7 +5,7 @@ const open=async p=>{await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.from=new Da
 const start=async p=>{await open(p);ok(await p.$('#rtsb'),'no Replacement Tutorial block on home');ok(/SAVE MY ATTENDANCE/.test(await p.textContent('#rtsgo')),'button text');
   await p.click('#rtsgo');await p.waitForSelector('#rtsyes');ok(/locks/.test(await p.textContent('.modal')),'start popup must explain the lock');await p.click('#rtsyes');await p.waitForTimeout(400)};
 /* fills every answer: MCQs correct, written answers long enough, a choice in every "choose" part */
-const fillAll=p=>p.evaluate(()=>{const s=rtsCur(),st=rtsSt(s);s.parts.forEach((pt,pi)=>{if(pt.kind==='mcq')pt.items.forEach(id=>st.a[id]=RTS_Q[id][2][0]);else{if(pt.pick)st.pick[pi]=pt.items[0];(pt.pick?[pt.items[0]]:pt.items).forEach(id=>st.a[id]=Array(130).fill('word').join(' '))}});save();rtsPage()});
+const fillAll=p=>p.evaluate(()=>{const s=rtsCur(),st=rtsSt(s);s.parts.forEach((pt,pi)=>{if(pt.kind==='mcq')pt.items.forEach(id=>st.a[id]=RTS_Q[id][2][0]);else{if(pt.pick)st.pick[pi]=pt.items[0];(pt.pick?[pt.items[0]]:pt.items).forEach(id=>st.a[id]=Array((RTS_Q[id].minW||60)+10).fill('word').join(' '))}});save();rtsPage()});
 return {
 async rtsFast(){const p=await page({sid:STUDENT,rts:true});await start(p);
   ok(/#\/rts/.test(p.url()),'not on the session page');await shot(p,'rts-session');
