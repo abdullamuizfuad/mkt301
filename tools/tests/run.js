@@ -20,7 +20,8 @@ async function page(opts={}){
   p.on('console',m=>{if(m.type()==='error'&&!/mailto|favicon|fonts\.g/.test(m.text()))p.errs.push('console: '+m.text())});
   p.on('dialog',d=>d.accept());
   if(!opts.breaks)await p.addInitScript(()=>{window.__presNoBreak=1});
-  if(!opts.celeb)await p.addInitScript(()=>{window.__noCeleb=1});/* celebrations only in the celebration tests */
+  if(!opts.celeb)await p.addInitScript(()=>{window.__noCeleb=1});
+  if(!opts.rts)await p.addInitScript(()=>{window.__noRts=1});/* Replacement Tutorial Sessions only in the rts tests (they move the window to now) *//* celebrations only in the celebration tests */
   /* already on Version 2.1 (the release test turns this off to see the one-time sign-out) */
   if(opts.ver!==false)await p.addInitScript(()=>{window.__noWhatsNew=1;try{if(!localStorage.getItem('mkt301_ver'))localStorage.setItem('mkt301_ver','"2.1"')}catch(e){}});/* break reminders only in the breaks test */
   if(opts.clock)await p.clock.install();if(opts.init)await p.addInitScript(opts.init);

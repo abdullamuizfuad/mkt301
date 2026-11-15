@@ -7,7 +7,7 @@ const start=async p=>{await open(p);ok(await p.$('#rtsb'),'no Replacement Tutori
 /* fills every answer: MCQs correct, written answers long enough, a choice in every "choose" part */
 const fillAll=p=>p.evaluate(()=>{const s=rtsCur(),st=rtsSt(s);s.parts.forEach((pt,pi)=>{if(pt.kind==='mcq')pt.items.forEach(id=>st.a[id]=RTS_Q[id][2][0]);else{if(pt.pick)st.pick[pi]=pt.items[0];(pt.pick?[pt.items[0]]:pt.items).forEach(id=>st.a[id]=Array(130).fill('word').join(' '))}});save();rtsPage()});
 return {
-async rtsFast(){const p=await page({sid:STUDENT});await start(p);
+async rtsFast(){const p=await page({sid:STUDENT,rts:true});await start(p);
   ok(/#\/rts/.test(p.url()),'not on the session page');await shot(p,'rts-session');
   await p.go('#/board');await p.waitForTimeout(300);ok(/#\/rts/.test(p.url()),'the arena is not locked during the session');
   ok(await p.evaluate(()=>presBusyNow()===true),'break reminder not paused');
@@ -22,7 +22,7 @@ async rtsFast(){const p=await page({sid:STUDENT});await start(p);
   await p.click('#rtsdok');await p.go('#/board');await p.waitForTimeout(300);ok(/#\/board/.test(p.url()),'the arena is still locked after finishing');
   await p.go('#/');await p.waitForTimeout(300);ok(/ATTENDANCE SAVED/.test(await p.textContent('#rtsgo')),'home button not green after finishing');
   ok(!(await p.$('[data-lect]')),'lecturer-only element on a student page');await p.done()},
-async rtsSlow(){const p=await page({sid:STUDENT});await start(p);
+async rtsSlow(){const p=await page({sid:STUDENT,rts:true});await start(p);
   await p.evaluate(()=>{const s=rtsCur(),st=rtsSt(s);st.act=rtsLimit(s,st);save();rtsPage()});
   ok(await p.$('#rtsext'),'no "more time" button when time is up');ok(await p.$eval('#rtsfin',b=>b.disabled),'Finish should wait while answers are missing');
   ok(await p.evaluate(()=>{location.hash='#/rts';return rtsNoXP()===false}),'no extension yet');
@@ -34,7 +34,7 @@ async rtsSlow(){const p=await page({sid:STUDENT});await start(p);
   const x0=await p.evaluate(()=>U.xp);await p.click('#rtsfin');await p.waitForTimeout(800);
   const r=await p.evaluate(()=>rtsSt(rtsCur()).res);ok(r&&r.ext===2&&r.todo>0,'slow finish: '+JSON.stringify(r));
   ok(/friendly tip on speed/.test(await p.textContent('.modal')),'no speed tips for a slow finish');ok((await p.evaluate(()=>U.xp))-x0>=300,'300 XP for finishing');await p.done()},
-async rtsRestart(){const p=await page({sid:STUDENT});await start(p);await fillAll(p);
+async rtsRestart(){const p=await page({sid:STUDENT,rts:true});await start(p);await fillAll(p);
   await p.click('#rtsrst');await p.waitForSelector('#rtsry');ok(/lose all your progress/.test(await p.textContent('.modal')),'restart warning');await p.click('#rtsry');await p.waitForTimeout(300);
   const r=await p.evaluate(()=>{const st=rtsSt(rtsCur());return {n:st.n,a:Object.keys(st.a).length,act:st.act,st:st.st}});ok(r.n===2&&r.a===0&&r.act===0&&r.st==='go','restart: '+JSON.stringify(r));
   await p.evaluate(()=>{save()});await p.reload();await p.waitForTimeout(500);await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.from=new Date(Date.now()-864e5).toISOString();s.to=new Date(Date.now()+864e5).toISOString();route()});await p.waitForTimeout(300);

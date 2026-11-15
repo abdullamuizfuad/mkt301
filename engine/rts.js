@@ -13,7 +13,7 @@
 const RTS_EXT=15*60e3,RTS_XP_DONE=300,RTS_XP_MIN=10,RTS_XP_MCQ=5;
 let RTST=null,RTSL=Date.now();
 const rtsSessions=()=>typeof RTS_SESSIONS!=='undefined'?RTS_SESSIONS:[];
-function rtsCur(now){now=now||Date.now();return rtsSessions().find(s=>now>=Date.parse(s.from)&&now<Date.parse(s.to))||null}
+function rtsCur(now){if(window.__noRts)return null;/* site tests turn sessions off unless they test them */now=now||Date.now();return rtsSessions().find(s=>now>=Date.parse(s.from)&&now<Date.parse(s.to))||null}
 const rtsPlayer=()=>!!(typeof ME!=='undefined'&&ME&&U&&ME.sid!==LECTURER);
 function rtsSt(s){U.rts=U.rts||{};return U.rts[s.id]||null}
 function rtsActive(){const s=rtsCur();if(!s||!rtsPlayer()||VIEWAS)return null;const st=rtsSt(s);return st&&st.st==='go'?{s,st}:null}
