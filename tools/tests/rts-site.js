@@ -34,6 +34,9 @@ async rtsSlow(){const p=await page({sid:STUDENT,rts:true});await start(p);
   const x0=await p.evaluate(()=>U.xp);await p.click('#rtsfin');await p.waitForTimeout(800);
   const r=await p.evaluate(()=>rtsSt(rtsCur()).res);ok(r&&r.ext===2&&r.todo>0,'slow finish: '+JSON.stringify(r));
   ok(/friendly tip on speed/.test(await p.textContent('.modal')),'no speed tips for a slow finish');ok((await p.evaluate(()=>U.xp))-x0>=300,'300 XP for finishing');await p.done()},
+async rtsLive(){const p=await page({sid:STUDENT,rts:true});await start(p);/* an unfinished session plus a live tutorial: the tutorial wins, no redirect loop */
+  await p.evaluate(()=>{window.__hops=0;addEventListener('hashchange',()=>window.__hops++);tutOn=()=>true;location.hash='#/tutorial'});await p.waitForTimeout(1500);
+  const r=await p.evaluate(()=>({h:location.hash,hops:window.__hops}));ok(r.h==='#/tutorial'&&r.hops<5,'live tutorial and session lock loop: '+JSON.stringify(r));p.errs.length=0;/* the stubbed tutorial has no session data */await p.done()},
 async rtsRestart(){const p=await page({sid:STUDENT,rts:true});await start(p);await fillAll(p);
   await p.click('#rtsrst');await p.waitForSelector('#rtsry');ok(/lose all your progress/.test(await p.textContent('.modal')),'restart warning');await p.click('#rtsry');await p.waitForTimeout(300);
   const r=await p.evaluate(()=>{const st=rtsSt(rtsCur());return {n:st.n,a:Object.keys(st.a).length,act:st.act,st:st.st}});ok(r.n===2&&r.a===0&&r.act===0&&r.st==='go','restart: '+JSON.stringify(r));

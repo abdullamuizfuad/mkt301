@@ -149,7 +149,8 @@ function rtsDone(s){const st=rtsSt(s),r=st.res||{},slow=r.ext>0||r.todo>0;
 
 /* ---------- the lock: while a session is unfinished, the arena shows only #/rts ---------- */
 ROUTES.rts=rtsPage;
-if(typeof route==='function'){const _rtsRoute=route;route=function(){if(typeof ME!=='undefined'&&ME&&U&&rtsActive()){const h=location.hash.replace(/^#\/?/,'').split('/')[0];if(h!=='rts'){location.replace('#/rts');return}}return _rtsRoute.apply(this,arguments)}}
+if(typeof route==='function'){const _rtsRoute=route;route=function(){/* a live tutorial session (presence.js tutGuard) wins: never fight its lock, or the two redirects loop */
+  if(typeof ME!=='undefined'&&ME&&U&&rtsActive()&&!(typeof tutOn==='function'&&tutOn())){const h=location.hash.replace(/^#\/?/,'').split('/')[0];if(h!=='rts'){location.replace('#/rts');return}}return _rtsRoute.apply(this,arguments)}}
 
 /* ---------- the lecturer's card ---------- */
 if(typeof LF_META!=='undefined')LF_META.rtsc=['🚧 Replacement tutorial','Who has saved their attendance'];
