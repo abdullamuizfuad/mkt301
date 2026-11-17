@@ -46,6 +46,15 @@ async rtsLate(){const p=await page({sid:STUDENT,rts:true});/* closed for the cla
   ok(!(await p.$('#rtsb')),'a closed session should not show');
   await p.evaluate(()=>applyMarks({note_rtsopen_t:{q:'note',fb:'Reopened for you',at:isoNow(),by:'lecturer',rts:RTS_SESSIONS[0].id,rtsTo:new Date(Date.now()+864e5).toISOString()}}));await p.go('#/');await p.waitForTimeout(300);
   ok(await p.$('#rtsb'),'the reopened session should show on home');ok(await p.evaluate(()=>!!rtsCur()),'rtsCur after reopening');await p.done()},
+async rtsLectReset(){const p=await page({sid:STUDENT,rts:true});await start(p);await fillAll(p);await p.click('#rtsfin');await p.waitForSelector('#rtsfn,#rtsdok');
+  if(await p.$('#rtsfn'))await p.click('#rtsfn');await p.waitForTimeout(500);await p.evaluate(()=>{closeModal&&closeModal()});
+  const x1=await p.evaluate(()=>({xp:U.xp,st:rtsSt(rtsCur()).st}));ok(x1.st==='done','not finished first');
+  await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.to=new Date(Date.now()-36e5).toISOString();applyMarks({note_rs:{q:'note',fb:'Reset',at:isoNow(),by:'lecturer',pin:true,rtsReset:s.id,rts:s.id,rtsTo:new Date(Date.now()+864e5).toISOString()}})});
+  await p.go('#/');await p.waitForTimeout(400);
+  const r=await p.evaluate(()=>{const s=RTS_SESSIONS[0];return {st:U.rts[s.id].st,old:(U.rtsOld[s.id]||[]).length,ans:Object.keys(U.ans||{}).filter(k=>/^rts_/.test(k)).length,xp:U.xp,log:Object.keys(U.log).filter(k=>k.indexOf('rts:')===0).length}});
+  ok(r.st==='new'&&r.old===1&&r.ans===0&&r.log===0&&r.xp<x1.xp,'lecturer reset: '+JSON.stringify(r)+' before '+JSON.stringify(x1));
+  ok(/SAVE MY ATTENDANCE/.test(await p.textContent('#rtsgo')),'red button back on home');ok(/#\/$|#$/.test(p.url())||!/#\/rts/.test(p.url()),'should not be locked before starting');
+  await p.evaluate(()=>applyMarks({note_rs:{q:'note',fb:'Reset',at:isoNow(),by:'lecturer',rtsReset:RTS_SESSIONS[0].id}}));ok(await p.evaluate(()=>(U.rtsOld[RTS_SESSIONS[0].id]||[]).length===1),'reset must run once only');await p.done()},
 async pinNote(){const p=await page({sid:STUDENT});
   await p.evaluate(()=>{applyMarks({note_old1:{q:'note',fb:'Old text',at:'2026-11-17T10:00:00Z',by:'lecturer'}});applyMarks({note_pin_t:{q:'note',fb:'Pinned text',at:'2026-11-17T11:00:00Z',by:'lecturer',pin:true,sup:'note_old1'}})});
   await p.go('#/');await p.waitForTimeout(300);

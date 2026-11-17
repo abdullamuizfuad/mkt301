@@ -117,6 +117,11 @@ function rtsReset(s){const st=rtsSt(s)||{};U.gain=U.gain||{};const pre='rts:'+s.
   U.rtsVoid=U.rtsVoid||{};(st.keys||[]).forEach(k=>{U.rtsVoid[k]=1;const rk='review:'+k;if(U.log[rk]){U.xp=Math.max(0,U.xp-(U.gain[rk]|0));U.gain[rk]=0}if(U.ans)delete U.ans[k]});
   U.rts[s.id]={st:'go',n:(st.n|0)+1,act:0,ext:0,a:{},pick:{},fl:{paste:0},ph:'main',started:new Date().toISOString()};save();hud()}
 
+/* the lecturer resets a student's attempt (a note with rtsReset:<session id>, usually with rtsTo): XP and written answers from it are cleared
+   as with Restart, a copy of the old attempt is kept in U.rtsOld, and the session goes back to "not started" so the student starts fresh from home */
+function rtsLectReset(key,id){const s=rtsSessions().find(x=>x.id===id);U.rtsRs=U.rtsRs||{};U.rtsRs[key]=1;if(!s){save();return}
+  const old=rtsSt(s);if(old){U.rtsOld=U.rtsOld||{};(U.rtsOld[id]=U.rtsOld[id]||[]).push(Object.assign(JSON.parse(JSON.stringify(old)),{resetAt:new Date().toISOString()}));
+    rtsReset(s);U.rts[id]={st:'new',n:old.n|0}}save();hud()}
 /* ---------- finishing ---------- */
 function rtsScore(s,st){const ids=rtsMcqs(s);return {ok:ids.filter(id=>st.a[id]===rtsQ(id)[2][0]).length,mx:ids.length}}
 function rtsFinishAsk(s){const st=rtsSt(s),T=rtsTodo(s,st),base=rtsBase(s);
@@ -164,5 +169,5 @@ if(typeof lcard==='function')lcard('rtsc',async el=>{const S=rtsSessions().slice
     us.filter(x=>x.id!==LECTURER&&x.id!=='S000000').forEach(x=>{let u={};try{u=JSON.parse(x.u)}catch(e){}const r=(u.rts||{})[id];if(r)rows.push({id:x.id,n:x.name||u.dn||x.id,r})});
     rows.sort((a,b)=>(a.r.st==='done'?0:1)-(b.r.st==='done'?0:1)||String(a.n).localeCompare(String(b.n)));const done=rows.filter(x=>x.r.st==='done').length;
     $('#rtsl').innerHTML=`<p><b>${done}</b> finished · ${rows.length-done} in progress</p>`+(rows.length?`<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Student</th><th>Status</th><th>Active min</th><th>Extra time</th><th>Quick-fire</th><th>Secret Q</th><th>Restarts</th><th>Finished</th></tr></thead><tbody>${rows.map(x=>{const r=x.r,s=r.res||{};
-      return `<tr><td>${esc(x.n)}<br><small class="muted">${esc(x.id)}</small></td><td>${r.st==='done'?'✅ Done':'⏳ In progress'}</td><td>${Math.ceil((r.act|0)/60000)}</td><td>${(r.ext|0)?(r.ext*15)+' min':'–'}</td><td>${s.mx?s.mcq+'/'+s.mx:'–'}</td><td>${s.bonus?'🤫 Yes':'–'}</td><td>${Math.max(0,(r.n|0)-1)}</td><td>${r.at?esc(String(r.at).slice(0,16).replace('T',' ')):'–'}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="muted">Nobody has started yet.</p>')};
+      return `<tr><td>${esc(x.n)}<br><small class="muted">${esc(x.id)}</small></td><td>${r.st==='done'?'✅ Done':r.st==='new'?'🔄 Reset, not started':'⏳ In progress'}</td><td>${Math.ceil((r.act|0)/60000)}</td><td>${(r.ext|0)?(r.ext*15)+' min':'–'}</td><td>${s.mx?s.mcq+'/'+s.mx:'–'}</td><td>${s.bonus?'🤫 Yes':'–'}</td><td>${Math.max(0,(r.n|0)-1)}</td><td>${r.at?esc(String(r.at).slice(0,16).replace('T',' ')):'–'}</td></tr>`}).join('')}</tbody></table></div>`:'<p class="muted">Nobody has started yet.</p>')};
   $('#rtssel').onchange=draw;draw()});
