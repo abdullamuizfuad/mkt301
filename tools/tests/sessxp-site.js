@@ -36,7 +36,7 @@ async sxbar(){const p=await page({sid:STUDENT});const r=await p.evaluate(async()
 /* the live board: XP this session per joined student (exact from the log, ≈ from whole hours), the total and the session leaders */
 async sxlive(){const l=await page({sid:LECT});const t=await l.evaluate(async()=>{const now=Date.now(),T=now-50*60e3,s=x=>Math.round(x/1000);ME.cloud=true;CLOUD.ok=true;['push','flush','put'].forEach(k=>CLOUD[k]=()=>Promise.resolve());
     PR.sess={id:'LV',name:'Week 13 tutorial',active:true,startedAt:T,endsAt:now+3600e3};PR.sessOn=true;
-    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S081441',name:'Aminath Test',u:{qaSince:T-1,qa:[[s(T+6*60e3),'qa',0,2],[s(T+7*60e3),'qb',1,0]],alSince:T-864e5,al:[[s(T-60e3),'mcq:a:0',2],[s(T+5*60e3),'mcq:a:1',2],[s(T+9*60e3),'plan:q:1',15]]}},{id:'S085542',name:'Other Student',u:{xph:{[mvHour(T)]:7,[mvHour(now)]:3}}}]),0);
+    CLOUD.docs=(o=>(c,q)=>c==='users'?new Promise(r=>CLOUD.watchUsers(r)):o(c,q))(CLOUD.docs);CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S081441',name:'Aminath Test',u:{qaSince:T-1,qa:[[s(T+6*60e3),'qa',0,2],[s(T+7*60e3),'qb',1,0]],alSince:T-864e5,al:[[s(T-60e3),'mcq:a:0',2],[s(T+5*60e3),'mcq:a:1',2],[s(T+9*60e3),'plan:q:1',15]]}},{id:'S085542',name:'Other Student',u:{xph:{[mvHour(T)]:7,[mvHour(now)]:3}}}]),0);
     CLOUD.watchPresence=(id,cb)=>setTimeout(()=>cb([{id:'S081441',st:'on',on:2000,idle:0,away:0,left:0,longest:0,joinedAt:T+2*60e3,t:now},{id:'S085542',st:'idle',on:1000,idle:500,away:0,left:1,longest:0,joinedAt:T,t:now}]),0);
     location.hash='#/live';await new Promise(r=>setTimeout(r,300));return document.querySelector('#lvb').textContent});
   ok(t.includes('XP this session')&&/Session leaders:.*Aminath Test \+17/.test(t),'live board XP: '+t.slice(0,500));
@@ -69,7 +69,7 @@ async sxfinish(){const l=await page({sid:LECT});const r=await l.evaluate(async()
     CLOUD.put=(p,d,m)=>{W.push([p,JSON.parse(JSON.stringify(d))]);return Promise.resolve()};CLOUD.endSession2=(id,d)=>{W.push(['END '+id,d]);return Promise.resolve()};CLOUD.endSession=()=>{W.push(['OLD']);return Promise.resolve()};
     CLOUD.presenceOnce=async()=>[{id:'S081441',st:'on',on:3000,idle:0,away:0,left:0,longest:0,joinedAt:T+60e3,t:Date.now()},{id:'S085542',st:'on',on:1000,idle:900,away:900,left:3,longest:200,joinedAt:T+20*60e3,t:Date.now()}];
     const U2=(a)=>({alSince:T-1,qaSince:T-1,al:[[s(T+5*60e3),'mcq:x:1',2]],qa:a});
-    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S081441',name:'A',u:U2([[s(T+5*60e3),'qa',1,0],[s(T+6*60e3),'qb',0,2]])},{id:'S085542',name:'B',u:U2([[s(T+25*60e3),'qb',0,2]])}]),0);
+    CLOUD.docs=(o=>(c,q)=>c==='users'?new Promise(r=>CLOUD.watchUsers(r)):o(c,q))(CLOUD.docs);CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S081441',name:'A',u:U2([[s(T+5*60e3),'qa',1,0],[s(T+6*60e3),'qb',0,2]])},{id:'S085542',name:'B',u:U2([[s(T+25*60e3),'qb',0,2]])}]),0);
     PR.sessList=[{id:'F1',name:'Week 12 tutorial',active:true,startedAt:T,endsAt:T+3*3600e3,fb:[]}];LIVE_NAMES={S081441:'A',S085542:'B'};
     await liveFinish('F1');return W});
   const P=r.map(x=>x[0]);ok(!P.includes('OLD'),'used the old end');ok(P.includes('sessions/F1/lect/rep'),'rows not moved to lect/rep: '+P.join());
@@ -81,7 +81,7 @@ async sxatt(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>{
     CLOUD.put=(p,d)=>{W.push([p,d]);return Promise.resolve()};CLOUD.get=async p=>p.endsWith('/lect/att')?{m:{S000004:'p'}}:p.endsWith('/lect/rep')?{rows:{S000001x:{}}}:null;
     CLOUD.docs=async()=>[{id:'S000002',n:'Bee Present',g:'MKT101_H01 course'},{id:'S000003',n:'Cee Late'},{id:'S000004',n:'Dee NoPhone'},{id:'S000005',n:'Eve Partial'},{id:'S000006',n:'Fay Absent'}];
     const S={id:'AT',name:'Week 12 tutorial',active:false,startedAt:T,endedAt:T+100*60e3,endsAt:T+180*60e3,fb:[],rep:{S000002:{n:'Bee Present',on:5000,pct:90,j:T+2*60e3},S000003:{n:'Cee Late',on:4000,pct:80,j:T+15*60e3},S000005:{n:'Eve Partial',on:900,pct:30,j:T+60e3}}};
-    CLOUD.watchUsers=cb=>setTimeout(()=>cb([]),0);CLOUD.watchSessionDoc=(id,cb)=>setTimeout(()=>cb(S),0);CLOUD.watchPresence=()=>{};
+    CLOUD.docs=(o=>(c,q)=>c==='users'?new Promise(r=>CLOUD.watchUsers(r)):o(c,q))(CLOUD.docs);CLOUD.watchUsers=cb=>setTimeout(()=>cb([]),0);CLOUD.watchSessionDoc=(id,cb)=>setTimeout(()=>cb(S),0);CLOUD.watchPresence=()=>{};
     let blob=null;URL.createObjectURL=b=>{blob=b;return 'blob:x'};HTMLAnchorElement.prototype.click=function(){};
     location.hash='#/session/AT';await new Promise(r=>setTimeout(r,500));const row=id=>document.querySelector(`#sratt tr[data-att="${id}"]`).textContent;
     const before=['S000002','S000003','S000004','S000005','S000006'].map(row);document.querySelector('[data-ov="S000006"]').click();await new Promise(r=>setTimeout(r,100));
@@ -95,7 +95,7 @@ async sxday(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>{
     const st=sessStats([{id:'S000002',u:{mday:{d,ids:{'t9-5':1,'t8-23':1,'t9-12':1}},log:{'mcq:t8-23:2026-11-04':1,'mcq:t9-12:2026-11-04':1,'plan:s9a:2026-11-04':1}}},{id:'S000003',u:{mday:{d,ids:{'t9-5':1,'t8-23':1}},log:{'mcq:t8-23:2026-11-04':1}}},{id:'S000004',u:{mday:{d:'2026-11-03',ids:{'t9-5':1}},log:{}}}],{id:'D1',startedAt:T,endedAt:T+90*60e3});
     CLOUD.noField=()=>'DEL';CLOUD.put=(p,x)=>{W.push([p,JSON.parse(JSON.stringify(x))]);return Promise.resolve()};CLOUD.get=async p=>p.endsWith('/lect/rep')?{rows:{S000002:{n:'Bee',pct:90,on:4000},S000003:{n:'Cee',pct:70,on:3000}}}:null;CLOUD.docs=async()=>[];
     const S={id:'D1',name:'Week 11 tutorial',active:false,startedAt:T,endedAt:T+90*60e3,endsAt:T+180*60e3,fb:[],rep:{S000002:{n:'Bee',pct:90,on:4000},S000003:{n:'Cee',pct:70,on:3000}}};
-    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S000002',name:'Bee',u:{mday:{d,ids:{'t9-5':1,'t8-23':1}},log:{'mcq:t8-23:2026-11-04':1}}},{id:'S000003',name:'Cee',u:{mday:{d,ids:{'t9-5':1}},log:{}}}]),0);
+    CLOUD.docs=(o=>(c,q)=>c==='users'?new Promise(r=>CLOUD.watchUsers(r)):o(c,q))(CLOUD.docs);CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S000002',name:'Bee',u:{mday:{d,ids:{'t9-5':1,'t8-23':1}},log:{'mcq:t8-23:2026-11-04':1}}},{id:'S000003',name:'Cee',u:{mday:{d,ids:{'t9-5':1}},log:{}}}]),0);
     CLOUD.watchSessionDoc=(id,cb)=>setTimeout(()=>cb(S),0);CLOUD.watchPresence=()=>{};location.hash='#/session/D1';await new Promise(r=>setTimeout(r,500));
     const t=document.querySelector('#srp').textContent;document.querySelector('#srrb').click();await new Promise(r=>setTimeout(r,300));
     return {avg:st.avg,est:st.est,miss:st.missed.map(e=>e.id+':'+e.pw).join(),cover:st.cover+'/'+st.miss,t,W:W.map(x=>[x[0],x[1]])}});
@@ -110,7 +110,7 @@ async sxweek(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>
     const S1={id:'W1',name:'Week 11 tutorial',active:false,startedAt:T,endedAt:T+90*60e3,endsAt:T+3*3600e3,rep:{S000002:{n:'Bee',on:3000,pct:90,j:T}}},
       S2={id:'W2',name:sxName(11,2),wk:11,grp:2,active:false,startedAt:T+24*3600e3,endedAt:T+25.5*3600e3,endsAt:T+27*3600e3,rep:{S000003:{n:'Cee',on:1800,pct:60,j:T+24*3600e3}}};
     CLOUD.docs=async c=>c==='sessions'?[S1,S2,{id:'W9',name:'Week 12 tutorial'}]:[{id:'S000002',n:'Bee'},{id:'S000003',n:'Cee'},{id:'S000004',n:'Dee'}];CLOUD.get=async()=>null;
-    CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S000002',name:'Bee',u:{}},{id:'S000003',name:'Cee',u:{}}]),0);CLOUD.watchSessionDoc=(id,cb)=>setTimeout(()=>cb(S2),0);CLOUD.watchPresence=()=>{};
+    CLOUD.docs=(o=>(c,q)=>c==='users'?new Promise(r=>CLOUD.watchUsers(r)):o(c,q))(CLOUD.docs);CLOUD.watchUsers=cb=>setTimeout(()=>cb([{id:'S000002',name:'Bee',u:{}},{id:'S000003',name:'Cee',u:{}}]),0);CLOUD.watchSessionDoc=(id,cb)=>setTimeout(()=>cb(S2),0);CLOUD.watchPresence=()=>{};
     let blob=null;URL.createObjectURL=b=>{blob=b;return 'blob:x'};HTMLAnchorElement.prototype.click=function(){};
     location.hash='#/session/W2';await new Promise(r=>setTimeout(r,400));document.querySelector('[data-rt="w"]').click();await new Promise(r=>setTimeout(r,500));
     const t=document.querySelector('#srw').textContent;document.querySelector('#wvcsv').click();return {wg,d1:d1.wk+'.'+d1.grp,d2:d2.wk+'.'+d2.grp,t,csv:await blob.text()}});
@@ -148,7 +148,7 @@ async sxreport(){const T0=Date.now()-3*3600e3;
       {id:'S085542',name:'Other Student',u:{xph:{[mvHour(T)]:9,[mvHour(T+3600e3)]:6}}},{id:'S082110',name:'Old Device',u:{}}]});
   const l=await page({sid:LECT});
   const got=await l.evaluate(async src=>{const D=eval('('+src[0]+')')(src[1],60e3);ME.cloud=true;CLOUD.ok=true;['push','flush','put'].forEach(k=>CLOUD[k]=()=>Promise.resolve());
-      CLOUD.watchUsers=(cb)=>cb(D.users);CLOUD.watchSessionDoc=(id,cb)=>cb(D.S);CLOUD.watchPresence=()=>{};
+      CLOUD.docs=(o=>(c,q)=>c==='users'?new Promise(r=>CLOUD.watchUsers(r)):o(c,q))(CLOUD.docs);CLOUD.watchUsers=(cb)=>cb(D.users);CLOUD.watchSessionDoc=(id,cb)=>cb(D.S);CLOUD.watchPresence=()=>{};
       let blob=null;URL.createObjectURL=b=>{blob=b;return 'blob:x'};HTMLAnchorElement.prototype.click=function(){};
       location.hash='#/session/R1';await new Promise(r=>setTimeout(r,300));const el=document.querySelector('#srp');document.querySelector('#srcsv').click();
       const row=sid=>document.querySelector(`#srp tr[data-sid="${sid}"]`).textContent;

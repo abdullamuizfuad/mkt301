@@ -103,7 +103,11 @@ function backupCard(){
   $('#bkf').onchange=async e=>{const f=e.target.files[0];if(f)$('#bkt').value=(await f.text()).trim()};
   $('#bkgo').onclick=async()=>{$('#bke').textContent=await restore($('#bkt').value)}}
 function inboxHTML(){return annHTML()+frzHTML()+notesHTML()}
-function notesHTML(){const N=U.notes||{},R=U.notesRead||{},ks=Object.keys(N).filter(k=>!R[k]).sort((a,b)=>String(N[a].at)<String(N[b].at)?1:-1);if(!ks.length)return '';
+/* pinned messages (note.pin): highlighted at the very top of home until "Got it"; note.sup = the key of an older message it replaces */
+const noteGone=()=>{const N=U.notes||{},g={};Object.values(N).forEach(n=>{if(n&&n.sup)g[n.sup]=1});return g};
+function pinNotesHTML(){if(!U)return '';const N=U.notes||{},R=U.notesRead||{},ks=Object.keys(N).filter(k=>N[k].pin&&!R[k]).sort((a,b)=>String(N[a].at)<String(N[b].at)?1:-1);if(!ks.length)return '';
+  return ks.map(k=>`<div class="card pinnote" role="alert"><h2 class="lhd">${typeof lectAvHTML==='function'?lectAvHTML(30):''} 📌 Message from your lecturer</h2><p>${esc(N[k].fb).replace(/\n/g,'<br>')}</p><div class="row" style="justify-content:space-between;margin-top:8px"><span class="muted" style="font-size:.8rem">${esc(String(N[k].at).slice(0,10))}</span><button class="btn sm" data-noteread="${esc(k)}">Got it</button></div></div>`).join('')}
+function notesHTML(){const N=U.notes||{},R=U.notesRead||{},G=noteGone(),ks=Object.keys(N).filter(k=>!R[k]&&!G[k]&&!N[k].pin).sort((a,b)=>String(N[a].at)<String(N[b].at)?1:-1);if(!ks.length)return '';
   return `<div class="card inbox" style="margin-bottom:16px"><h2 style="margin:0 0 6px" class="lhd">${typeof lectAvHTML==='function'?lectAvHTML(30):''} Message${ks.length>1?'s':''} from your lecturer</h2>${ks.slice(0,5).map(k=>`<div class="note"><p style="margin:0">${esc(N[k].fb).replace(/\n/g,'<br>')}</p><div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" style="font-size:.8rem">${esc(String(N[k].at).slice(0,10))}</span><button class="btn ghost sm" data-noteread="${esc(k)}">Got it</button></div></div>`).join('')}</div>`}
 function argCard(c,a,i,col){const k=c.id+':'+i,mine=U.verd[k],L={strong:'Strong',mixed:'Partly right',weak:'Weak'};
   return `<div class="card arg" style="margin-bottom:12px"><div class="avatar" style="background:${col}">${esc(a.who[0])}</div><div>
@@ -326,7 +330,8 @@ function applyMarks(m){U.rev=U.rev||{};U.gain=U.gain||{};let n=0,ch=0;
   let nn=0,first='';U.notes=U.notes||{};
   for(const [key,v] of Object.entries(m||{})){if(!v||typeof v!=='object')continue;
     if(isBonus(key)){const bk='bonus:'+key;if(!U.log[bk]){U.fun=U.fun||{};if(/^bonus_ment_/.test(key))U.fun.ment=(U.fun.ment|0)+1;award(bk,Math.max(0,Math.min(30,v.xp|0)),String(v.fb||'Bonus from your lecturer').slice(0,80));U.notes[key]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};nn++;first=first||U.notes[key].fb}continue}
-    if(isNote(key)){if(!U.notes[key]){U.notes[key]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};if(typeof cheerNote==='function'&&/^note_enc_/.test(key))cheerNote(key,U.notes[key].fb);else{nn++;first=first||U.notes[key].fb}}continue}
+    if(isNote(key)&&typeof v.rts==='string'&&v.rtsTo){U.rtsLate=U.rtsLate||{};if(U.rtsLate[v.rts]!==String(v.rtsTo)){U.rtsLate[v.rts]=String(v.rtsTo);save()}}/* the lecturer reopened a Replacement Tutorial for this student (engine/rts.js) */
+    if(isNote(key)){if(!U.notes[key]){U.notes[key]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};if(v.pin)U.notes[key].pin=1;if(typeof v.sup==='string')U.notes[key].sup=v.sup;if(typeof cheerNote==='function'&&/^note_enc_/.test(key))cheerNote(key,U.notes[key].fb);else{nn++;first=first||U.notes[key].fb}}continue}
     if(U.rtsVoid&&U.rtsVoid[key])continue;/* a Replacement Tutorial attempt the student restarted: its marks give no XP */
     const r={q:String(v.q||''),band:Math.max(0,Math.min(6,v.band|0)),xp:Math.max(0,Math.min(30,v.xp|0)),fb:String(v.fb||'').slice(0,600),at:String(v.at||''),by:v.by==='lecturer'?'lecturer':'claude'},k='review:'+key;
     const old=U.rev[key];U.rev[key]=r;

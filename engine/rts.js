@@ -13,7 +13,9 @@
 const RTS_EXT=15*60e3,RTS_XP_DONE=300,RTS_XP_MIN=10,RTS_XP_MCQ=5;
 let RTST=null,RTSL=Date.now();
 const rtsSessions=()=>typeof RTS_SESSIONS!=='undefined'?RTS_SESSIONS:[];
-function rtsCur(now){if(window.__noRts)return null;/* site tests turn sessions off unless they test them */now=now||Date.now();return rtsSessions().find(s=>now>=Date.parse(s.from)&&now<Date.parse(s.to))||null}
+function rtsCur(now){if(window.__noRts)return null;/* site tests turn sessions off unless they test them */now=now||Date.now();return rtsSessions().find(s=>now>=Date.parse(s.from)&&now<rtsEnd(s))||null}
+/* when the session closes for this student: s.to, or later if the lecturer reopened it for them (U.rtsLate[id], set from a note with rts/rtsTo in engine/core.js applyMarks) */
+function rtsEnd(s){const t=Date.parse(s.to),l=typeof U!=='undefined'&&U&&U.rtsLate&&U.rtsLate[s.id]?Date.parse(U.rtsLate[s.id]):0;return Math.max(t,l||0)}
 const rtsPlayer=()=>!!(typeof ME!=='undefined'&&ME&&U&&ME.sid!==LECTURER);
 function rtsSt(s){U.rts=U.rts||{};return U.rts[s.id]||null}
 function rtsActive(){const s=rtsCur();if(!s||!rtsPlayer()||VIEWAS)return null;const st=rtsSt(s);return st&&st.st==='go'?{s,st}:null}
@@ -53,7 +55,7 @@ function rtsHomeHTML(){const s=rtsCur();if(!s||!ME||!U||(ME.sid===LECTURER&&!VIE
   return `<div class="rtsb${done?' done':''}" id="rtsb" role="region" aria-label="${esc(s.title)}"><div class="rtsin">
   <p class="rtsk">⚠️ ${esc(CRS.CODE||'')} · ${esc(s.topics)}</p><h2>${esc(s.title)}</h2>
   <p>This is extra tutorial work you can complete to save the attendance of a class you missed because of the public holiday. It replaces a 2-hour tutorial session.</p>
-  <p class="rtsm">⏱️ ${s.mins} minutes · open until ${esc(rtsWhen(s.to))}</p>
+  <p class="rtsm">⏱️ ${s.mins} minutes · open until ${esc(rtsWhen(new Date(rtsEnd(s)).toISOString()))}</p>
   ${done?`<p style="margin:0">Done ${esc(ymd(new Date(st.at)))}: ${st.res?st.res.xp:0} XP earned.</p>`:''}
   <button type="button" class="rtsgo${done?' ok':''}" id="rtsgo"${done||VIEWAS?' disabled':''}>${done?'✅ ATTENDANCE SAVED':go?'▶ CONTINUE: SAVE MY ATTENDANCE':'SAVE MY ATTENDANCE'}</button></div></div>`}
 function rtsHomeBind(){const b=$('#rtsgo');if(!b||b.disabled)return;b.onclick=()=>{const s=rtsCur();if(!s)return;const st=rtsSt(s);if(st&&st.st==='go'){location.hash='#/rts';return}rtsAsk(s)}}

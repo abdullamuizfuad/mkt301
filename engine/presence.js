@@ -214,7 +214,7 @@ async function liveFinish(id){if(liveFinish.busy&&Date.now()-liveFinish.busy<900
   toast('■','Session ended','Report saved: '+Object.keys(rep).length+' joined')}catch(e){toast('⚠️','Could not end the session',CLOUD.say(e))}finally{liveFinish.busy=0}}
 let LIVE_NAMES=null,LIVE_USERS=null;
 /* one read of the class (not a listener: a page change cancels listeners, which left these waits hanging forever) */
-const usersOnce=()=>CLOUD.docs('users').then(l=>l.map(x=>{let u=null;try{u=JSON.parse(x.u)}catch(e){}return {id:x.id,name:x.name,xp:x.xp,ts:x.ts?new Date(x.ts):null,u}}),()=>[]);
+const usersOnce=()=>CLOUD.docs('users').then(l=>l.map(x=>{let u=x.u&&typeof x.u==='object'?x.u:null;try{if(typeof x.u==='string')u=JSON.parse(x.u)}catch(e){}return {id:x.id,name:x.name,xp:x.xp,ts:x.ts?new Date(x.ts):null,u}}),()=>[]);
 function liveNames(){if(LIVE_NAMES)return Promise.resolve(LIVE_NAMES);return usersOnce().then(list=>{LIVE_NAMES={};LIVE_USERS=list;list.forEach(x=>LIVE_NAMES[x.id]=x.name||'');return LIVE_NAMES})}
 const csvDownload=(rows,name)=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download=name;a.click()};
 function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shell('#/lecturer','<div class="callout">Live sessions need the live connection.</div>');

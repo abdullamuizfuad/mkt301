@@ -41,6 +41,17 @@ async rtsLiveFree(){const p=await page({sid:STUDENT,rts:true});await start(p);/*
   await p.evaluate(()=>{PR.sess={id:'x',active:true,endsAt:Date.now()+36e5}});await p.go('#/board');await p.waitForTimeout(500);
   ok(/#\/board/.test(p.url()),'a live session should lift the Replacement Tutorial lock');
   await p.evaluate(()=>{PR.sess=null});await p.go('#/badges');await p.waitForTimeout(500);ok(/#\/rts/.test(p.url()),'the lock should come back when the live session ends');await p.done()},
+async rtsLate(){const p=await page({sid:STUDENT,rts:true});/* closed for the class, reopened for one student by a lecturer note */
+  await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.from=new Date(Date.now()-2*864e5).toISOString();s.to=new Date(Date.now()-36e5).toISOString()});await p.go('#/');await p.waitForTimeout(300);
+  ok(!(await p.$('#rtsb')),'a closed session should not show');
+  await p.evaluate(()=>applyMarks({note_rtsopen_t:{q:'note',fb:'Reopened for you',at:isoNow(),by:'lecturer',rts:RTS_SESSIONS[0].id,rtsTo:new Date(Date.now()+864e5).toISOString()}}));await p.go('#/');await p.waitForTimeout(300);
+  ok(await p.$('#rtsb'),'the reopened session should show on home');ok(await p.evaluate(()=>!!rtsCur()),'rtsCur after reopening');await p.done()},
+async pinNote(){const p=await page({sid:STUDENT});
+  await p.evaluate(()=>{applyMarks({note_old1:{q:'note',fb:'Old text',at:'2026-11-17T10:00:00Z',by:'lecturer'}});applyMarks({note_pin_t:{q:'note',fb:'Pinned text',at:'2026-11-17T11:00:00Z',by:'lecturer',pin:true,sup:'note_old1'}})});
+  await p.go('#/');await p.waitForTimeout(300);
+  const r=await p.evaluate(()=>{const m=document.querySelector('main')||document.body,f=document.querySelector('.pinnote');return {f:!!f,top:f&&![...document.querySelectorAll('.card')].some(c=>c!==f&&(c.compareDocumentPosition(f)&Node.DOCUMENT_POSITION_FOLLOWING)),old:/Old text/.test((document.querySelector('.inbox')||{}).textContent||'')}});
+  ok(r.f&&r.top&&!r.old,'pinned message not first on home, or old message still shown: '+JSON.stringify(r));
+  await p.click('.pinnote [data-noteread]');await p.waitForTimeout(300);ok(!(await p.$('.pinnote')),'Got it should clear the pinned message');await p.done()},
 async rtsRestart(){const p=await page({sid:STUDENT,rts:true});await start(p);await fillAll(p);
   await p.click('#rtsrst');await p.waitForSelector('#rtsry');ok(/lose all your progress/.test(await p.textContent('.modal')),'restart warning');await p.click('#rtsry');await p.waitForTimeout(300);
   const r=await p.evaluate(()=>{const st=rtsSt(rtsCur());return {n:st.n,a:Object.keys(st.a).length,act:st.act,st:st.st}});ok(r.n===2&&r.a===0&&r.act===0&&r.st==='go','restart: '+JSON.stringify(r));

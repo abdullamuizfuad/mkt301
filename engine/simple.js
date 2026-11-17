@@ -43,7 +43,7 @@ function paperTile(){if(typeof ppLine!=='function')return null;const L=ME&&ME.si
 function tilesHTML(){const T=(typeof homeTiles==='function'?homeTiles():[]).concat([paperTile()].filter(Boolean));
   return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile${x[4]?' locked':''}" href="${x[3]}"${x[3]==='#/paper'?' id="tpaper"':''}><span class="em">${x[0]}</span><span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></span></a>`).join('')}</div>`}
 function home(){if(!U)return;rollDay();if(ME.sid===LECTURER)return lectHome();
-  shell('#/',`<h1 class="sr">Today</h1>${todayHeadHTML()}${typeof rtsHomeHTML==='function'?rtsHomeHTML():''}${inboxHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}<div id="tfun"></div><div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
+  shell('#/',`<h1 class="sr">Today</h1>${pinNotesHTML()}${todayHeadHTML()}${typeof rtsHomeHTML==='function'?rtsHomeHTML():''}${inboxHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}<div id="tfun"></div><div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
   const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)};if(typeof wildHome==='function')wildHome();if(typeof rtsHomeBind==='function')rtsHomeBind();if(typeof funHome==='function')funHome()}
 
 /* ---------- the lecturer's home: lecturer essentials only (the lecturer is never a player) ---------- */
