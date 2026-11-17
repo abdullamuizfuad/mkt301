@@ -37,6 +37,10 @@ async rtsSlow(){const p=await page({sid:STUDENT,rts:true});await start(p);
 async rtsLive(){const p=await page({sid:STUDENT,rts:true});await start(p);/* an unfinished session plus a live tutorial: the tutorial wins, no redirect loop */
   await p.evaluate(()=>{window.__hops=0;addEventListener('hashchange',()=>window.__hops++);tutOn=()=>true;location.hash='#/tutorial'});await p.waitForTimeout(1500);
   const r=await p.evaluate(()=>({h:location.hash,hops:window.__hops}));ok(r.h==='#/tutorial'&&r.hops<5,'live tutorial and session lock loop: '+JSON.stringify(r));p.errs.length=0;/* the stubbed tutorial has no session data */await p.done()},
+async rtsLiveFree(){const p=await page({sid:STUDENT,rts:true});await start(p);/* any live session lifts the session lock, joined or not */
+  await p.evaluate(()=>{PR.sess={id:'x',active:true,endsAt:Date.now()+36e5}});await p.go('#/board');await p.waitForTimeout(500);
+  ok(/#\/board/.test(p.url()),'a live session should lift the Replacement Tutorial lock');
+  await p.evaluate(()=>{PR.sess=null});await p.go('#/badges');await p.waitForTimeout(500);ok(/#\/rts/.test(p.url()),'the lock should come back when the live session ends');await p.done()},
 async rtsRestart(){const p=await page({sid:STUDENT,rts:true});await start(p);await fillAll(p);
   await p.click('#rtsrst');await p.waitForSelector('#rtsry');ok(/lose all your progress/.test(await p.textContent('.modal')),'restart warning');await p.click('#rtsry');await p.waitForTimeout(300);
   const r=await p.evaluate(()=>{const st=rtsSt(rtsCur());return {n:st.n,a:Object.keys(st.a).length,act:st.act,st:st.st}});ok(r.n===2&&r.a===0&&r.act===0&&r.st==='go','restart: '+JSON.stringify(r));

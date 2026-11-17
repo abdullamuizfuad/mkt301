@@ -17,6 +17,8 @@ function rtsCur(now){if(window.__noRts)return null;/* site tests turn sessions o
 const rtsPlayer=()=>!!(typeof ME!=='undefined'&&ME&&U&&ME.sid!==LECTURER);
 function rtsSt(s){U.rts=U.rts||{};return U.rts[s.id]||null}
 function rtsActive(){const s=rtsCur();if(!s||!rtsPlayer()||VIEWAS)return null;const st=rtsSt(s);return st&&st.st==='go'?{s,st}:null}
+/* a live session (any kind, joined or not) takes precedence: the session lock lifts while it runs */
+const rtsLiveNow=()=>!!((typeof sessLive==='function'&&sessLive())||(typeof tutOn==='function'&&tutOn()));
 const rtsBase=s=>s.mins*60e3,rtsLimit=(s,st)=>rtsBase(s)+(st.ext|0)*RTS_EXT;
 function rtsNoXP(){const a=rtsActive();return !!(a&&(a.st.ext|0)>0&&location.hash.indexOf('#/rts')===0&&a.st.act>=rtsBase(a.s))}/* extra time: no study-time XP */
 const rtsQ=id=>RTS_Q[id];
@@ -149,8 +151,8 @@ function rtsDone(s){const st=rtsSt(s),r=st.res||{},slow=r.ext>0||r.todo>0;
 
 /* ---------- the lock: while a session is unfinished, the arena shows only #/rts ---------- */
 ROUTES.rts=rtsPage;
-if(typeof route==='function'){const _rtsRoute=route;route=function(){/* a live tutorial session (presence.js tutGuard) wins: never fight its lock, or the two redirects loop */
-  if(typeof ME!=='undefined'&&ME&&U&&rtsActive()&&!(typeof tutOn==='function'&&tutOn())){const h=location.hash.replace(/^#\/?/,'').split('/')[0];if(h!=='rts'){location.replace('#/rts');return}}return _rtsRoute.apply(this,arguments)}}
+if(typeof route==='function'){const _rtsRoute=route;route=function(){/* a live session wins (rtsLiveNow): never fight its lock, or the two redirects loop */
+  if(typeof ME!=='undefined'&&ME&&U&&rtsActive()&&!rtsLiveNow()){const h=location.hash.replace(/^#\/?/,'').split('/')[0];if(h!=='rts'){location.replace('#/rts');return}}return _rtsRoute.apply(this,arguments)}}
 
 /* ---------- the lecturer's card ---------- */
 if(typeof LF_META!=='undefined')LF_META.rtsc=['🚧 Replacement tutorial','Who has saved their attendance'];

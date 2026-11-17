@@ -199,14 +199,23 @@ function liveCardRefresh(){const el=document.getElementById('lsess');if(!el||el.
 const LIVE_LBL={on:'🟢 On screen',idle:'🟡 Idle',away:'🔴 Left the app',off:'⚫ Offline'};
 function liveRow(p,now){const off=!p.t||now-p.t>ST.OFF*1000,st=off&&p.st!=='off'?'off':p.st,tot=(p.on|0)+(p.idle|0)+(p.away|0);
   return Object.assign({},p,{s:st,pct:tot?Math.round((p.on|0)/tot*100):0,chAt:p.joinedAt!=null?p.joinedAt+(p.ch|0)*1000:p.t})}
-async function liveFinish(id){if(liveFinish.busy)return;liveFinish.busy=1;try{const ps=await CLOUD.presenceOnce(id),now=Date.now(),names=await liveNames();const rep={};
+/* End a live session and save its report. Every step has a time limit and the session is always ended: a wait that never
+   returns (for example a listener cancelled by a page change) used to leave the session running and the End button dead. */
+const sxTO=(p,ms,v)=>Promise.race([Promise.resolve(p).catch(()=>v),new Promise(r=>setTimeout(()=>r(v),ms))]);
+async function liveFinish(id){if(liveFinish.busy&&Date.now()-liveFinish.busy<90000)return;liveFinish.busy=Date.now();try{
+  const ps=await sxTO(CLOUD.presenceOnce(id),20000,[]),now=Date.now(),names=await sxTO(liveNames(),20000,{});const rep={};
   ps.forEach(p=>{const r=liveRow(p,now);rep[p.id]={n:(names[p.id]||'').slice(0,60),on:r.on|0,idle:r.idle|0,away:r.away|0,left:r.left|0,lg:r.longest|0,pct:r.pct,pr:String(r.pr||'').slice(0,200)}});
-  const S=(PR.sessList||[]).find(s=>s.id===id)||(PR.sess&&PR.sess.id===id?PR.sess:null);try{if(S)sxRepAdd(rep,Object.assign({},S,{endedAt:now}),await usersOnce(),ps)}catch(e){console.warn('Session XP not added',e)}
-  if(S&&await sessR3()){const users=await usersOnce(),o=await sxPublish(Object.assign({},S,{endedAt:now}),rep,users,ps);await CLOUD.endSession2(id,{nj:o.nj,refl:o.refl})}
-  else await CLOUD.endSession(id,rep);toast('■','Session ended','Report saved: '+Object.keys(rep).length+' joined')}catch(e){toast('⚠️','Could not end the session',CLOUD.say(e))}finally{liveFinish.busy=0}}
+  const S=(PR.sessList||[]).find(s=>s.id===id)||(PR.sess&&PR.sess.id===id?PR.sess:null),users=S?await sxTO(usersOnce(),30000,null):null;
+  try{if(S&&users)sxRepAdd(rep,Object.assign({},S,{endedAt:now}),users,ps)}catch(e){console.warn('Session XP not added',e)}
+  let o=null;try{if(S&&users&&await sxTO(sessR3(),10000,false))o=await sxTO(sxPublish(Object.assign({},S,{endedAt:now}),rep,users,ps),30000,null)}catch(e){console.warn('Session report not published',e)}
+  if(!o&&await sxTO(sessR3(),10000,false)){/* keep the rows private (lect/rep) even when the full report could not be built */
+    const put=await sxTO(CLOUD.put('sessions/'+id+'/lect/rep',{rows:rep},true).then(()=>true),20000,false);if(put)o={nj:Object.keys(rep).length,refl:null}}
+  if(o)await CLOUD.endSession2(id,Object.assign({nj:o.nj},o.refl?{refl:o.refl}:{}));else await CLOUD.endSession(id,rep);
+  toast('■','Session ended','Report saved: '+Object.keys(rep).length+' joined')}catch(e){toast('⚠️','Could not end the session',CLOUD.say(e))}finally{liveFinish.busy=0}}
 let LIVE_NAMES=null,LIVE_USERS=null;
-const usersOnce=()=>new Promise(res=>{let d=0;CLOUD.watchUsers(l=>{if(!d){d=1;res(l)}},()=>{if(!d){d=1;res([])}})});
-function liveNames(){return new Promise(res=>{if(LIVE_NAMES)return res(LIVE_NAMES);let done=false;CLOUD.watchUsers(list=>{LIVE_NAMES={};LIVE_USERS=list;list.forEach(x=>LIVE_NAMES[x.id]=x.name||'');if(!done){done=true;res(LIVE_NAMES)}},()=>{if(!done){done=true;res({})}})})}
+/* one read of the class (not a listener: a page change cancels listeners, which left these waits hanging forever) */
+const usersOnce=()=>CLOUD.docs('users').then(l=>l.map(x=>{let u=null;try{u=JSON.parse(x.u)}catch(e){}return {id:x.id,name:x.name,xp:x.xp,ts:x.ts?new Date(x.ts):null,u}}),()=>[]);
+function liveNames(){if(LIVE_NAMES)return Promise.resolve(LIVE_NAMES);return usersOnce().then(list=>{LIVE_NAMES={};LIVE_USERS=list;list.forEach(x=>LIVE_NAMES[x.id]=x.name||'');return LIVE_NAMES})}
 const csvDownload=(rows,name)=>{const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"',a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download=name;a.click()};
 function livePage(){if(ME.sid!==LECTURER)return home();if(!cloudOn())return shell('#/lecturer','<div class="callout">Live sessions need the live connection.</div>');
   shell('#/lecturer',`<div class="row" style="justify-content:space-between;align-items:center"><a href="#/lecturer">← Lecturer</a><button class="btn ghost sm" id="lvproj" data-lect>⛶ Projector view</button></div><div id="lvb" style="margin-top:10px"><p class="muted">Loading…</p></div><div class="card" id="lvfc" data-lect style="margin-top:16px"><h2>💬 Send live feedback</h2><div id="lvfcb"><p class="muted">Checking…</p></div></div><div class="card" id="lvac" data-lect style="margin-top:16px"><h2>🎯 Activity for joined students</h2><div id="lvacb"><p class="muted">Checking…</p></div></div>`);
