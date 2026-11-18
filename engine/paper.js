@@ -1,14 +1,22 @@
 /* MKT Arena engine: the practice paper (#/paper).
    Unlocks Sun 22 Nov 2026, 00:00 GMT+5 (PAPER_AT in dash.js); the lecturer (S000001) can preview it at any time.
-   3 hours, section by section. Time left over in a section carries forward as bonus minutes to the next one; the clock keeps
-   running if the page is closed (it is a real sitting), and a section whose time runs out is submitted as it stands, with a buzzer.
+   3 hours, section by section. Time left over in a section carries forward as bonus minutes to the next one. The clock runs only while
+   the paper is open on screen (P.used, active ms in the current section): students can save, close and come back later; nothing locks
+   the app. A section whose time runs out is submitted as it stands, with a buzzer. Papers started before this change (no P.v) are
+   moved to the open-time clock the first time they are opened.
+   Lecturer: "Preview the paper" is a sandbox kept in memory only (PPV): nothing is saved, no XP, the timer is for show, sections can be
+   jumped, and it can be restarted or reopened any number of times.
    Answers are typed, spoken (speech to text) or written on paper; nothing can be changed after a section is submitted.
    After the paper: a self-check against the key ideas (XP only, no marks) and a report.
    Course hook (course.js): paperSpec(rng) → [{k, title, mins, note, items:[{id, kind:'written'|'mcq', q, html?, ideas:[...], o?:[correct first], label}]}]
    with the minutes adding up to 180. Progress field (additive): U.pp {n, cur, hist:[...]}. XP keys pp:<paper>:<question> and pp:<paper>:mcq,
    for the first PP_XP papers only. */
 const PP_XP=3,PP_MIN=60e3;
-let PPT=null;onHook('leave',()=>{clearInterval(PPT);PPT=null;stopMic()});
+let PPT=null,PPV=null,PPWL=null;onHook('leave',()=>{clearInterval(PPT);PPT=null;stopMic();if(PPWL){try{PPWL.release()}catch(e){}PPWL=null}if(U&&U.pp&&U.pp.cur&&!U.pp.cur.end)save()});
+const ppLect=()=>!!(typeof ME!=='undefined'&&ME&&ME.sid===LECTURER&&!VIEWAS);
+const ppIsV=P=>!!(P&&P.prev);
+/* keep the screen on while sitting (writing on paper means no taps) */
+function ppWake(){try{if(navigator.wakeLock&&!PPWL)navigator.wakeLock.request('screen').then(l=>{PPWL=l;l.addEventListener('release',()=>{if(PPWL===l)PPWL=null})}).catch(()=>{})}catch(e){}}
 const ppOpen=()=>Date.now()>=PAPER_AT||(ME&&ME.sid===LECTURER);
 const ppFmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(s%60).padStart(2,'0')};
 const ppMins=ms=>Math.round(ms/PP_MIN);
@@ -17,17 +25,20 @@ const PP_SPEC={};
 function ppSpec(P){const k=ME.sid+'|'+P.id;if(PP_SPEC[k])return PP_SPEC[k];const rng=seeded(CRS.id+'|'+k),S=paperSpec(rng);
   const mix=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
   return PP_SPEC[k]=S.map(s=>({k:s.k,title:s.title,mins:s.mins,note:s.note||'',items:s.items.map(it=>Object.assign({},it,{ord:it.kind==='mcq'?mix(it.o.map((x,j)=>j)):null}))}))}
-/* the deadline of the current section */
-const ppDue=P=>P.ss+ppSpec(P)[P.si].mins*PP_MIN+(P.bonus|0);
+/* the current section's allowance and the time left in it (open-time clock) */
+const ppAl=P=>ppSpec(P)[P.si].mins*PP_MIN+(P.bonus|0);
+const ppLeftMs=P=>ppAl(P)-(P.used|0);
+/* a paper from before the open-time clock: count the wall-clock time already spent in this section, once */
+function ppMigrate(P){if(!P||P.v)return;P.v=2;if(!P.end)P.used=Math.max(0,Math.min(Date.now()-(P.ss||Date.now()),ppAl(P)))}
 /* submit the current section (by the student, or because its time ran out at `at`) */
-function ppSubmit(P,at,auto){const S=ppSpec(P),due=ppDue(P),t=Math.min(at,due),left=Math.max(0,due-t);
+function ppSubmit(P,at,auto){const S=ppSpec(P),al=ppAl(P),used=Math.min(P.used|0,al),left=Math.max(0,al-used),t=Date.now();
   /* a section answered on paper counts as timed writing (presence.js U.stw): its time, capped at the allowance, minus what was on screen */
-  if(typeof twStop==='function'){twStop(P);const paper=S[P.si].items.some(it=>it.kind!=='mcq'&&(P.a[it.id]||{}).mode==='paper'&&(P.a[it.id]||{}).paper);
-    if(paper&&t-P.ss>=(due-P.ss)*MINPCT)stwAdd((t-P.ss)/1000,(due-P.ss)/1000,P.twOs);P.twOs=0}
-  P.sub.push({at:t,used:t-P.ss,al:due-P.ss,left,auto:auto?1:0});if(!auto)P.bonus=left;else P.bonus=0;
-  if(P.si+1<S.length){P.si++;P.ss=t;if(typeof twStart==='function')twStart(P)}else{P.end=t;P.si=S.length}}
+  if(!ppIsV(P)&&typeof twStop==='function'){twStop(P);const paper=S[P.si].items.some(it=>it.kind!=='mcq'&&(P.a[it.id]||{}).mode==='paper'&&(P.a[it.id]||{}).paper);
+    if(paper&&used>=al*MINPCT)stwAdd(used/1000,al/1000,P.twOs);P.twOs=0}
+  P.sub.push({at:t,used,al,left,auto:auto?1:0});if(!auto)P.bonus=left;else P.bonus=0;P.used=0;
+  if(P.si+1<S.length){P.si++;P.ss=t;if(!ppIsV(P)&&typeof twStart==='function')twStart(P)}else{P.end=t;P.si=S.length}}
 /* catch up after the page was closed: sections whose time ran out are submitted in turn */
-function ppCatchUp(P){let n=0;while(!P.end&&Date.now()>=ppDue(P)){ppSubmit(P,ppDue(P),1);n++}return n}
+function ppCatchUp(P){ppMigrate(P);let n=0;while(!P.end&&ppLeftMs(P)<=0){ppSubmit(P,0,1);n++}return n}
 function ppBuzz(){try{const A=window.AudioContext||window.webkitAudioContext,ac=new A();[0,.45,.9].forEach(t=>{const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=660;
     g.gain.setValueAtTime(.0001,ac.currentTime+t);g.gain.exponentialRampToValueAtTime(.25,ac.currentTime+t+.02);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+t+.35);o.connect(g).connect(ac.destination);o.start(ac.currentTime+t);o.stop(ac.currentTime+t+.4)});
     setTimeout(()=>ac.close(),1800)}catch(e){}try{navigator.vibrate&&navigator.vibrate([300,150,300,150,300])}catch(e){}}
@@ -36,34 +47,39 @@ const ppDone=(it,a)=>a&&(it.kind==='mcq'?a.oi!=null:a.mode==='paper'?!!a.paper:w
 
 /* the paper's state in a few words (home dashboard) */
 function ppLine(){const P=U&&U.pp&&U.pp.cur;return P&&!P.end?'in progress: carry on':P&&P.end&&!P.ck?'finished: do your self-check':ppOpen()?'3 hours, section by section':'unlocks Sun 22 Nov 2026, 00:00'}
-const ppBusy=()=>{const P=U&&U.pp&&U.pp.cur;return !!(P&&(!P.end||!P.ck))};
+const ppBusy=()=>{if(ppLect())return false;const P=U&&U.pp&&U.pp.cur;return !!(P&&(!P.end||!P.ck))};
 
 ROUTES.paper=()=>{clearInterval(PPT);U.pp=U.pp||{n:0,cur:null,hist:[]};const PP=U.pp,P=PP.cur;
+  if(ppLect()){if(PPV&&location.hash.includes('preview')){if(!PPV.end)return ppSitting(PPV);if(!PPV.ck)return ppCheck(PPV);return ppReport(PPV)}return ppStart()}
   if(P&&!P.end){if(ppCatchUp(P)){save();toast('⏰','Time ran out','Sections whose time ended were submitted as they stood')}if(!P.end)return ppSitting(P)}
   if(P&&P.end&&!P.ck)return ppCheck(P);
   if(P&&P.ck&&location.hash.includes('report'))return ppReport(P);
   ppStart()};
 
-function ppStart(){const PP=U.pp,open=ppOpen(),last=PP.cur&&PP.cur.ck?PP.cur:null,lect=ME.sid===LECTURER;
+function ppStart(){const PP=U.pp,lect=ppLect(),open=ppOpen(),last=!lect&&PP.cur&&PP.cur.ck?PP.cur:null;
   const ex=paperSpec(seeded('preview'));
   shell('#/',`<p><a href="#/">← Home</a></p><h1>📝 Practice paper</h1>
   ${!open?`<div class="card" style="text-align:center;padding:26px 18px"><div style="font-size:2.6rem">🔒</div><h2 style="margin:6px 0">Unlocks Sun 22 Nov 2026, 00:00</h2><p class="muted">Maldives time (GMT+5). <span id="ppcd"></span></p></div>`:''}
   <div class="card" style="margin-top:14px"><h2 style="margin:0 0 6px">How it works</h2><ul class="sumlist">
    <li><b>3 hours</b>, one section at a time: ${ex.map(s=>`${esc(s.title)} (${s.mins} min)`).join(', ')}.</li>
    <li>Finish a section early and the time you have left is <b>added to the next section</b>.</li>
-   <li>When a section's time runs out, a buzzer sounds and it is submitted as it stands. The clock keeps running if you close the page.</li>
+   <li>When a section's time runs out, a buzzer sounds and it is submitted as it stands.</li>
+   <li><b>Save and come back later:</b> the clock only runs while the paper is open. Close it any time and carry on later with the time you had left.</li>
    <li>Type your answers, speak them (🎤), or write them on paper and tick “I wrote this on paper”.</li>
    <li>Once you submit a section you can't change it.</li>
    <li>Afterwards, check your answers against the key ideas for XP and see your report. The check is not timed.</li></ul>
    <p class="muted" style="font-size:.88rem">Find a quiet place, keep paper and a pen ready, and put your phone on silent.</p>
-   ${open?`<button class="btn gold" id="ppgo">${PP.n?'Start a new practice paper':'Start the practice paper'}</button>${lect&&Date.now()<PAPER_AT?' <span class="tag">Lecturer preview</span>':''}`:''}
+   ${lect?`<div class="row" data-lect><button class="btn gold" id="ppgo">👀 ${PPV&&!PPV.ck?'Start a fresh preview':'Preview the paper'}</button>${PPV&&!PPV.ck?' <a class="btn ghost" href="#/paper/preview" id="ppcont">Continue the preview</a>':''}</div>
+   <p class="muted" data-lect style="font-size:.85rem;margin:8px 0 0">Lecturer preview: show the class how the paper looks and works. Nothing is saved, the timer is only for show, and you can jump between sections and open it again as often as you like.</p>`
+   :open?`<button class="btn gold" id="ppgo">${PP.cur&&!PP.cur.end?'Carry on with my paper':PP.n?'Start a new practice paper':'Start the practice paper'}</button>`:''}
    ${last?` <a class="btn ghost" href="#/paper/report">Last report</a>`:''}</div>
   ${PP.hist.length?`<div class="card" style="margin-top:14px"><h2 style="margin:0 0 6px">Your papers</h2>${PP.hist.slice().reverse().map(h=>`<div class="rdrow"><span class="rdl">Paper ${h.n} · ${esc(h.d)}</span><span class="muted">${h.ideas}% of key ideas${h.mcq!=null?' · MCQ '+h.mcq+'%':''}</span></div>`).join('')}</div>`:''}`);
-  if(!open){const cd=()=>{const e=$('#ppcd');if(!e)return clearInterval(PPT);const ms=PAPER_AT-Date.now();if(ms<=0){clearInterval(PPT);return route()}const d=Math.floor(ms/864e5);e.textContent=(d?d+' day'+(d===1?'':'s')+' ':'')+ppFmt(ms%864e5)+' to go.'};cd();PPT=setInterval(cd,1000);return}
-  $('#ppgo').onclick=()=>{if(!confirm('Start the 3-hour practice paper now?\n\nThe clock starts straight away and keeps running if you close the page.'))return;
-    PP.n++;PP.cur={id:'p'+PP.n,n:PP.n,at:Date.now(),si:0,ss:Date.now(),bonus:0,sub:[],a:{},end:null,chk:{},ck:0,pre:Date.now()<PAPER_AT?1:0};save();route()}}
+  if(!open&&!lect){const cd=()=>{const e=$('#ppcd');if(!e)return clearInterval(PPT);const ms=PAPER_AT-Date.now();if(ms<=0){clearInterval(PPT);return route()}const d=Math.floor(ms/864e5);e.textContent=(d?d+' day'+(d===1?'':'s')+' ':'')+ppFmt(ms%864e5)+' to go.'};cd();PPT=setInterval(cd,1000);return}
+  if(lect){$('#ppgo').onclick=()=>{const n=((PPV&&PPV.n)|0)+1;PPV={id:'pv'+n,n,prev:1,v:2,at:Date.now(),si:0,ss:Date.now(),used:0,bonus:0,sub:[],a:{},end:null,chk:{},ck:0};location.hash='#/paper/preview';route()};return}
+  $('#ppgo').onclick=()=>{if(PP.cur&&!PP.cur.end)return route();if(!confirm('Start the 3-hour practice paper now?\n\nThe clock runs while the paper is open. You can save, close it and carry on later.'))return;
+    PP.n++;PP.cur={id:'p'+PP.n,n:PP.n,v:2,at:Date.now(),si:0,ss:Date.now(),used:0,bonus:0,sub:[],a:{},end:null,chk:{},ck:0};save();route()}}
 
-function ppSitting(P){const S=ppSpec(P),sec=S[P.si];
+function ppSitting(P){ppMigrate(P);const S=ppSpec(P),sec=S[P.si],V=ppIsV(P);ppWake();
   const item=(it,i)=>{const a=ppAns(P,it.id),qn=`${i+1}.`;
     if(it.kind==='mcq')return `<div class="card qcard ppq" id="pq-${it.id}"><h3 style="font-weight:600;margin:0 0 8px">${qn} ${esc(it.q)}</h3><div class="mopts">${it.ord.map(j=>`<button class="mopt${a.oi===j?' on':''}" data-pm="${it.id}" data-oi="${j}" aria-pressed="${a.oi===j}">${esc(it.o[j])}</button>`).join('')}</div></div>`;
     return `<div class="card qcard ppq" id="pq-${it.id}"><div class="qmeta"><span class="tag">${esc(it.label||'')}</span></div>${it.html?`<details class="ppbrief"><summary class="click">Read the brief</summary><div>${it.html}</div></details>`:''}<h3 style="font-weight:600;margin:6px 0 8px">${qn} ${esc(it.q)}</h3>
@@ -71,29 +87,36 @@ function ppSitting(P){const S=ppSpec(P),sec=S[P.si];
      ${a.mode==='paper'?`<label class="row ppchk"><input type="checkbox" data-paper="${it.id}" ${a.paper?'checked':''}> I wrote this answer on paper</label>`
       :`<textarea id="ta-${it.id}" rows="8" placeholder="Type your answer, or tap 🎤 Speak" aria-label="Answer to question ${i+1}">${esc(a.txt||'')}</textarea>
      <div class="row" style="justify-content:space-between;margin-top:6px"><span class="muted" id="wc-${it.id}" style="font-size:.82rem">${words(a.txt)} words</span>${SR?`<button class="btn ghost sm" data-a="mic" aria-pressed="false">🎤 Speak</button>`:''}</div><p class="muted" id="im-${it.id}" style="font-size:.85rem;margin:4px 0 0"></p><p class="muted" id="fn-${it.id}" style="font-size:.82rem;margin:4px 0 0"></p>`}</div>`};
-  shell('#/',`<div class="pphead" id="pphead"><div><b class="lex">${esc(sec.title)}</b><span class="muted"> · section ${P.si+1} of ${S.length}</span></div><div class="row" style="gap:8px">${P.bonus?`<span class="tag" title="Time carried forward">+${ppMins(P.bonus)} min carried</span>`:''}<b class="timer lex" id="pptm" aria-live="off"></b></div></div>
+  shell('#/',`${V?`<div class="callout" data-lect style="margin-bottom:10px">👀 <b>Lecturer preview</b>: nothing is saved and the timer is only for show.<div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">${S.map((x,i)=>`<button class="btn ghost sm${i===P.si?' on':''}" data-pvs="${i}">${i+1}. ${esc(x.title)}</button>`).join('')}<button class="btn ghost sm" data-pvs="check">Self-check</button><button class="btn ghost sm" id="pvrst">↺ Restart</button><a class="btn ghost sm" href="#/paper">Exit preview</a></div></div>`:''}<div class="pphead" id="pphead"><div><b class="lex">${esc(sec.title)}</b><span class="muted"> · section ${P.si+1} of ${S.length}</span></div><div class="row" style="gap:8px">${P.bonus?`<span class="tag" title="Time carried forward">+${ppMins(P.bonus)} min carried</span>`:''}<b class="timer lex" id="pptm" aria-live="off"></b></div></div>
   ${sec.note?`<p class="muted" style="margin:10px 0">${esc(sec.note)}</p>`:''}
   <div id="ppitems">${sec.items.map(item).join('')}</div>
   <div class="card" style="margin-top:14px;text-align:center"><p class="muted" id="ppleft" style="margin:0 0 10px"></p><button class="btn gold" id="ppsub">Submit this section${P.si+1<S.length?' and go on':''}</button>
-  <p class="muted" style="font-size:.82rem;margin:10px 0 0">The paper ends at ${new Date(P.at+180*PP_MIN+MV).toISOString().slice(11,16)} (Maldives time) at the latest. <a href="javascript:void 0" id="ppquit">End the paper now</a></p></div>`);
+  <div style="margin-top:10px"><button class="btn ghost" id="ppsave">💾 Save and continue later</button></div>
+  <p class="muted" style="font-size:.82rem;margin:10px 0 0">The clock only runs while the paper is open. <a href="javascript:void 0" id="ppquit">End the paper now</a></p></div>`);
   const left=()=>{const n=sec.items.filter(it=>!ppDone(it,P.a[it.id])).length;$('#ppleft').textContent=n?n+' of '+sec.items.length+' not answered yet.':'All '+sec.items.length+' answered.'};left();
   sec.items.forEach(it=>{if(it.kind==='mcq'||ppAns(P,it.id).mode==='paper')return;const ta=$('#ta-'+it.id),card=$('#pq-'+it.id),st=ppAns(P,it.id);typingBox({id:it.id},st,ta,card);ta.addEventListener('input',left)});
   document.querySelectorAll('[data-pm]').forEach(b=>b.onclick=()=>{const a=ppAns(P,b.dataset.pm);a.oi=+b.dataset.oi;b.parentNode.querySelectorAll('.mopt').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)});save();left()});
   document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{const a=ppAns(P,b.dataset.q);if(a.mode===b.dataset.mode)return;stopMic();a.mode=b.dataset.mode;save();ppSitting(P);const e=$('#pq-'+b.dataset.q);e&&e.scrollIntoView({block:'center'})});
   document.querySelectorAll('[data-paper]').forEach(c=>c.onchange=()=>{ppAns(P,c.dataset.paper).paper=c.checked?1:0;save();left()});
-  let warned=Date.now()>ppDue(P)-5*PP_MIN;
-  const tick=()=>{if(!$('#pptm'))return clearInterval(PPT);const ms=ppDue(P)-Date.now();
-    if(ms<=0){clearInterval(PPT);stopMic();ppSubmit(P,ppDue(P),1);ppCatchUp(P);save();ppBuzz();route();
+  let warned=ppLeftMs(P)<=5*PP_MIN,last=Date.now(),sv=Date.now();
+  const tick=()=>{if(!$('#pptm'))return clearInterval(PPT);const now=Date.now(),dt=Math.min(Math.max(0,now-last),5000);last=now;
+    if(document.visibilityState==='visible')P.used=(P.used|0)+dt;if(!V&&now-sv>15000){sv=now;save()}
+    const ms=ppLeftMs(P);
+    if(ms<=0&&V){P.used=ppAl(P);$('#pptm').textContent='0:00';$('#pptm').className='timer lex over';if(!P.pvTold){P.pvTold=1;toast('⏰','Preview: time is up','In a real sitting the section is submitted now')}return}
+    if(ms<=0){clearInterval(PPT);stopMic();ppSubmit(P,0,1);ppCatchUp(P);save();ppBuzz();route();
       modal('Time is up',`<div style="text-align:center"><div style="font-size:2.6rem">⏰</div><h2 style="margin:6px 0">Time is up</h2><p>${esc(sec.title)} was submitted as it stood.${P.end?' That was the last section.':' The next section has started.'}</p><button class="btn" id="ppok">OK</button></div>`);$('#ppok').onclick=closeModal;return}
     $('#pptm').textContent=ppFmt(ms);$('#pptm').className='timer lex'+(ms<=60e3?' over':ms<=5*PP_MIN?' warn':'');
     if(!warned&&ms<=5*PP_MIN){warned=true;toast('⏳','5 minutes left',sec.title)}};
-  if(typeof twStart==='function'&&P.twPid!==PR.pid)twStart(P);
-  tick();PPT=setInterval(()=>{if(typeof twTake==='function'&&Date.now()-(P.twAt||0)>10000){twTake(P);P.twAt=Date.now()}tick()},500);
-  $('#ppsub').onclick=()=>{const n=sec.items.filter(it=>!ppDone(it,P.a[it.id])).length,carry=ppDue(P)-Date.now();
-    if(!confirm(`${n?n+' question'+(n===1?' is':'s are')+' not answered. ':''}Submit ${sec.title}? You can't change these answers afterwards.${P.si+1<S.length?`\n\n${ppMins(carry)} minute${ppMins(carry)===1?'':'s'} will be added to the next section.`:''}`))return;
-    clearInterval(PPT);stopMic();ppSubmit(P,Date.now(),0);save();if(P.end)toast('🏁','Paper finished','Now check your answers');route();scrollTo(0,0)};
-  $('#ppquit').onclick=()=>{if(!confirm('End the whole paper now? Every section left is submitted as it stands.'))return;clearInterval(PPT);stopMic();
-    while(!P.end)ppSubmit(P,Date.now(),1);save();route()}}
+  if(!V&&typeof twStart==='function'&&P.twPid!==PR.pid)twStart(P);
+  tick();PPT=setInterval(()=>{if(!V&&typeof twTake==='function'&&Date.now()-(P.twAt||0)>10000){twTake(P);P.twAt=Date.now()}tick()},500);
+  $('#ppsave').onclick=()=>{clearInterval(PPT);stopMic();if(V){location.hash='#/paper';return}save();toast('💾','Paper saved',ppFmt(ppLeftMs(P))+' left in '+sec.title+'. Carry on any time.');location.hash='#/'};
+  if(V){document.querySelectorAll('[data-pvs]').forEach(b=>b.onclick=()=>{stopMic();if(b.dataset.pvs==='check'){while(!P.end)ppSubmit(P,0,0);return route()}P.si=+b.dataset.pvs;P.used=0;P.bonus=0;P.pvTold=0;ppSitting(P);scrollTo(0,0)});
+    $('#pvrst').onclick=()=>{stopMic();PPV={id:'pv'+(P.n+1),n:P.n+1,prev:1,v:2,at:Date.now(),si:0,ss:Date.now(),used:0,bonus:0,sub:[],a:{},end:null,chk:{},ck:0};ppSitting(PPV);scrollTo(0,0)}}
+  $('#ppsub').onclick=()=>{const n=sec.items.filter(it=>!ppDone(it,P.a[it.id])).length,carry=ppLeftMs(P);
+    if(!V&&!confirm(`${n?n+' question'+(n===1?' is':'s are')+' not answered. ':''}Submit ${sec.title}? You can't change these answers afterwards.${P.si+1<S.length?`\n\n${ppMins(carry)} minute${ppMins(carry)===1?'':'s'} will be added to the next section.`:''}`))return;
+    clearInterval(PPT);stopMic();ppSubmit(P,Date.now(),0);if(!V)save();if(P.end)toast('🏁','Paper finished','Now check your answers');route();scrollTo(0,0)};
+  $('#ppquit').onclick=()=>{if(!V&&!confirm('End the whole paper now? Every section left is submitted as it stands.'))return;clearInterval(PPT);stopMic();
+    while(!P.end)ppSubmit(P,Date.now(),1);if(!V)save();route()}}
 
 /* the self-check: written answers against the key ideas; MCQs are checked automatically */
 function ppCheck(P){const S=ppSpec(P);
@@ -104,6 +127,7 @@ function ppCheck(P){const S=ppSpec(P);
      ${ppDone(it,a)?`<p class="muted" style="margin:8px 0 4px;font-size:.88rem">Key ideas: tick each one your answer covers.</p>${it.ideas.map((x,j)=>`<label class="row ppchk"><input type="checkbox" data-q="${it.id}" data-j="${j}"> ${esc(x)}</label>`).join('')}`:''}</div>`}).join('')}`).join('')}
   <div class="card" style="margin-top:16px;text-align:center"><button class="btn gold" id="ppfin">Finish the check and see my report</button></div>`);
   $('#ppfin').onclick=()=>{P.chk={};document.querySelectorAll('[data-q][data-j]').forEach(c=>{if(c.checked)(P.chk[c.dataset.q]=P.chk[c.dataset.q]||[]).push(+c.dataset.j)});
+    if(ppIsV(P)){P.ck=1;return ppReport(P)}
     let xp=0;const give=P.n<=PP_XP;
     S.forEach(s=>s.items.forEach(it=>{if(it.kind!=='written'||!ppDone(it,P.a[it.id]))return;const k=(P.chk[it.id]||[]).length,g=Math.min(10,2+Math.round(k/Math.max(1,it.ideas.length)*8));
       if(give&&award('pp:'+P.id+':'+it.id,g,'Practice paper',1))xp+=g}));

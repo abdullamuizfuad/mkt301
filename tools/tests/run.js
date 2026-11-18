@@ -188,24 +188,33 @@ async dash(){const p=await page({sid:STUDENT});
 
 async paper(){const p=await page({sid:STUDENT,clock:true});await p.clock.setSystemTime(new Date('2026-11-21T20:00:00+05:00'));
   await p.go('#/paper');ok((await p.textContent('main')).includes('Unlocks Sun 22 Nov 2026')&&!await p.$('#ppgo'),'paper not locked before 22 Nov');
-  const l=await page({sid:LECT,clock:true});await l.clock.setSystemTime(new Date('2026-11-01T10:00:00+05:00'));await l.go('#/paper');ok(!!await l.$('#ppgo'),'lecturer cannot preview');await l.done();
+  const l=await page({sid:LECT,clock:true});await l.clock.setSystemTime(new Date('2026-11-01T10:00:00+05:00'));await l.go('#/paper');ok(!!await l.$('#ppgo'),'lecturer cannot preview');
+  /* the lecturer's preview: in memory only, timer for show, sections can be jumped, restart and reopen as often as wanted */
+  await l.click('#ppgo');await l.waitForSelector('#pptm');ok(/Lecturer preview/.test(await l.textContent('main')),'preview banner');
+  await l.clock.runFor(200*60e3);ok(await l.evaluate(()=>PPV.si===0&&!PPV.end),'preview time-out should not submit');ok((await l.textContent('#pptm'))==='0:00','preview timer');
+  await l.click('[data-pvs="2"]');ok(await l.evaluate(()=>PPV.si===2),'jump to a section');await l.click('[data-pvs="check"]');await l.waitForSelector('#ppfin');await l.click('#ppfin');ok(/key ideas covered/.test(await l.textContent('main')),'preview report');
+  await l.go('#/paper');await l.click('#ppgo');await l.waitForSelector('#pptm');ok(await l.evaluate(()=>PPV.si===0&&!PPV.end&&PPV.n===2),'preview cannot be reopened');
+  ok(await l.evaluate(()=>!U.pp.cur&&!(U.pp.hist||[]).length&&!U.xp),'the preview changed the lecturer\'s progress');await l.done();
   await p.clock.setSystemTime(new Date('2026-11-22T09:00:00+05:00'));await p.go('#/');await p.go('#/paper');await p.click('#ppgo');await p.waitForSelector('#pptm');await shot(p,'paper-sitting');
   const sec=async()=>p.evaluate(()=>U.pp.cur.si),answer=async()=>{const ta=await p.$('.ppq textarea');if(ta){await ta.click();await p.keyboard.type('My answer explains the idea with an example from the case and says why it matters.',{delay:5})}else await p.click('.ppq .mopt')};
   ok(await sec()===0,'paper did not start at section 1');await answer();
   /* paste is blocked in the paper too */
   const ta=await p.$('.ppq textarea');if(ta){await p.evaluate(()=>navigator.clipboard.writeText('pasted text from somewhere'));await ta.focus();await p.keyboard.press('Control+V');ok(!(await ta.inputValue()).includes('pasted text'),'paste allowed in the paper')}
-  const m1=await p.evaluate(()=>ppSpec(U.pp.cur)[0].mins);await p.clock.fastForward('10:00');await p.click('#ppsub');await p.waitForTimeout(300);
+  const m1=await p.evaluate(()=>ppSpec(U.pp.cur)[0].mins);await p.clock.runFor(10*60e3);await p.click('#ppsub');await p.waitForTimeout(300);
   ok(await sec()===1,'section not submitted');const carried=await p.evaluate(()=>U.pp.cur.bonus/60000);ok(Math.abs(carried-(m1-10))<=1,'leftover time not carried: '+carried);
   ok((await p.textContent('#pphead')).includes('+'+Math.round(carried)+' min carried'),'carried minutes not shown');
   /* the first section can't be edited any more */
   const first=await p.evaluate(()=>ppSpec(U.pp.cur)[0].items[0].id);ok(!await p.$('#pq-'+first),'submitted section still on screen');
   /* the second section runs out: buzzer modal, the third starts */
   await answer();
-  const m2=await p.evaluate(()=>ppSpec(U.pp.cur)[1].mins);await p.clock.fastForward((m2+Math.round(carried)+1)*60*1000);await p.waitForTimeout(800);
+  const m2=await p.evaluate(()=>ppSpec(U.pp.cur)[1].mins);await p.clock.runFor((m2+Math.round(carried)+1)*60*1000);await p.waitForTimeout(800);
   ok(await sec()===2&&!!await p.$('.modal[aria-label="Time is up"]'),'time-out did not submit the section');await p.click('#ppok');
   ok(await p.evaluate(()=>U.pp.cur.sub[1].auto===1&&U.pp.cur.bonus===0),'auto submit not recorded');
-  /* closing the page past the end: everything is submitted */
-  await p.clock.fastForward(4*3600*1000);await p.waitForTimeout(600);if(await p.$('#ppok'))await p.click('#ppok');await p.go('#/');await p.go('#/paper');ok(await p.evaluate(()=>!!U.pp.cur.end),'paper did not end after 3 hours');
+  /* save and come back later: the clock stops while the paper is closed */
+  const l0=await p.evaluate(()=>ppLeftMs(U.pp.cur));await p.click('#ppsave');await p.waitForTimeout(300);ok(!/#\/paper/.test(p.url()),'save did not leave the paper');
+  await p.clock.fastForward(4*3600*1000);await p.go('#/board');ok(/#\/board/.test(p.url()),'the app is locked during the paper');await p.go('#/paper');await p.waitForSelector('#pptm');
+  const l1=await p.evaluate(()=>({left:ppLeftMs(U.pp.cur),si:U.pp.cur.si,end:U.pp.cur.end}));ok(l1.si===2&&!l1.end&&Math.abs(l1.left-l0)<60e3,'time ran while the paper was closed: '+JSON.stringify(l1)+' was '+l0);
+  await p.click('#ppquit');await p.waitForTimeout(300);ok(await p.evaluate(()=>!!U.pp.cur.end),'End the paper now did not end it');
   /* self-check (XP only), then the report */
   const x0=(await p.U()).xp;const n=await p.$$eval('[data-q][data-j]',a=>a.length);if(n)await p.locator('[data-q][data-j]').first().check({force:true});await shot(p,'paper-check');await p.click('#ppfin');await p.waitForTimeout(300);
   const r=await p.evaluate(()=>({h:U.pp.hist,hash:location.hash,ck:U.pp.cur.ck}));ok(r.ck&&r.h.length===1&&/report/.test(r.hash),'report not shown: '+JSON.stringify(r));
