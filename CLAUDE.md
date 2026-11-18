@@ -43,6 +43,12 @@ If there is a lot to mark, work in batches of about 20: write `marks.json`, appl
 
 Follow `docs/QGEN.md`: draft them in `tools/qgen/drafts.json`, check and upload them with `node tools/qgen/upload.mjs`, and the lecturer publishes them from the Question editor. Practice questions only, never anything from a paper.
 
+## Discussion notes ("prepare the discussion for the live session")
+
+1. `node tools/discuss/prep.mjs [sessionId]` (latest session if no id) writes `tools/discuss/session.json`: the session's written answers (with key ideas) and choice splits (Boardroom verdicts with the correct verdict and why), with the same "Student A, B…" letters as the Discussion panel.
+2. Write `tools/discuss/notes.md`: plain text, `## ` headings, `- ` bullets, `**bold**`. The 3–5 main misconceptions (with the numbers), answers worth showing by Student letter, questions to ask the class, and points to close on. Never names or student IDs (post.mjs refuses IDs).
+3. `node tools/discuss/post.mjs <sessionId> tools/discuss/notes.md` puts them in the 🤖 box at the top of the lecturer's Discussion panel (reviews/S000001, lecturer-only). The working files are git-ignored.
+
 ## Setup (once, by the lecturer)
 
 1. Sign in to the live site as `S000001` and create the lecturer PIN.
