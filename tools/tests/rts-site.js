@@ -1,6 +1,6 @@
 /* Site tests for Replacement Tutorial Sessions (engine/rts.js); shared by both courses.
    The session's window is moved around "now" so the tests do not depend on today's date. */
-module.exports=({page,ok,STUDENT,shot})=>{
+module.exports=({page,ok,STUDENT,LECT,shot})=>{
 const open=async p=>{await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.from=new Date(Date.now()-864e5).toISOString();s.to=new Date(Date.now()+864e5).toISOString()});await p.go('#/');await p.waitForTimeout(300)};
 const start=async p=>{await open(p);ok(await p.$('#rtsb'),'no Replacement Tutorial block on home');ok(/SAVE MY ATTENDANCE/.test(await p.textContent('#rtsgo')),'button text');
   await p.click('#rtsgo');await p.waitForSelector('#rtsyes');ok(/locks/.test(await p.textContent('.modal')),'start popup must explain the lock');await p.click('#rtsyes');await p.waitForTimeout(400)};
@@ -55,6 +55,11 @@ async rtsLectReset(){const p=await page({sid:STUDENT,rts:true});await start(p);a
   ok(r.st==='new'&&r.old===1&&r.ans===0&&r.log===0&&r.xp<x1.xp,'lecturer reset: '+JSON.stringify(r)+' before '+JSON.stringify(x1));
   ok(/SAVE MY ATTENDANCE/.test(await p.textContent('#rtsgo')),'red button back on home');ok(/#\/$|#$/.test(p.url())||!/#\/rts/.test(p.url()),'should not be locked before starting');
   await p.evaluate(()=>applyMarks({note_rs:{q:'note',fb:'Reset',at:isoNow(),by:'lecturer',rtsReset:RTS_SESSIONS[0].id}}));ok(await p.evaluate(()=>(U.rtsOld[RTS_SESSIONS[0].id]||[]).length===1),'reset must run once only');await p.done()},
+async rtsResetBtn(){const p=await page({sid:LECT,rts:true});await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.from=new Date(Date.now()-864e5).toISOString();s.to=new Date(Date.now()+864e5).toISOString();
+    CLOUD.ok=true;ME.cloud=true;window.__W=[];CLOUD.docs=async c=>c==='users'?[{id:'S081441',name:'A',u:JSON.stringify({rts:{[s.id]:{st:'done',n:1,act:6e5,res:{}}}})}]:[];CLOUD.saveReview=async(sid,k,v)=>{__W.push([sid,k,v])};window.confirm=()=>true});
+  await p.go('#/lecturer');await p.waitForTimeout(500);await p.click('[data-f="rtsc"] .lfh');await p.waitForTimeout(500);
+  await p.waitForSelector('[data-rtsrs]',{timeout:5000});await p.click('[data-rtsrs]');await p.waitForTimeout(300);
+  const w=await p.evaluate(()=>__W);ok(w.length===1&&w[0][0]==='S081441'&&w[0][2].pin&&w[0][2].rtsReset&&/\+05:00$/.test(w[0][2].rtsTo)&&/^note_/.test(w[0][1]),'reset note: '+JSON.stringify(w));await p.done()},
 async pinNote(){const p=await page({sid:STUDENT});
   await p.evaluate(()=>{applyMarks({note_old1:{q:'note',fb:'Old text',at:'2026-11-17T10:00:00Z',by:'lecturer'}});applyMarks({note_pin_t:{q:'note',fb:'Pinned text',at:'2026-11-17T11:00:00Z',by:'lecturer',pin:true,sup:'note_old1'}})});
   await p.go('#/');await p.waitForTimeout(300);
