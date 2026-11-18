@@ -17,5 +17,12 @@ async discuss(){const l=await page({sid:LECT});
   const k=await l.$eval('.dsa.weak',e=>e.dataset.k);await l.click('.dsa.weak [data-dsm]');await l.waitForTimeout(200);ok(await l.$(`.dsa.best[data-k="${k}"]`),'move to best did not work');
   ok(await l.evaluate(()=>!!(U.disc&&U.disc.L1&&U.disc.L1.pin)),'changes not kept');
   const n0=(await l.$$('.dsq')).length;await l.click('[data-dsa]');await l.waitForTimeout(200);ok((await l.$$('.dsq')).length<n0,'unticking an area did not hide it');
-  ok(await l.evaluate(()=>!U.xp),'the lecturer earned XP');await l.done()}
+  ok(await l.$('.dspts'),'no points to discuss');ok(await l.evaluate(()=>!U.xp),'the lecturer earned XP');await l.done()},
+async discussVerdict(){const l=await page({sid:LECT});
+  const r=await l.evaluate(async()=>{const T=Date.now()-30*60e3,c=CASE_ALL.find(x=>x.boardroom&&x.boardroom.length),i=c.boardroom.findIndex(a=>a.v==='weak'),id='v:'+c.id+':'+i;
+    const users=[1,2,3,4].map(n=>({id:'S08100'+n,name:'N'+n,u:{qa:[[Math.round((T+n*6e4)/1000),id,n===1?1:0,n===1?'weak':'strong']]}}));
+    CLOUD.ok=true;ME.cloud=true;window.cloudOn=()=>true;PR.sess={id:'L2',name:'T',active:true,startedAt:T,endsAt:T+3*3600e3};PR.sessList=[PR.sess];
+    CLOUD.docs=async k=>k==='users'?users.map(u=>({id:u.id,name:u.name,u:JSON.stringify(u.u)})):[];location.hash='#/discuss';await new Promise(r=>setTimeout(r,800));
+    const ok=document.querySelector('.dsbar.ok');return {ok:ok&&ok.textContent,why:!!document.querySelector('.dswhy'),pts:(document.querySelector('.dspts')||{}).textContent||''}});
+  ok(r.ok&&/Weak/.test(r.ok)&&/correct/.test(r.ok),'correct verdict not highlighted: '+JSON.stringify(r));ok(r.why,'no why');ok(/Only 25% got it right/.test(r.pts),'points to discuss: '+r.pts.slice(0,200));await l.done()}
 });

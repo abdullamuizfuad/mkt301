@@ -26,9 +26,9 @@ function discData(D){const S=D.S,w=sxWin(S,0),A={},letter={},first=[];const I=ty
     Object.entries(u.ans||{}).forEach(([key,a])=>{const t=Date.parse(a&&a.at);if(!a||!a.q||!(t>=w.a&&t<=w.b))return;t0=Math.min(t0,t);
       const e=I[a.q],lab=e?String(e.label||''):(typeof RTS_Q!=='undefined'&&RTS_Q[a.q]?'Replacement tutorial':'Written answers');
       const ar=area('w:'+lab.split(':')[0],lab.split(':')[0]+' · written answers'),q=ar.qs[a.q]||(ar.qs[a.q]={id:a.q,kind:'w',label:lab,ans:[]});
-      const r=(D.RV[x.id]||{})[key];q.ans.push({key,sid:x.id,name:x.name||x.id,t:String(a.t||''),w:a.w|0,band:r?r.band|0:null,auto:a.b|0,at:t})});
+      const r=(D.RV[x.id]||{})[key];q.ans.push({key,sid:x.id,name:x.name||x.id,t:String(a.t||''),w:a.w|0,band:r?r.band|0:null,auto:a.b|0,f:Array.isArray(a.f)?a.f:[],at:t})});
     const seen={};(u.qa||[]).forEach(([s,id,ok,p])=>{const t=s*1000;if(!(t>=w.a&&t<=w.b)||seen[id])return;seen[id]=1;t0=Math.min(t0,t);
-      const info=discChoice(id),ar=area('c:'+info.area,info.area),q=ar.qs[id]||(ar.qs[id]={id,kind:'c',q:info.q,ans:info.ans,opt:info.opt,n:0,right:0,picks:{}});
+      const info=discChoice(id),ar=area('c:'+info.area,info.area),q=ar.qs[id]||(ar.qs[id]={id,kind:'c',q:info.q,ans:info.ans,opt:info.opt,why:info.why||'',right1:info.right1,n:0,right:0,picks:{}});
       q.n++;if(ok>=.5)q.right++;const pk=p===''||p==null?'(no pick)':String(p);q.picks[pk]=(q.picks[pk]|0)+1});
     if(t0<Infinity)first.push([t0,x.id])});
   first.sort((a,b)=>a[0]-b[0]).forEach(([t,sid],i)=>letter[sid]=discLetter(i));
@@ -37,7 +37,7 @@ const discLetter=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharC
 /* a choice question: Boardroom verdicts (v:<case>:<i>) are read from the case; everything else from qInfo (presence.js) */
 function discChoice(id){const m=/^v:([^:]+):(\d+)$/.exec(id);
   if(m&&typeof CASE_ALL!=='undefined'){const c=CASE_ALL.find(x=>x.id===m[1]),a=c&&c.boardroom&&c.boardroom[+m[2]];
-    if(a){const L={strong:'Strong',mixed:'Partly right',weak:'Weak'};return {area:(c.short||c.id)+' · Boardroom: '+a.topic,q:a.who+': '+a.say,ans:L[a.v]||a.v,opt:p=>L[p]||p}}}
+    if(a){const L={strong:'Strong',mixed:'Partly right',weak:'Weak'};return {area:(c.short||c.id)+' · Boardroom: '+a.topic,q:a.who+': '+a.say,ans:L[a.v]||a.v,opt:p=>L[p]||p,why:a.why||'',right1:a.v}}}
   const I=qInfo(id);return {area:I.top+' · quick questions',q:I.q,ans:I.ans,opt:p=>{const n=+p;return p!==''&&!isNaN(n)&&I.opt(n)?I.opt(n):p}}}
 function discSt(S){U.disc=U.disc||{};const k=S.id;const st=U.disc[k]||(U.disc[k]={sel:null,pin:{},at:Date.now()});
   const ks=Object.keys(U.disc);if(ks.length>12)ks.sort((a,b)=>(U.disc[a].at||0)-(U.disc[b].at||0)).slice(0,ks.length-12).forEach(x=>delete U.disc[x]);return st}
@@ -62,14 +62,28 @@ function discDraw(D){const el=$('#dsb');if(!el)return;const S=D.S;
     <div class="grid g2" style="margin-top:8px"><div><h4 class="dsh">🌟 Best answers</h4>${P.B.map(a=>card(a,q,'best')).join('')||'<p class="muted">None yet.</p>'}</div><div><h4 class="dsh">🛠️ Needs work</h4>${P.W.map(a=>card(a,q,'weak')).join('')||'<p class="muted">Not enough answers to compare yet.</p>'}</div></div>
     ${P.others.length?`<details class="dsoth"><summary class="click muted">All other answers (${P.others.length})</summary>${P.others.map(a=>`<div class="dsa"><div class="row" style="justify-content:space-between"><b class="dsn">${esc(X.letter[a.sid]||'Student')}</b><span class="row" style="gap:6px"><button class="btn ghost sm" data-dsm="${esc(q.id)}|${esc(a.key)}|b">⬆ Best</button><button class="btn ghost sm" data-dsm="${esc(q.id)}|${esc(a.key)}|w">⬇ Weak</button></span></div><div class="dst">${esc(a.t).replace(/\n/g,'<br>')}</div></div>`).join('')}</details>`:''}
     ${(st.pin[q.id]||{}).x&&st.pin[q.id].x.length?`<button class="btn ghost sm" data-dsu="${esc(q.id)}">Show ${st.pin[q.id].x.length} hidden</button>`:''}</div>`};
-  const cq=q=>{const pk=Object.entries(q.picks).sort((a,b)=>b[1]-a[1]),pct=Math.round(q.right/q.n*100);
-    return `<div class="card dsq"><h3 style="margin:0 0 8px">${esc(q.q)}</h3><p style="margin:0 0 8px"><b>${pct}% right</b> <span class="muted">· ${q.n} answered${q.ans?' · Answer: '+esc(q.ans):''}</span></p>
-    ${pk.map(([p,n])=>`<div class="dsbar"><span>${esc(q.opt(p)||p)}</span><i style="width:${Math.round(n/q.n*100)}%"></i><b>${Math.round(n/q.n*100)}%</b></div>`).join('')}</div>`};
+  const isOk=(q,p)=>q.right1!=null?p===q.right1:!!q.ans&&String(q.opt(p)||p)===String(q.ans);
+  const cq=q=>{const pk=Object.entries(q.picks);if(q.right1&&!pk.some(([p])=>p===q.right1))pk.push([q.right1,0]);pk.sort((a,b)=>b[1]-a[1]);const pct=Math.round(q.right/q.n*100);
+    return `<div class="card dsq"><h3 style="margin:0 0 8px">${esc(q.q)}</h3><p style="margin:0 0 8px"><b>${pct}% right</b> <span class="muted">· ${q.n} answered</span></p>
+    ${pk.map(([p,n])=>{const ok=isOk(q,p),v=Math.round(n/q.n*100);return `<div class="dsbar${ok?' ok':' no'}"><span>${ok?'✅ ':''}${esc(q.opt(p)||p)}${ok?' <small>(correct)</small>':''}</span><i style="width:${v}%"></i><b>${v}%</b></div>`}).join('')}
+    ${q.why?`<details class="dswhy"><summary class="click">💡 Why it is ${esc(q.ans)} (open after the class has discussed it)</summary><p style="margin:6px 0 0">${esc(q.why)}</p></details>`:''}</div>`};
+  /* points to discuss: the choices most of the class got wrong, and the key ideas few written answers used */
+  const points=()=>{const L=[],shown=X.areas.filter(a=>sel.includes(a.k));
+    shown.forEach(a=>Object.values(a.qs).forEach(q=>{if(q.kind!=='c'||q.n<2)return;const pct=Math.round(q.right/q.n*100);if(pct>=70)return;
+      const wrong=Object.entries(q.picks).filter(([p])=>!isOk(q,p)).sort((x,y)=>y[1]-x[1])[0];
+      L.push({s:pct,h:`<b>${esc(q.q.length>110?q.q.slice(0,108)+'…':q.q)}</b><br>Only ${pct}% got it right${wrong?`; ${Math.round(wrong[1]/q.n*100)}% chose “${esc(q.opt(wrong[0])||wrong[0])}”`:''}. Correct: <b>${esc(q.ans)}</b>.${q.why?` <span class="muted">${esc(q.why)}</span>`:''}`})}));
+    const I2=typeof qIndex==='function'?qIndex():{};
+    shown.forEach(a=>Object.values(a.qs).forEach(q=>{if(q.kind!=='w'||q.ans.length<3)return;const e=I2[q.id],ch=e&&e.q&&e.q.chips||[];
+      const few=ch.map((c,j)=>[c,j]).filter(([c,j])=>c.g&&q.ans.filter(x=>x.f.includes(j)).length/q.ans.length<.34).map(([c])=>c.t);
+      if(few.length)L.push({s:40,h:`<b>${esc(e&&e.q?(e.q.q.length>110?e.q.q.slice(0,108)+'…':e.q.q):q.id)}</b><br>Few of the ${q.ans.length} answers used: ${few.slice(0,4).map(t=>'<span class="tag">'+esc(t)+'</span>').join(' ')}`})}));
+    L.sort((x,y)=>x.s-y.s);
+    return `<div class="card dspts"><h2 style="margin:0 0 6px">🗣️ Points to discuss</h2>${L.length?`<ol class="sumlist">${L.slice(0,8).map(x=>`<li>${x.h}</li>`).join('')}</ol>`:'<p class="muted" style="margin:0">Nothing stands out yet: most of the class got the choices right. Press ↻ Refresh as more answers come in.</p>'}</div>`};
   el.innerHTML=`<div class="card"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><h1 style="margin:0">💬 Discussion</h1>${live?'<span class="live"><i></i>LIVE</span>':'<span class="tag">Ended</span>'}</div>
     <label for="dssel" class="muted" style="font-size:.85rem">Session</label><select id="dssel">${opts||`<option>${esc(S.name)}</option>`}</select>
     <p class="muted" style="font-size:.85rem;margin:8px 0 0">${X.n} student${X.n===1?'':'s'} answered during this session. Names are hidden: tap 👁 to see who wrote an answer (only on your screen). Best and weakest are picked automatically: use the buttons to change them.</p>
     <div class="dsareas">${X.areas.length?X.areas.map(a=>{const n=Object.values(a.qs).reduce((t,q)=>t+(q.kind==='w'?q.ans.length:q.n),0);return `<label class="row ppchk"><input type="checkbox" data-dsa="${esc(a.k)}"${sel.includes(a.k)?' checked':''}> ${esc(a.label)} <span class="muted">(${Object.keys(a.qs).length} question${Object.keys(a.qs).length===1?'':'s'}, ${n} answer${n===1?'':'s'})</span></label>`}).join(''):'<p class="muted">No answers in this session yet. Press ↻ Refresh as students work.</p>'}</div></div>
-  ${X.areas.filter(a=>sel.includes(a.k)).map(a=>`<h2 class="dsah">${esc(a.label)}</h2>${Object.values(a.qs).sort((x,y)=>(y.kind==='w'?y.ans.length:y.n)-(x.kind==='w'?x.ans.length:x.n)).map(q=>q.kind==='w'?wq(q):cq(q)).join('')}`).join('')}`;
+  ${X.areas.filter(a=>sel.includes(a.k)).map(a=>`<h2 class="dsah">${esc(a.label)}</h2>${Object.values(a.qs).sort((x,y)=>(y.kind==='w'?y.ans.length:y.n)-(x.kind==='w'?x.ans.length:x.n)).map(q=>q.kind==='w'?wq(q):cq(q)).join('')}`).join('')}
+  ${X.areas.length?points():''}`;
   $('#dssel')&&($('#dssel').onchange=e=>{location.hash='#/discuss/'+e.target.value});
   el.querySelectorAll('[data-dsa]').forEach(c=>c.onchange=()=>{st.sel=[...el.querySelectorAll('[data-dsa]')].filter(x=>x.checked).map(x=>x.dataset.dsa);st.at=Date.now();save();discDraw(D)});
   const pin=qid=>st.pin[qid]||(st.pin[qid]={b:[],w:[],x:[]});const drop=(p,k)=>{p.b=p.b.filter(x=>x!==k);p.w=p.w.filter(x=>x!==k)};
@@ -81,7 +95,7 @@ function discDraw(D){const el=$('#dsb');if(!el)return;const S=D.S;
   '.dsareas{display:grid;gap:4px;margin-top:10px}.dsah{margin:22px 0 8px}.dsq{margin-bottom:14px}.dsh{margin:4px 0 6px}'+
   '.dsa{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--sunk)}.dsa.best{border-left:4px solid var(--green)}.dsa.weak{border-left:4px solid var(--gold)}'+
   '.dst{margin-top:6px;line-height:1.5;max-height:16em;overflow:auto}.dsnm{font-size:.82rem;color:var(--gold)}'+
-  '.dsbar{display:grid;grid-template-columns:minmax(0,1fr) 40% 3em;gap:8px;align-items:center;margin:4px 0}.dsbar i{display:block;height:12px;border-radius:6px;background:var(--teal)}.dsbar b{text-align:right}'+
+  '.dsbar{display:grid;grid-template-columns:minmax(0,1fr) 40% 3em;gap:8px;align-items:center;margin:4px 0}.dsbar i{display:block;height:12px;border-radius:6px;background:var(--teal)}.dsbar b{text-align:right}.dsbar.ok i{background:var(--green)}.dsbar.no i{background:var(--pink,#e85d75);opacity:.75}.dsbar.ok span{font-weight:700;color:var(--green)}.dswhy{margin-top:8px}.dspts{margin-top:22px;border:2px solid var(--gold)}.dspts li{margin-bottom:10px;line-height:1.5}'+
   'body.dproj .dsctl,body.dproj .dsoth,body.dproj [data-dsu]{display:none}body.dproj #dsb{font-size:1.18rem}body.dproj .dst{max-height:none}';
   document.head.appendChild(st)})();
 if(typeof ROUTES!=='undefined')ROUTES.discuss=discRoute;
