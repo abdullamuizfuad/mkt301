@@ -202,7 +202,15 @@ function liveRow(p,now){const off=!p.t||now-p.t>ST.OFF*1000,st=off&&p.st!=='off'
 /* End a live session and save its report. Every step has a time limit and the session is always ended: a wait that never
    returns (for example a listener cancelled by a page change) used to leave the session running and the End button dead. */
 const sxTO=(p,ms,v)=>Promise.race([Promise.resolve(p).catch(()=>v),new Promise(r=>setTimeout(()=>r(v),ms))]);
-async function liveFinish(id){if(liveFinish.busy&&Date.now()-liveFinish.busy<90000)return;liveFinish.busy=Date.now();try{
+/* End a session. The session is marked ended FIRST (students leave at once, a new session can start), with retries; the report is
+   built and saved afterwards. Progress shows on the End buttons and in toasts. The last error is kept in localStorage (endErr) for diagnosis. */
+const liveEndBtns=(t,dis)=>['lsend','lvend'].forEach(i=>{const b=document.getElementById(i);if(b){b.textContent=t;b.disabled=!!dis}});
+async function liveEndNow(id){let err=null;for(let i=0;i<3;i++){try{await sxTO(CLOUD.endSession2(id,{}).then(()=>true),15000,false).then(ok=>{if(!ok)throw new Error('No answer from the server (timed out)')});return null}catch(e){err=e;await new Promise(r=>setTimeout(r,1500))}}return err}
+async function liveFinish(id){if(liveFinish.busy&&Date.now()-liveFinish.busy<90000){toast('⏳','Still ending the session','Saving the report: one moment');return}liveFinish.busy=Date.now();
+  liveEndBtns('Ending…',1);toast('■','Ending the session…','Students are being signed out of it');
+  const e0=await liveEndNow(id);if(e0){liveFinish.busy=0;liveEndBtns('■ End session',0);try{localStorage.setItem('endErr',JSON.stringify({at:new Date().toISOString(),id,m:String(e0.code||e0.message||e0)}))}catch(e){}
+    toast('⚠️','Could not end the session',CLOUD.say(e0)+' · Check the connection and press End again');return}
+  toast('■','Session ended','Saving the report…');try{
   const ps=await sxTO(CLOUD.presenceOnce(id),20000,[]),now=Date.now(),names=await sxTO(liveNames(),20000,{});const rep={};
   ps.forEach(p=>{const r=liveRow(p,now);rep[p.id]={n:(names[p.id]||'').slice(0,60),on:r.on|0,idle:r.idle|0,away:r.away|0,left:r.left|0,lg:r.longest|0,pct:r.pct,pr:String(r.pr||'').slice(0,200)}});
   const S=(PR.sessList||[]).find(s=>s.id===id)||(PR.sess&&PR.sess.id===id?PR.sess:null),users=S?await sxTO(usersOnce(),30000,null):null;
@@ -210,8 +218,9 @@ async function liveFinish(id){if(liveFinish.busy&&Date.now()-liveFinish.busy<900
   let o=null;try{if(S&&users&&await sxTO(sessR3(),10000,false))o=await sxTO(sxPublish(Object.assign({},S,{endedAt:now}),rep,users,ps),30000,null)}catch(e){console.warn('Session report not published',e)}
   if(!o&&await sxTO(sessR3(),10000,false)){/* keep the rows private (lect/rep) even when the full report could not be built */
     const put=await sxTO(CLOUD.put('sessions/'+id+'/lect/rep',{rows:rep},true).then(()=>true),20000,false);if(put)o={nj:Object.keys(rep).length,refl:null}}
-  if(o)await CLOUD.endSession2(id,Object.assign({nj:o.nj},o.refl?{refl:o.refl}:{}));else await CLOUD.endSession(id,rep);
-  toast('■','Session ended','Report saved: '+Object.keys(rep).length+' joined')}catch(e){toast('⚠️','Could not end the session',CLOUD.say(e))}finally{liveFinish.busy=0}}
+  /* the session is already ended: add the figures without moving endedAt */
+  if(o)await CLOUD.put('sessions/'+id,Object.assign({nj:o.nj},o.refl?{refl:o.refl}:{}),true);else await CLOUD.put('sessions/'+id,{rep},true);
+  toast('✅','Report saved',Object.keys(rep).length+' joined')}catch(e){toast('⚠️','The session ended, but the report was not saved',CLOUD.say(e))}finally{liveFinish.busy=0}}
 let LIVE_NAMES=null,LIVE_USERS=null;
 /* one read of the class (not a listener: a page change cancels listeners, which left these waits hanging forever) */
 const usersOnce=()=>CLOUD.docs('users').then(l=>l.map(x=>{let u=x.u&&typeof x.u==='object'?x.u:null;try{if(typeof x.u==='string')u=JSON.parse(x.u)}catch(e){}return {id:x.id,name:x.name,xp:x.xp,ts:x.ts?new Date(x.ts):null,u}}),()=>[]);

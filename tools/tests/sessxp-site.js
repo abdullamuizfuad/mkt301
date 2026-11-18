@@ -74,7 +74,8 @@ async sxfinish(){const l=await page({sid:LECT});const r=await l.evaluate(async()
     await liveFinish('F1');return W});
   const P=r.map(x=>x[0]);ok(!P.includes('OLD'),'used the old end');ok(P.includes('sessions/F1/lect/rep'),'rows not moved to lect/rep: '+P.join());
   const me=r.find(x=>x[0]==='sessions/F1/me/S081441');ok(me&&me[1].sc===50&&me[1].miss.join()==='qb'&&me[1].xp===2,'own doc: '+JSON.stringify(me));
-  const end=r.find(x=>x[0]==='END F1')[1];ok(end.nj===2&&end.refl&&!end.rep&&end.refl.ar[0].id==='qb'&&end.refl.ar[0].p===100,'session doc: '+JSON.stringify(end).slice(0,300));
+  ok(P.indexOf('END F1')>=0&&P.indexOf('END F1')<P.indexOf('sessions/F1/lect/rep'),'the session must be ended before the report is built: '+P.join());
+  const end=r.find(x=>x[0]==='sessions/F1')[1];ok(end.nj===2&&end.refl&&!end.rep&&end.refl.ar[0].id==='qb'&&end.refl.ar[0].p===100,'session doc: '+JSON.stringify(end).slice(0,300));
   ok(!JSON.stringify(end).includes('S08'),'student IDs on the session doc');await l.done()},
 /* attendance on the report: the whole class, statuses, overrides saved, CSV */
 async sxatt(){const l=await page({sid:LECT});const r=await l.evaluate(async()=>{const T=Date.now()-3*3600e3,W=[];ME.cloud=true;CLOUD.ok=true;PR.r3=true;
