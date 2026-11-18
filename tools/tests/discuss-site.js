@@ -6,7 +6,7 @@ async discuss(){const l=await page({sid:LECT});
     const users=[1,2,3,4,5,6,7].map(n=>({id:'S08000'+n,name:'Name'+n,u:{ans:A(n,n%7,'Answer number '+n+' with some words'),qa:[[Math.round((T+n*6e4)/1000),'v:x:0',n%2,n%2?'strong':'weak']]}}));
     users.push({id:'S080009',name:'Old',u:{ans:{[qid+'_old']:{q:qid,t:'before the session',at:new Date(T-864e5).toISOString(),b:6,w:3}}}});
     CLOUD.ok=true;ME.cloud=true;window.cloudOn=()=>true;PR.sess={id:'L1',name:'Week 12 tutorial',active:true,startedAt:T,endsAt:T+3*3600e3};PR.sessList=[PR.sess];
-    CLOUD.docs=async c=>c==='users'?users.map(u=>({id:u.id,name:u.name,u:JSON.stringify(u.u)})):c==='reviews'?[{id:'S080001',m:{[qid+'_k1']:{band:6,xp:24,fb:'x'}}}]:[];
+    CLOUD.docs=async c=>c==='users'?users.map(u=>({id:u.id,name:u.name,u:JSON.stringify(u.u)})):c==='reviews'?[{id:'S080001',m:{[qid+'_k1']:{band:6,xp:24,fb:'x'}}},{id:'S000001',m:{disc_L1:{q:'disc',fb:'## Misconceptions\n- **Push** vs pull mixed up',at:new Date().toISOString(),by:'claude'}}}]:[];
     location.hash='#/discuss';await new Promise(r=>setTimeout(r,800));
     const best=[...document.querySelectorAll('.dsa.best .dst')].map(x=>x.textContent),weak=[...document.querySelectorAll('.dsa.weak .dst')].map(x=>x.textContent);
     return {qid,best,weak,txt:document.querySelector('#dsb').textContent,named:/Name\d/.test([...document.querySelectorAll('.dsa')].map(x=>x.querySelector('.dsn').textContent+x.querySelector('.dst').textContent).join(''))}});
@@ -17,7 +17,7 @@ async discuss(){const l=await page({sid:LECT});
   const k=await l.$eval('.dsa.weak',e=>e.dataset.k);await l.click('.dsa.weak [data-dsm]');await l.waitForTimeout(200);ok(await l.$(`.dsa.best[data-k="${k}"]`),'move to best did not work');
   ok(await l.evaluate(()=>!!(U.disc&&U.disc.L1&&U.disc.L1.pin)),'changes not kept');
   const n0=(await l.$$('.dsq')).length;await l.click('[data-dsa]');await l.waitForTimeout(200);ok((await l.$$('.dsq')).length<n0,'unticking an area did not hide it');
-  ok(await l.$('.dspts'),'no points to discuss');ok(await l.evaluate(()=>!U.xp),'the lecturer earned XP');await l.done()},
+  ok(await l.$('.dspts'),'no points to discuss');ok(/Misconceptions/.test(await l.textContent('.dsnotes')),'Claude notes not shown');ok(await l.evaluate(()=>!U.xp),'the lecturer earned XP');await l.done()},
 async discussVerdict(){const l=await page({sid:LECT});
   const r=await l.evaluate(async()=>{const T=Date.now()-30*60e3,c=CASE_ALL.find(x=>x.boardroom&&x.boardroom.length),i=c.boardroom.findIndex(a=>a.v==='weak'),id='v:'+c.id+':'+i;
     const users=[1,2,3,4].map(n=>({id:'S08100'+n,name:'N'+n,u:{qa:[[Math.round((T+n*6e4)/1000),id,n===1?1:0,n===1?'weak':'strong']]}}));

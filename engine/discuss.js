@@ -6,7 +6,9 @@
    - choices (U.qa entries in the window: MCQs, quick questions, Boardroom verdicts): how the class split, the share right, the answer.
    The lecturer ticks which areas to show; the choice and any changes to the lists are kept in the lecturer's own progress
    (U.disc[sessionId], users/S000001), so no new Firestore rules are needed: the lecturer can already read users and reviews.
-   Shown on the lecturer's (projected) screen only; nothing is written where students can read it. */
+   Shown on the lecturer's (projected) screen only; nothing is written where students can read it.
+   Claude's discussion notes: when the lecturer asks Claude to prepare a discussion, Claude writes reviews/S000001.m['disc_'+sessionId] =
+   {q:'disc', fb:text, at, by:'claude'} (only the lecturer can read their own reviews doc; no new rules). Shown as a 🤖 box at the top. */
 const DISC_N=3;
 function discRoute(h){if(!ME||ME.sid!==LECTURER)return home();if(!cloudOn())return shell('#/lecturer','<div class="callout">The discussion panel needs the live connection.</div>');
   shell('#/lecturer',`<div class="row" style="justify-content:space-between;align-items:center;gap:8px"><a href="#/live">← Live session</a><span class="row" style="gap:6px"><button class="btn ghost sm" id="dsref" data-lect>↻ Refresh</button><button class="btn ghost sm" id="dsproj" data-lect>⛶ Projector view</button></span></div>
@@ -33,6 +35,12 @@ function discData(D){const S=D.S,w=sxWin(S,0),A={},letter={},first=[];const I=ty
     if(t0<Infinity)first.push([t0,x.id])});
   first.sort((a,b)=>a[0]-b[0]).forEach(([t,sid],i)=>letter[sid]=discLetter(i));
   return {areas:Object.values(A).sort((a,b)=>a.label.localeCompare(b.label)),letter,n:first.length}}
+/* Claude's notes: plain text; lines starting "## " are headings, "- " bullets, **bold** */
+function discNotes(D){const n=((D.RV[LECTURER]||{})['disc_'+D.S.id])||null;if(!n||!n.fb)return '';
+  const inl=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');let h='',ul=false;
+  String(n.fb).split('\n').forEach(l=>{const t=l.trim();if(/^[-•] /.test(t)){if(!ul){h+='<ul class="sumlist">';ul=true}h+='<li>'+inl(t.slice(2))+'</li>';return}
+    if(ul){h+='</ul>';ul=false}if(!t)return;h+=/^#{1,3} /.test(t)?'<h3 style="margin:12px 0 4px">'+inl(t.replace(/^#+ /,''))+'</h3>':'<p style="margin:6px 0">'+inl(t)+'</p>'});if(ul)h+='</ul>';
+  return `<details class="card dsnotes" open><summary class="click"><b>🤖 Discussion notes from Claude</b> <span class="muted" style="font-size:.8rem">${n.at?esc(new Date(n.at).toLocaleTimeString('en-GB',{hour:'numeric',minute:'2-digit',timeZone:'Indian/Maldives'})):''}</span></summary>${h}</details>`}
 const discLetter=i=>{let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return 'Student '+s};
 /* a choice question: Boardroom verdicts (v:<case>:<i>) are read from the case; everything else from qInfo (presence.js) */
 function discChoice(id){const m=/^v:([^:]+):(\d+)$/.exec(id);
@@ -82,6 +90,7 @@ function discDraw(D){const el=$('#dsb');if(!el)return;const S=D.S;
     <label for="dssel" class="muted" style="font-size:.85rem">Session</label><select id="dssel">${opts||`<option>${esc(S.name)}</option>`}</select>
     <p class="muted" style="font-size:.85rem;margin:8px 0 0">${X.n} student${X.n===1?'':'s'} answered during this session. Names are hidden: tap 👁 to see who wrote an answer (only on your screen). Best and weakest are picked automatically: use the buttons to change them.</p>
     <div class="dsareas">${X.areas.length?X.areas.map(a=>{const n=Object.values(a.qs).reduce((t,q)=>t+(q.kind==='w'?q.ans.length:q.n),0);return `<label class="row ppchk"><input type="checkbox" data-dsa="${esc(a.k)}"${sel.includes(a.k)?' checked':''}> ${esc(a.label)} <span class="muted">(${Object.keys(a.qs).length} question${Object.keys(a.qs).length===1?'':'s'}, ${n} answer${n===1?'':'s'})</span></label>`}).join(''):'<p class="muted">No answers in this session yet. Press ↻ Refresh as students work.</p>'}</div></div>
+  ${discNotes(D)}
   ${X.areas.filter(a=>sel.includes(a.k)).map(a=>`<h2 class="dsah">${esc(a.label)}</h2>${Object.values(a.qs).sort((x,y)=>(y.kind==='w'?y.ans.length:y.n)-(x.kind==='w'?x.ans.length:x.n)).map(q=>q.kind==='w'?wq(q):cq(q)).join('')}`).join('')}
   ${X.areas.length?points():''}`;
   $('#dssel')&&($('#dssel').onchange=e=>{location.hash='#/discuss/'+e.target.value});
@@ -95,7 +104,7 @@ function discDraw(D){const el=$('#dsb');if(!el)return;const S=D.S;
   '.dsareas{display:grid;gap:4px;margin-top:10px}.dsah{margin:22px 0 8px}.dsq{margin-bottom:14px}.dsh{margin:4px 0 6px}'+
   '.dsa{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--sunk)}.dsa.best{border-left:4px solid var(--green)}.dsa.weak{border-left:4px solid var(--gold)}'+
   '.dst{margin-top:6px;line-height:1.5;max-height:16em;overflow:auto}.dsnm{font-size:.82rem;color:var(--gold)}'+
-  '.dsbar{display:grid;grid-template-columns:minmax(0,1fr) 40% 3em;gap:8px;align-items:center;margin:4px 0}.dsbar i{display:block;height:12px;border-radius:6px;background:var(--teal)}.dsbar b{text-align:right}.dsbar.ok i{background:var(--green)}.dsbar.no i{background:var(--pink,#e85d75);opacity:.75}.dsbar.ok span{font-weight:700;color:var(--green)}.dswhy{margin-top:8px}.dspts{margin-top:22px;border:2px solid var(--gold)}.dspts li{margin-bottom:10px;line-height:1.5}'+
+  '.dsbar{display:grid;grid-template-columns:minmax(0,1fr) 40% 3em;gap:8px;align-items:center;margin:4px 0}.dsbar i{display:block;height:12px;border-radius:6px;background:var(--teal)}.dsbar b{text-align:right}.dsbar.ok i{background:var(--green)}.dsbar.no i{background:var(--pink,#e85d75);opacity:.75}.dsbar.ok span{font-weight:700;color:var(--green)}.dswhy{margin-top:8px}.dsnotes{margin-top:14px;border:2px solid var(--teal)}.dspts{margin-top:22px;border:2px solid var(--gold)}.dspts li{margin-bottom:10px;line-height:1.5}'+
   'body.dproj .dsctl,body.dproj .dsoth,body.dproj [data-dsu]{display:none}body.dproj #dsb{font-size:1.18rem}body.dproj .dst{max-height:none}';
   document.head.appendChild(st)})();
 if(typeof ROUTES!=='undefined')ROUTES.discuss=discRoute;
