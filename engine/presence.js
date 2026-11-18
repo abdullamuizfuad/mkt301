@@ -47,7 +47,7 @@ const PR={act:0,pid:Math.random().toString(36).slice(2),last:Date.now(),lt:Date.
   sess:null,sessOn:false,joined:false,st:'',stAt:0,awayAt:0,wrote:0,sec:'',secAt:0,secDirty:false,sessList:null,started:false,iv:null};
 const presTimerOn=()=>[...document.querySelectorAll('[data-a="tgo"]')].some(b=>/pause/i.test(b.textContent||''));
 const presMicOn=()=>typeof MIC!=='undefined'&&!!MIC;
-const presBusyNow=()=>presTimerOn()||presMicOn()||(typeof presBusy==='function'&&!!presBusy())||(typeof rtsActive==='function'&&!!rtsActive());
+const presBusyNow=()=>presTimerOn()||presMicOn()||(typeof presBusy==='function'&&!!presBusy())||(typeof rtsActive==='function'&&!!rtsActive()&&location.hash.indexOf('#/rts')===0);
 const sessLive=()=>!!(PR.sess&&PR.sess.active&&(!PR.sess.endsAt||Date.now()<PR.sess.endsAt));
 const presVisible=()=>document.visibilityState==='visible'&&(typeof document.hasFocus!=='function'||document.hasFocus());
 

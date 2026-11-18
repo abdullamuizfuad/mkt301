@@ -1,7 +1,8 @@
 /* MKT Arena engine: Replacement Tutorial Sessions (#/rts). Shared by MKT101 and MKT301; the questions are course data (rts.js:
    RTS_SESSIONS and RTS_Q). A session replaces a 2-hour tutorial missed through a public holiday: students who finish it keep that attendance.
    - Home: a caution-tape block with SAVE MY ATTENDANCE while a session is open (from/to, GMT+5). Green once done.
-   - Starting locks the arena onto #/rts until the session is finished (or closes). "Save and continue later" keeps everything.
+   - Nothing locks the app: students can leave the session page any time ("Save and continue later", or just close it) and carry on
+     from the home block. The clock only runs on #/rts. (Until 18 Nov 2026 starting locked the arena onto #/rts; the lecturer lifted it.)
    - Timer: active time only (idle over 2 minutes and time away do not count). The block is s.mins; two extensions of 15 minutes each.
      During extension time, study-time block XP is not earned (presence.js asks rtsNoXP). The break reminder is paused (presence.js asks rtsActive).
    - Finish needs every question answered (written answers at least minW words), except after both extensions run out.
@@ -19,7 +20,7 @@ function rtsEnd(s){const t=Date.parse(s.to),l=typeof U!=='undefined'&&U&&U.rtsLa
 const rtsPlayer=()=>!!(typeof ME!=='undefined'&&ME&&U&&ME.sid!==LECTURER);
 function rtsSt(s){U.rts=U.rts||{};return U.rts[s.id]||null}
 function rtsActive(){const s=rtsCur();if(!s||!rtsPlayer()||VIEWAS)return null;const st=rtsSt(s);return st&&st.st==='go'?{s,st}:null}
-/* a live session (any kind, joined or not) takes precedence: the session lock lifts while it runs */
+/* a live session (any kind, joined or not) is running (kept for course code; the session no longer locks the app) */
 const rtsLiveNow=()=>!!((typeof sessLive==='function'&&sessLive())||(typeof tutOn==='function'&&tutOn()));
 const rtsBase=s=>s.mins*60e3,rtsLimit=(s,st)=>rtsBase(s)+(st.ext|0)*RTS_EXT;
 function rtsNoXP(){const a=rtsActive();return !!(a&&(a.st.ext|0)>0&&location.hash.indexOf('#/rts')===0&&a.st.act>=rtsBase(a.s))}/* extra time: no study-time XP */
@@ -61,7 +62,7 @@ function rtsHomeHTML(){const s=rtsCur();if(!s||!ME||!U||(ME.sid===LECTURER&&!VIE
 function rtsHomeBind(){const b=$('#rtsgo');if(!b||b.disabled)return;b.onclick=()=>{const s=rtsCur();if(!s)return;const st=rtsSt(s);if(st&&st.st==='go'){location.hash='#/rts';return}rtsAsk(s)}}
 function rtsModal(h){closeModal();const m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.innerHTML=`<div class="card" style="max-width:520px">${h}</div>`;document.body.append(m);return m}
 function rtsAsk(s){const m=rtsModal(`<div style="font-size:2.4rem;text-align:center">🚧</div><h2 style="text-align:center;margin:4px 0 10px">Before you start</h2>
-  <p>Once you start, <b>the Arena locks onto this session until it is done</b>. You can tap <b>Save and continue later</b> any time and come back, but the rest of the app only unlocks when you finish.</p>
+  <p><b>You can leave any time.</b> Tap <b>Save and continue later</b>, or just close the app: your answers and your time are kept, and you carry on from the button on Today. The clock only runs while this session is open.</p>
   <p>Real talk: it's literally ${s.mins} minutes. No cap 🧢. Put your phone on Do Not Disturb, close TikTok for a bit, and secure that attendance. You've got this 💅</p>
   <div class="row" style="justify-content:center;margin-top:14px"><button type="button" class="btn ghost" id="rtsno">Not now</button><button type="button" class="btn" id="rtsyes">Let's Go! 🏁</button></div>`);
   $('#rtsno').onclick=closeModal;m.onclick=e=>{if(e.target===m)closeModal()};$('#rtsyes').focus();
@@ -85,7 +86,7 @@ function rtsPage(){const s=rtsCur();if(!s||!rtsPlayer()){location.replace('#/');
      ${over&&(st.ext|0)<2?`<button type="button" class="btn gold" id="rtsext">⏳ I need more time (+15 min)</button>`:''}
      <button type="button" class="btn ghost" id="rtssave">💾 Save and continue later</button><button type="button" class="btn ghost" id="rtsrst">↺ Restart from the beginning</button></div>`;
   shell('#/rts',`<div class="rtsp"><div class="rtstop${over&&st.ph!=='bonus'?' over':''}" id="rtstop"><span>${esc(s.title)} · ${esc(s.topics)}</span><span id="rtsprog">${T.d}/${T.n} answered</span><span class="rtsclk" id="rtsclk"></span></div>
-    <h1 style="margin:0 0 6px">${esc(s.title)}</h1><p class="muted">The Arena is locked until you finish. Your answers save as you go. Only active time counts: if you stop for more than 2 minutes, the clock waits for you.</p>
+    <h1 style="margin:0 0 6px">${esc(s.title)}</h1><p class="muted">Your answers save as you go, and you can leave and come back any time from Today. Only active time counts: if you stop for more than 2 minutes, the clock waits for you.</p>
     ${over&&st.ph!=='bonus'?`<div class="callout" style="margin-bottom:14px">${(st.ext|0)<2?'⏰ Time is up. Tap <b>I need more time</b> for 15 more minutes (you can do this twice), or restart from the beginning.':'⏰ Time is up, and both extra times are used. Tap <b>Finish</b> to complete the session with what you have.'}</div>`:''}
     ${body}</div>`);
   rtsBind(s);rtsClock(s)}
@@ -100,7 +101,7 @@ function rtsBind(s){const st=rtsSt(s);clearInterval(RTST);let lastSave=Date.now(
   document.querySelectorAll('[data-pk]').forEach(r=>r.onchange=()=>{st.pick=st.pick||{};st.pick[r.dataset.pk]=r.value;save();rtsPage()});
   document.querySelectorAll('[data-wq]').forEach(t=>{t.oninput=()=>{st.a[t.dataset.wq]=t.value.slice(0,6000);const q=rtsQ(t.dataset.wq),w=rtsWords(t.value),mn=q.minW||60,e=$('#wc_'+t.dataset.wq);if(e){e.textContent=w+' words (at least '+mn+')';e.className='rtswc '+(w>=mn?'ok':'muted')}upd()};
     t.onpaste=e=>{e.preventDefault();st.fl=st.fl||{};st.fl.paste=(st.fl.paste|0)+1;toast('✋','Pasting is switched off here','Type your answer, or use your keyboard\'s voice typing.')};t.onblur=()=>save()});
-  $('#rtssave')&&($('#rtssave').onclick=()=>{save();rtsModal(`<div style="font-size:2.2rem;text-align:center">💾</div><h2 style="text-align:center">Saved</h2><p>Your answers and your time are saved to your account. You can close the app now and carry on from any device before ${esc(rtsWhen(s.to))}.</p><p class="muted">The rest of the Arena unlocks when you finish this session.</p><div class="row" style="justify-content:center"><button type="button" class="btn" id="rtsok">Keep going</button></div>`);$('#rtsok').onclick=closeModal});
+  $('#rtssave')&&($('#rtssave').onclick=()=>{save();rtsModal(`<div style="font-size:2.2rem;text-align:center">💾</div><h2 style="text-align:center">Saved</h2><p>Your answers and your time are saved to your account. You can close the app now and carry on from any device before ${esc(rtsWhen(new Date(rtsEnd(s)).toISOString()))}.</p><div class="row" style="justify-content:center"><button type="button" class="btn ghost" id="rtsout">Leave for now</button><button type="button" class="btn" id="rtsok">Keep going</button></div>`);$('#rtsok').onclick=closeModal;$('#rtsout').onclick=()=>{closeModal();location.hash='#/'}});
   $('#rtsext')&&($('#rtsext').onclick=()=>{st.ext=(st.ext|0)+1;st.extUsed=1;save();toast('⏳','15 more minutes','Extra time earns no study-time XP, but your answers and finishing still count.');rtsPage()});
   $('#rtsrst')&&($('#rtsrst').onclick=()=>rtsRestartAsk(s));
   $('#rtsfin')&&($('#rtsfin').onclick=()=>rtsFinishAsk(s));
@@ -156,10 +157,8 @@ function rtsDone(s){const st=rtsSt(s),r=st.res||{},slow=r.ext>0||r.todo>0;
     <button type="button" class="btn" id="rtsdok" style="margin-top:14px">👍 Nice</button></div>`;
   document.body.append(m);if(typeof confetti==='function'&&!(typeof calm==='function'&&calm()))confetti(m.querySelector('canvas'),true);$('#rtsdok').onclick=()=>{m.remove();route()};$('#rtsdok').focus()}
 
-/* ---------- the lock: while a session is unfinished, the arena shows only #/rts ---------- */
+/* ---------- the session page (no lock: students come and go from the home block) ---------- */
 ROUTES.rts=rtsPage;
-if(typeof route==='function'){const _rtsRoute=route;route=function(){/* a live session wins (rtsLiveNow): never fight its lock, or the two redirects loop */
-  if(typeof ME!=='undefined'&&ME&&U&&rtsActive()&&!rtsLiveNow()){const h=location.hash.replace(/^#\/?/,'').split('/')[0];if(h!=='rts'){location.replace('#/rts');return}}return _rtsRoute.apply(this,arguments)}}
 
 /* ---------- the lecturer's card ---------- */
 /* default end for a reset: a day after the later of now and the session's close, at 23:59 (datetime-local value, Maldives time) */

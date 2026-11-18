@@ -3,13 +3,13 @@
 module.exports=({page,ok,STUDENT,LECT,shot})=>{
 const open=async p=>{await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.from=new Date(Date.now()-864e5).toISOString();s.to=new Date(Date.now()+864e5).toISOString()});await p.go('#/');await p.waitForTimeout(300)};
 const start=async p=>{await open(p);ok(await p.$('#rtsb'),'no Replacement Tutorial block on home');ok(/SAVE MY ATTENDANCE/.test(await p.textContent('#rtsgo')),'button text');
-  await p.click('#rtsgo');await p.waitForSelector('#rtsyes');ok(/locks/.test(await p.textContent('.modal')),'start popup must explain the lock');await p.click('#rtsyes');await p.waitForTimeout(400)};
+  await p.click('#rtsgo');await p.waitForSelector('#rtsyes');ok(/leave any time/.test(await p.textContent('.modal')),'start popup must say students can leave');await p.click('#rtsyes');await p.waitForTimeout(400)};
 /* fills every answer: MCQs correct, written answers long enough, a choice in every "choose" part */
 const fillAll=p=>p.evaluate(()=>{const s=rtsCur(),st=rtsSt(s);s.parts.forEach((pt,pi)=>{if(pt.kind==='mcq')pt.items.forEach(id=>st.a[id]=RTS_Q[id][2][0]);else{if(pt.pick)st.pick[pi]=pt.items[0];(pt.pick?[pt.items[0]]:pt.items).forEach(id=>st.a[id]=Array((RTS_Q[id].minW||60)+10).fill('word').join(' '))}});save();rtsPage()});
 return {
 async rtsFast(){const p=await page({sid:STUDENT,rts:true});await start(p);
   ok(/#\/rts/.test(p.url()),'not on the session page');await shot(p,'rts-session');
-  await p.go('#/board');await p.waitForTimeout(300);ok(/#\/rts/.test(p.url()),'the arena is not locked during the session');
+  await p.go('#/board');await p.waitForTimeout(300);ok(/#\/board/.test(p.url()),'the arena should not lock during the session');ok(await p.evaluate(()=>presBusyNow()!==true),'break reminder paused away from the session');await p.go('#/');await p.click('#rtsgo');await p.waitForTimeout(300);ok(/#\/rts/.test(p.url()),'CONTINUE should reopen the session');
   ok(await p.evaluate(()=>presBusyNow()===true),'break reminder not paused');
   const x0=await p.evaluate(()=>U.xp);await fillAll(p);ok(!(await p.$eval('#rtsfin',b=>b.disabled)),'Finish should be enabled when everything is answered');
   await p.click('#rtsfin');await p.waitForSelector('#rtsfx');ok(/Secret question unlocked/.test(await p.textContent('.modal')),'secret question offer');await p.click('#rtsfx');await p.waitForTimeout(300);
@@ -40,7 +40,7 @@ async rtsLive(){const p=await page({sid:STUDENT,rts:true});await start(p);/* an 
 async rtsLiveFree(){const p=await page({sid:STUDENT,rts:true});await start(p);/* any live session lifts the session lock, joined or not */
   await p.evaluate(()=>{PR.sess={id:'x',active:true,endsAt:Date.now()+36e5}});await p.go('#/board');await p.waitForTimeout(500);
   ok(/#\/board/.test(p.url()),'a live session should lift the Replacement Tutorial lock');
-  await p.evaluate(()=>{PR.sess=null});await p.go('#/badges');await p.waitForTimeout(500);ok(/#\/rts/.test(p.url()),'the lock should come back when the live session ends');await p.done()},
+  await p.evaluate(()=>{PR.sess=null});await p.go('#/badges');await p.waitForTimeout(500);ok(/#\/badges/.test(p.url()),'no lock after the live session either');await p.done()},
 async rtsLate(){const p=await page({sid:STUDENT,rts:true});/* closed for the class, reopened for one student by a lecturer note */
   await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.from=new Date(Date.now()-2*864e5).toISOString();s.to=new Date(Date.now()-36e5).toISOString()});await p.go('#/');await p.waitForTimeout(300);
   ok(!(await p.$('#rtsb')),'a closed session should not show');
@@ -70,5 +70,5 @@ async rtsRestart(){const p=await page({sid:STUDENT,rts:true});await start(p);awa
   await p.click('#rtsrst');await p.waitForSelector('#rtsry');ok(/lose all your progress/.test(await p.textContent('.modal')),'restart warning');await p.click('#rtsry');await p.waitForTimeout(300);
   const r=await p.evaluate(()=>{const st=rtsSt(rtsCur());return {n:st.n,a:Object.keys(st.a).length,act:st.act,st:st.st}});ok(r.n===2&&r.a===0&&r.act===0&&r.st==='go','restart: '+JSON.stringify(r));
   await p.evaluate(()=>{save()});await p.reload();await p.waitForTimeout(500);await p.evaluate(()=>{const s=RTS_SESSIONS[0];s.from=new Date(Date.now()-864e5).toISOString();s.to=new Date(Date.now()+864e5).toISOString();route()});await p.waitForTimeout(300);
-  ok(/#\/rts/.test(p.url()),'an unfinished session should reopen after a reload');await p.done()}
+  await p.go('#/');await p.waitForTimeout(300);ok(/CONTINUE/.test(await p.textContent('#rtsgo')),'an unfinished session should offer CONTINUE after a reload');await p.done()}
 }};
