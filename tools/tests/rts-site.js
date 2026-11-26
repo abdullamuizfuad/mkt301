@@ -75,6 +75,12 @@ async rtsNoLimit(){const p=await page({sid:STUDENT,rts:true});const has=await p.
   ok(!(await p.$eval('#rtsfin',b=>b.disabled)),'Finish should be enabled');const x0=await p.evaluate(()=>U.xp);await p.click('#rtsfin');await p.waitForTimeout(800);
   const r=await p.evaluate(()=>{const st=rtsSt(RTS_SESSIONS.find(x=>x.noLimit));return {st:st.st,keys:(st.keys||[]).length,xp:U.xp}});
   ok(r.st==='done'&&r.keys===2&&r.xp-x0>=300,'finish: '+JSON.stringify(r)+' from '+x0);await p.done()},
+async rtsViewAs(){const p=await page({sid:LECT,rts:true});/* View as student shows messages and opened tutorials the student's device hasn't picked up yet */
+  await p.evaluate(async()=>{const s=RTS_SESSIONS.find(x=>x.noLimit)||RTS_SESSIONS[0];s.from=new Date(Date.now()-864e5).toISOString();s.to=s.from;CLOUD.ok=true;ME.cloud=true;window.cloudOn=()=>true;
+    CLOUD.get=async path=>/^users\//.test(path)?{name:'Test',u:JSON.stringify({xp:10,days:[],log:{},badges:{}})}:/^reviews\//.test(path)?{m:{note_pin_x:{q:'note',fb:'Pinned hello',at:new Date().toISOString(),pin:true,rts:s.id,rtsTo:new Date(Date.now()+864e5).toISOString()}}}:null;
+    await vaOpen('S081441')});await p.waitForTimeout(500);
+  ok(/Pinned hello/.test(await p.textContent('.pinnote')),'pinned message not shown in View as student');ok(await p.$('#rtsb'),'tutorial block not shown in View as student');
+  ok(await p.evaluate(()=>!!VIEWAS),'not in View as student');await p.done()},
 async pinNote(){const p=await page({sid:STUDENT});
   await p.evaluate(()=>{applyMarks({note_old1:{q:'note',fb:'Old text',at:'2026-11-17T10:00:00Z',by:'lecturer'}});applyMarks({note_pin_t:{q:'note',fb:'Pinned text',at:'2026-11-17T11:00:00Z',by:'lecturer',pin:true,sup:'note_old1'}})});
   await p.go('#/');await p.waitForTimeout(300);

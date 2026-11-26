@@ -153,6 +153,10 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 async function vaOpen(sid){if(!ME||ME.sid!==LECTURER||VIEWAS||!cloudOn())return;let x;
   try{x=await CLOUD.get('users/'+sid)}catch(e){toast('⚠️','Could not open '+sid,CLOUD.say(e));return}
   let u=null;try{u=x&&JSON.parse(x.u)}catch(e){}if(!u){toast('👁','Nothing to show yet',sid+' has no saved progress.');return}
+  /* also show what the lecturer has sent that the student's device hasn't picked up yet: messages (pinned too) and tutorials opened for them */
+  try{const r=await CLOUD.get('reviews/'+sid),m=(r&&r.m)||{};u.notes=u.notes||{};Object.entries(m).forEach(([k,v])=>{if(!v||!/^note_/.test(k))return;
+    if(!u.notes[k]){u.notes[k]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};if(v.pin)u.notes[k].pin=1;if(typeof v.sup==='string')u.notes[k].sup=v.sup}
+    if(typeof v.rts==='string'&&v.rtsTo){u.rtsLate=u.rtsLate||{};if(!u.rtsLate[v.rts]||Date.parse(v.rtsTo)>Date.parse(u.rtsLate[v.rts]))u.rtsLate[v.rts]=String(v.rtsTo)}})}catch(e){}
   vaEnter({id:sid,name:u.dn||x.name||sid,u})}
 function vaEnter(X){if(!ME||ME.sid!==LECTURER||VIEWAS)return;closeModal();
   VIEWAS={me:ME,u:U,sid:X.id,name:X.name,back:location.hash||'#/lecturer'};presOff();
