@@ -27,3 +27,7 @@ tools/qgen/drafts.json
 # Discussion prep working files (student answers)
 tools/discuss/*.json
 tools/discuss/*.md
+
+# Course marks: never commit the marks workbook or the private marks file
+*marks*.csv
+*marks*.json

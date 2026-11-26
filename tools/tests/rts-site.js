@@ -84,7 +84,7 @@ async rtsViewAs(){const p=await page({sid:LECT,rts:true});/* View as student sho
 async courseMarks(){const p=await page({sid:STUDENT});if(!(await p.evaluate(()=>typeof cmSet==='function')))return p.done();/* MKT101 only */
   ok(!(await p.$('#cmcard')),'marks card shown without marks');const x0=await p.evaluate(()=>U.xp);
   await p.evaluate(()=>applyMarks({cm_t:{q:'cm',band:0,xp:0,n:'Test Student',g:3,mt:38.5,mtw:12.83,rp:15,pr:9.2,tot:37.03,pass:50,hd:'NR',st:'Present',nog:0}}));await p.go('#/');await p.waitForTimeout(300);
-  const t=await p.textContent('#cmcard');ok(/37\.03/.test(t)&&/Raw 52\.5\/70/.test(t)&&/Out of reach/.test(t)&&/provisional/i.test(t),'card content: '+t.slice(0,200));
+  const r301=await p.evaluate(()=>typeof CMC!=='undefined');const t=await p.textContent('#cmcard');ok(/37\.03/.test(t)&&(r301||/Raw 52\.5\/70/.test(t))&&(r301?/For a Distinction/.test(t):/For an HD/.test(t)&&/94\.9/.test(t))&&/provisional/i.test(t),'card content: '+t.slice(0,200));
   ok(await p.evaluate(()=>{const a=document.getElementById('cmcard'),h=document.getElementById('thead');return !!h&&h.nextElementSibling===a}),'card should sit right under the profile block');
   ok(await p.evaluate(()=>document.getElementById('cmmore').hidden&&!!document.querySelector('#cmcard .cmbar')),'card should start folded with the total bar showing');await p.click('#cmtg');await p.waitForTimeout(200);ok(await p.evaluate(()=>!document.getElementById('cmmore').hidden),'tap should open the details');
   ok((await p.evaluate(()=>U.xp))===x0,'marks gave XP');ok(await p.evaluate(()=>!Object.keys(U.rev||{}).some(k=>/^cm_/.test(k))),'marks treated as an answer mark');

@@ -49,6 +49,13 @@ Follow `docs/QGEN.md`: draft them in `tools/qgen/drafts.json`, check and upload 
 2. Write `tools/discuss/notes.md`: plain text, `## ` headings, `- ` bullets, `**bold**`. The 3–5 main misconceptions (with the numbers), answers worth showing by Student letter, questions to ask the class, and points to close on. Never names or student IDs (post.mjs refuses IDs).
 3. `node tools/discuss/post.mjs <sessionId> tools/discuss/notes.md` puts them in the 🤖 box at the top of the lecturer's Discussion panel (reviews/S000001, lecturer-only). The working files are git-ignored.
 
+## Course marks ("publish the marks")
+
+Each student sees their own marks card on Home, under their profile block (`cmarks.js`; weights in `CMC`). The data never goes into the repo: it lives in the student's own `reviews/{SID}` document (key `cm_<term>`), which only that student and the lecturer can read.
+1. `python3 tools/build-marks.py <coursework marks .xlsx> -o <private .json OUTSIDE the repo>` (sheet "Class Marks"; columns found by header name; computed values).
+2. `node tools/marks/upload.mjs <private .json> --dry`, then without `--dry` to publish. Read the records back and compare before reporting.
+3. Never commit the workbook or the JSON. The card may say "final exam": the lecturer's exception to the no-exam-wording rule, for this card only.
+
 ## Setup (once, by the lecturer)
 
 1. Sign in to the live site as `S000001` and create the lecturer PIN.
