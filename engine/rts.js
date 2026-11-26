@@ -22,7 +22,7 @@ function rtsSt(s){U.rts=U.rts||{};return U.rts[s.id]||null}
 function rtsActive(){const s=rtsCur();if(!s||!rtsPlayer()||VIEWAS)return null;const st=rtsSt(s);return st&&st.st==='go'?{s,st}:null}
 /* a live session (any kind, joined or not) is running (kept for course code; the session no longer locks the app) */
 const rtsLiveNow=()=>!!((typeof sessLive==='function'&&sessLive())||(typeof tutOn==='function'&&tutOn()));
-const rtsBase=s=>s.mins*60e3,rtsLimit=(s,st)=>rtsBase(s)+(st.ext|0)*RTS_EXT;
+const rtsBase=s=>s.mins*60e3,rtsLimit=(s,st)=>s.noLimit?Infinity:rtsBase(s)+(st.ext|0)*RTS_EXT;/* noLimit: s.mins is only a guide */
 function rtsNoXP(){const a=rtsActive();return !!(a&&(a.st.ext|0)>0&&location.hash.indexOf('#/rts')===0&&a.st.act>=rtsBase(a.s))}/* extra time: no study-time XP */
 const rtsQ=id=>RTS_Q[id];
 const rtsWords=t=>String(t||'').trim().split(/\s+/).filter(Boolean).length;
@@ -30,7 +30,9 @@ const rtsWhen=iso=>new Date(iso).toLocaleString('en-GB',{timeZone:'Indian/Maldiv
 function rtsRand(seed){let h=1779033703;for(let i=0;i<seed.length;i++){h=Math.imul(h^seed.charCodeAt(i),3432918353);h=h<<13|h>>>19}return ()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return ((h^=h>>>16)>>>0)/4294967296}}
 function rtsOpts(qid){const q=rtsQ(qid),r=rtsRand(ME.sid+'|'+qid),o=q[2].slice();for(let i=o.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[o[i],o[j]]=[o[j],o[i]]}return o}
 /* the written questions a student must answer: every item of an "answer all" part, the chosen item of a "choose" part */
-function rtsWritten(s,st){const L=[];s.parts.forEach((p,pi)=>{if(p.kind!=='write')return;if(p.pick)L.push({pi,id:(st.pick||{})[pi]||null,p});else p.items.forEach(id=>L.push({pi,id,p}))});return L}
+/* pick: how many to choose (1 = st.pick[pi] is one id; 2+ = an array of ids) */
+const rtsPicks=(st,pi)=>{const v=(st.pick||{})[pi];return Array.isArray(v)?v:v?[v]:[]};
+function rtsWritten(s,st){const L=[];s.parts.forEach((p,pi)=>{if(p.kind!=='write')return;if(p.pick){const c=rtsPicks(st,pi);for(let k=0;k<p.pick;k++)L.push({pi,id:c[k]||null,p})}else p.items.forEach(id=>L.push({pi,id,p}))});return L}
 function rtsMcqs(s){return s.parts.filter(p=>p.kind==='mcq').flatMap(p=>p.items)}
 function rtsTodo(s,st){const a=st.a||{};let n=0,d=0;
   rtsMcqs(s).forEach(id=>{n++;if(a[id])d++});
@@ -55,15 +57,16 @@ function rtsCss(){if(document.getElementById('rtscss'))return;const st=document.
 function rtsHomeHTML(){const s=rtsCur();if(!s||!ME||!U||(ME.sid===LECTURER&&!VIEWAS))return '';rtsCss();const st=rtsSt(s),done=st&&st.st==='done',go=st&&st.st==='go';
   return `<div class="rtsb${done?' done':''}" id="rtsb" role="region" aria-label="${esc(s.title)}"><div class="rtsin">
   <p class="rtsk">⚠️ ${esc(CRS.CODE||'')} · ${esc(s.topics)}</p><h2>${esc(s.title)}</h2>
-  <p>This is extra tutorial work you can complete to save the attendance of a class you missed because of the public holiday. It replaces a 2-hour tutorial session.</p>
-  <p class="rtsm">⏱️ ${s.mins} minutes · open until ${esc(rtsWhen(new Date(rtsEnd(s)).toISOString()))}</p>
+  <p>${esc(s.blurb||'This is extra tutorial work you can complete to save the attendance of a class you missed because of the public holiday. It replaces a 2-hour tutorial session.')}</p>
+  <p class="rtsm">⏱️ ${s.noLimit?'About '+s.mins+' minutes, no time limit':s.mins+' minutes'} · open until ${esc(rtsWhen(new Date(rtsEnd(s)).toISOString()))}</p>
   ${done?`<p style="margin:0">Done ${esc(ymd(new Date(st.at)))}: ${st.res?st.res.xp:0} XP earned.</p>`:''}
   <button type="button" class="rtsgo${done?' ok':''}" id="rtsgo"${done||VIEWAS?' disabled':''}>${done?'✅ ATTENDANCE SAVED':go?'▶ CONTINUE: SAVE MY ATTENDANCE':'SAVE MY ATTENDANCE'}</button></div></div>`}
 function rtsHomeBind(){const b=$('#rtsgo');if(!b||b.disabled)return;b.onclick=()=>{const s=rtsCur();if(!s)return;const st=rtsSt(s);if(st&&st.st==='go'){location.hash='#/rts';return}rtsAsk(s)}}
 function rtsModal(h){closeModal();const m=document.createElement('div');m.className='modal';m.setAttribute('role','dialog');m.setAttribute('aria-modal','true');m.innerHTML=`<div class="card" style="max-width:520px">${h}</div>`;document.body.append(m);return m}
 function rtsAsk(s){const m=rtsModal(`<div style="font-size:2.4rem;text-align:center">🚧</div><h2 style="text-align:center;margin:4px 0 10px">Before you start</h2>
   <p><b>You can leave any time.</b> Tap <b>Save and continue later</b>, or just close the app: your answers and your time are kept, and you carry on from the button on Today. The clock only runs while this session is open.</p>
-  <p>Real talk: it's literally ${s.mins} minutes. No cap 🧢. Put your phone on Do Not Disturb, close TikTok for a bit, and secure that attendance. You've got this 💅</p>
+  ${s.noLimit?'<p><b>No time limit.</b> It is designed to take about '+s.mins+' minutes, but take as long as you need before the deadline.</p>':''}
+  <p>Real talk: it's ${s.noLimit?'about ':'literally '}${s.mins} minutes. No cap 🧢. Put your phone on Do Not Disturb, close TikTok for a bit, and secure that attendance. You've got this 💅</p>
   <div class="row" style="justify-content:center;margin-top:14px"><button type="button" class="btn ghost" id="rtsno">Not now</button><button type="button" class="btn" id="rtsyes">Let's Go! 🏁</button></div>`);
   $('#rtsno').onclick=closeModal;m.onclick=e=>{if(e.target===m)closeModal()};$('#rtsyes').focus();
   $('#rtsyes').onclick=()=>{U.rts=U.rts||{};const old=U.rts[s.id];U.rts[s.id]={st:'go',n:((old&&old.n)|0)+1,act:0,ext:0,a:{},pick:{},fl:{paste:0},ph:'main',started:new Date().toISOString()};save();closeModal();location.hash='#/rts'}}
@@ -76,7 +79,8 @@ function rtsPage(){const s=rtsCur();if(!s||!rtsPlayer()){location.replace('#/');
   const wq=(id)=>{const q=rtsQ(id),w=rtsWords(a[id]),mn=q.minW||60;return `${q.label?`<p class="rtslbl muted">${esc(q.label)}</p>`:''}${q.scenario?`<p class="rtsscn">${esc(q.scenario)}</p>`:''}<h3>${esc(q.q)}</h3>
     <textarea data-wq="${esc(id)}" aria-label="Your answer" spellcheck="true"${lock?' disabled':''}>${esc(a[id]||'')}</textarea><p class="rtswc ${w>=mn?'ok':'muted'}" id="wc_${esc(id)}">${w} words (at least ${mn})</p>`};
   const wr=(p,pi)=>`<div class="card"><h2 style="margin-top:0">${esc(p.title)}</h2><p class="muted">${esc(p.sub||'')}</p>${p.label?`<p class="rtslbl muted">${esc(p.label)}</p>`:''}${p.scenario?`<p class="rtsscn">${esc(p.scenario)}</p>`:''}
-    ${p.pick?`<div class="rtspick" role="radiogroup" aria-label="Choose a question">${p.items.map(id=>{const q=rtsQ(id);return `<label class="rtso${(st.pick||{})[pi]===id?' on':''}"><input type="radio" name="pk_${pi}" data-pk="${pi}" value="${esc(id)}"${(st.pick||{})[pi]===id?' checked':''}${lock?' disabled':''}><span><b>${esc(q.topic)}</b></span></label>`}).join('')}</div>${(st.pick||{})[pi]?'<div style="margin-top:14px">'+wq(st.pick[pi])+'</div>':'<p class="muted">Choose one question above to see it.</p>'}`
+    ${p.pick>1?(()=>{const c=rtsPicks(st,pi);return `<p><b>Choose ${p.pick}:</b> ${c.length}/${p.pick} chosen</p><div class="rtspick" role="group" aria-label="Choose ${p.pick} questions">${p.items.map(id=>{const q=rtsQ(id),on=c.includes(id);return `<label class="rtso${on?' on':''}"><input type="checkbox" data-pkm="${pi}" value="${esc(id)}"${on?' checked':''}${!on&&c.length>=p.pick?' disabled':''}${lock?' disabled':''}><span><b>${esc(q.topic)}</b><br><small>${esc(q.q)}</small></span></label>`}).join('')}</div>${c.map(id=>'<div style="margin-top:14px" class="rtsq">'+wq(id)+'</div>').join('')||'<p class="muted">Choose two questions above to see them.</p>'}`})()
+     :p.pick?`<div class="rtspick" role="radiogroup" aria-label="Choose a question">${p.items.map(id=>{const q=rtsQ(id);return `<label class="rtso${(st.pick||{})[pi]===id?' on':''}"><input type="radio" name="pk_${pi}" data-pk="${pi}" value="${esc(id)}"${(st.pick||{})[pi]===id?' checked':''}${lock?' disabled':''}><span><b>${esc(q.topic)}</b></span></label>`}).join('')}</div>${(st.pick||{})[pi]?'<div style="margin-top:14px">'+wq(st.pick[pi])+'</div>':'<p class="muted">Choose one question above to see it.</p>'}`
       :p.items.map(id=>`<div class="rtsq">${wq(id)}</div>`).join('')}</div>`;
   const T=rtsTodo(s,st);
   const body=st.ph==='bonus'?`<div class="card"><h2 style="margin-top:0">🤫 The secret question</h2><p class="muted">Answer it to double your finishing XP and your time bonus. At least ${rtsQ(s.bonus).minW||100} words.</p><div class="rtsq">${wq(s.bonus)}</div></div>
@@ -90,7 +94,8 @@ function rtsPage(){const s=rtsCur();if(!s||!rtsPlayer()){location.replace('#/');
     ${over&&st.ph!=='bonus'?`<div class="callout" style="margin-bottom:14px">${(st.ext|0)<2?'⏰ Time is up. Tap <b>I need more time</b> for 15 more minutes (you can do this twice), or restart from the beginning.':'⏰ Time is up, and both extra times are used. Tap <b>Finish</b> to complete the session with what you have.'}</div>`:''}
     ${body}</div>`);
   rtsBind(s);rtsClock(s)}
-function rtsClock(s){const el=$('#rtsclk');if(!el)return;const st=rtsSt(s);if(st.ph==='bonus'){el.textContent='🤫 Bonus round';return}const left=rtsLimit(s,st)-st.act;
+function rtsClock(s){const el=$('#rtsclk');if(!el)return;const st=rtsSt(s);if(st.ph==='bonus'){el.textContent='🤫 Bonus round';return}
+  if(s.noLimit){el.textContent='⏱️ '+Math.floor(st.act/60000)+' min · about '+s.mins+' suggested';return}const left=rtsLimit(s,st)-st.act;
   el.textContent=left>0?'⏱️ '+Math.floor(left/60000)+':'+String(Math.floor(left%60000/1000)).padStart(2,'0')+' left':'⏰ Time is up';}
 function rtsBind(s){const st=rtsSt(s);clearInterval(RTST);let lastSave=Date.now(),lt=Date.now();
   RTST=setInterval(()=>{if(location.hash.indexOf('#/rts')!==0){clearInterval(RTST);return}const now=Date.now(),dt=Math.min(now-lt,5000);lt=now;
@@ -99,6 +104,7 @@ function rtsBind(s){const st=rtsSt(s);clearInterval(RTST);let lastSave=Date.now(
   const upd=()=>{const T=rtsTodo(s,st),p=$('#rtsprog');if(p)p.textContent=T.d+'/'+T.n+' answered';const f=$('#rtsfin');if(f)f.disabled=!(T.all||(st.act>=rtsLimit(s,st)&&(st.ext|0)>=2))};
   document.querySelectorAll('[data-mq]').forEach(r=>r.onchange=()=>{st.a[r.dataset.mq]=r.value;r.closest('fieldset').querySelectorAll('.rtso').forEach(l=>l.classList.toggle('on',l.contains(r)));save();upd()});
   document.querySelectorAll('[data-pk]').forEach(r=>r.onchange=()=>{st.pick=st.pick||{};st.pick[r.dataset.pk]=r.value;save();rtsPage()});
+  document.querySelectorAll('[data-pkm]').forEach(r=>r.onchange=()=>{st.pick=st.pick||{};const pi=r.dataset.pkm,c=rtsPicks(st,pi).filter(x=>x!==r.value);if(r.checked)c.push(r.value);st.pick[pi]=c;save();const y=scrollY;rtsPage();scrollTo(0,y)});
   document.querySelectorAll('[data-wq]').forEach(t=>{t.oninput=()=>{st.a[t.dataset.wq]=t.value.slice(0,6000);const q=rtsQ(t.dataset.wq),w=rtsWords(t.value),mn=q.minW||60,e=$('#wc_'+t.dataset.wq);if(e){e.textContent=w+' words (at least '+mn+')';e.className='rtswc '+(w>=mn?'ok':'muted')}upd()};
     t.onpaste=e=>{e.preventDefault();st.fl=st.fl||{};st.fl.paste=(st.fl.paste|0)+1;toast('✋','Pasting is switched off here','Type your answer, or use your keyboard\'s voice typing.')};t.onblur=()=>save()});
   $('#rtssave')&&($('#rtssave').onclick=()=>{save();rtsModal(`<div style="font-size:2.2rem;text-align:center">💾</div><h2 style="text-align:center">Saved</h2><p>Your answers and your time are saved to your account. You can close the app now and carry on from any device before ${esc(rtsWhen(new Date(rtsEnd(s)).toISOString()))}.</p><div class="row" style="justify-content:center"><button type="button" class="btn ghost" id="rtsout">Leave for now</button><button type="button" class="btn" id="rtsok">Keep going</button></div>`);$('#rtsok').onclick=closeModal;$('#rtsout').onclick=()=>{closeModal();location.hash='#/'}});

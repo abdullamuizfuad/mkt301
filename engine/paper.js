@@ -99,7 +99,7 @@ function ppSitting(P){ppMigrate(P);const S=ppSpec(P),sec=S[P.si],V=ppIsV(P);ppWa
   document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{const a=ppAns(P,b.dataset.q);if(a.mode===b.dataset.mode)return;stopMic();a.mode=b.dataset.mode;save();ppSitting(P);const e=$('#pq-'+b.dataset.q);e&&e.scrollIntoView({block:'center'})});
   document.querySelectorAll('[data-paper]').forEach(c=>c.onchange=()=>{ppAns(P,c.dataset.paper).paper=c.checked?1:0;save();left()});
   let warned=ppLeftMs(P)<=5*PP_MIN,last=Date.now(),sv=Date.now();
-  const tick=()=>{if(!$('#pptm'))return clearInterval(PPT);const now=Date.now(),dt=Math.min(Math.max(0,now-last),5000);last=now;
+  let me=0;const tick=()=>{if(!$('#pptm')||P.end||P.si>=S.length||(me&&me!==PPT)){clearInterval(me);if(me===PPT)PPT=null;return}const now=Date.now(),dt=Math.min(Math.max(0,now-last),5000);last=now;
     if(document.visibilityState==='visible')P.used=(P.used|0)+dt;if(!V&&now-sv>15000){sv=now;save()}
     const ms=ppLeftMs(P);
     if(ms<=0&&V){P.used=ppAl(P);$('#pptm').textContent='0:00';$('#pptm').className='timer lex over';if(!P.pvTold){P.pvTold=1;toast('⏰','Preview: time is up','In a real sitting the section is submitted now')}return}
@@ -108,7 +108,7 @@ function ppSitting(P){ppMigrate(P);const S=ppSpec(P),sec=S[P.si],V=ppIsV(P);ppWa
     $('#pptm').textContent=ppFmt(ms);$('#pptm').className='timer lex'+(ms<=60e3?' over':ms<=5*PP_MIN?' warn':'');
     if(!warned&&ms<=5*PP_MIN){warned=true;toast('⏳','5 minutes left',sec.title)}};
   if(!V&&typeof twStart==='function'&&P.twPid!==PR.pid)twStart(P);
-  tick();PPT=setInterval(()=>{if(!V&&typeof twTake==='function'&&Date.now()-(P.twAt||0)>10000){twTake(P);P.twAt=Date.now()}tick()},500);
+  clearInterval(PPT);tick();me=PPT=setInterval(()=>{if(!V&&typeof twTake==='function'&&Date.now()-(P.twAt||0)>10000){twTake(P);P.twAt=Date.now()}tick()},500);
   $('#ppsave').onclick=()=>{clearInterval(PPT);stopMic();if(V){location.hash='#/paper';return}save();toast('💾','Paper saved',ppFmt(ppLeftMs(P))+' left in '+sec.title+'. Carry on any time.');location.hash='#/'};
   if(V){document.querySelectorAll('[data-pvs]').forEach(b=>b.onclick=()=>{stopMic();if(b.dataset.pvs==='check'){while(!P.end)ppSubmit(P,0,0);return route()}P.si=+b.dataset.pvs;P.used=0;P.bonus=0;P.pvTold=0;ppSitting(P);scrollTo(0,0)});
     $('#pvrst').onclick=()=>{stopMic();PPV={id:'pv'+(P.n+1),n:P.n+1,prev:1,v:2,at:Date.now(),si:0,ss:Date.now(),used:0,bonus:0,sub:[],a:{},end:null,chk:{},ck:0};ppSitting(PPV);scrollTo(0,0)}}
