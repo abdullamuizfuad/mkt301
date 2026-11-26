@@ -89,6 +89,10 @@ async courseMarks(){const p=await page({sid:STUDENT});if(!(await p.evaluate(()=>
   ok(await p.evaluate(()=>document.getElementById('cmmore').hidden&&!!document.querySelector('#cmcard .cmbar')),'card should start folded with the total bar showing');await p.click('#cmtg');await p.waitForTimeout(200);ok(await p.evaluate(()=>!document.getElementById('cmmore').hidden),'tap should open the details');
   ok((await p.evaluate(()=>U.xp))===x0,'marks gave XP');ok(await p.evaluate(()=>!Object.keys(U.rev||{}).some(k=>/^cm_/.test(k))),'marks treated as an answer mark');
   await p.done()},
+async noteHide(){const p=await page({sid:STUDENT});
+  await p.evaluate(()=>applyMarks({note_x1:{q:'note',fb:'Old apology',at:isoNow(),by:'lecturer',pin:true}}));await p.go('#/');await p.waitForTimeout(300);ok(/Old apology/.test(await p.textContent('main')),'message not shown first');
+  await p.evaluate(()=>applyMarks({note_x1:{q:'note',fb:'Old apology',at:isoNow(),by:'lecturer',pin:true,hide:true}}));await p.go('#/');await p.waitForTimeout(300);
+  ok(!/Old apology/.test(await p.textContent('main')),'a withdrawn message is still shown');await p.done()},
 async pinNote(){const p=await page({sid:STUDENT});
   await p.evaluate(()=>{applyMarks({note_old1:{q:'note',fb:'Old text',at:'2026-11-17T10:00:00Z',by:'lecturer'}});applyMarks({note_pin_t:{q:'note',fb:'Pinned text',at:'2026-11-17T11:00:00Z',by:'lecturer',pin:true,sup:'note_old1'}})});
   await p.go('#/');await p.waitForTimeout(300);
