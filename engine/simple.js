@@ -43,7 +43,7 @@ function paperTile(){if(typeof ppLine!=='function')return null;const L=ME&&ME.si
 function tilesHTML(){const T=(typeof homeTiles==='function'?homeTiles():[]).concat([paperTile()].filter(Boolean));
   return `<div class="ttiles" id="ttiles">${T.map(x=>`<a class="card zone ttile${x[4]?' locked':''}" href="${x[3]}"${x[3]==='#/paper'?' id="tpaper"':''}><span class="em">${x[0]}</span><span><b class="lex">${esc(x[1])}</b><small class="muted">${esc(x[2]||'')}</small></span></a>`).join('')}</div>`}
 function home(){if(!U)return;rollDay();if(ME.sid===LECTURER)return lectHome();
-  shell('#/',`<h1 class="sr">Today</h1>${pinNotesHTML()}${todayHeadHTML()}${typeof rtsHomeHTML==='function'?rtsHomeHTML():''}${inboxHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}<div id="tfun"></div><div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
+  shell('#/',`<h1 class="sr">Today</h1>${pinNotesHTML()}${todayHeadHTML()}${typeof homeTopHTML==='function'?homeTopHTML():''}${typeof rtsHomeHTML==='function'?rtsHomeHTML():''}${inboxHTML()}${miniCdHTML()}${nextHTML()}${todayRowHTML()}<div id="tfun"></div><div id="twild"></div>${inviteHTML()}${tilesHTML()}`);
   const b=$('#tmb');b.onclick=()=>{const l=$('#tml'),o=l.hidden;l.hidden=!o;b.setAttribute('aria-expanded',o)};if(typeof wildHome==='function')wildHome();if(typeof rtsHomeBind==='function')rtsHomeBind();if(typeof funHome==='function')funHome()}
 
 /* ---------- the lecturer's home: lecturer essentials only (the lecturer is never a player) ---------- */
@@ -154,7 +154,7 @@ async function vaOpen(sid){if(!ME||ME.sid!==LECTURER||VIEWAS||!cloudOn())return;
   try{x=await CLOUD.get('users/'+sid)}catch(e){toast('⚠️','Could not open '+sid,CLOUD.say(e));return}
   let u=null;try{u=x&&JSON.parse(x.u)}catch(e){}if(!u){toast('👁','Nothing to show yet',sid+' has no saved progress.');return}
   /* also show what the lecturer has sent that the student's device hasn't picked up yet: messages (pinned too) and tutorials opened for them */
-  try{const r=await CLOUD.get('reviews/'+sid),m=(r&&r.m)||{};u.notes=u.notes||{};Object.entries(m).forEach(([k,v])=>{if(!v||!/^note_/.test(k))return;
+  try{const r=await CLOUD.get('reviews/'+sid),m=(r&&r.m)||{};u.notes=u.notes||{};Object.entries(m).forEach(([k,v])=>{if(v&&/^cm_/.test(k)){u._cm=v;return}if(!v||!/^note_/.test(k))return;
     if(!u.notes[k]){u.notes[k]={fb:String(v.fb||'').slice(0,600),at:String(v.at||'')};if(v.pin)u.notes[k].pin=1;if(typeof v.sup==='string')u.notes[k].sup=v.sup}
     if(typeof v.rts==='string'&&v.rtsTo){u.rtsLate=u.rtsLate||{};if(!u.rtsLate[v.rts]||Date.parse(v.rtsTo)>Date.parse(u.rtsLate[v.rts]))u.rtsLate[v.rts]=String(v.rtsTo)}})}catch(e){}
   vaEnter({id:sid,name:u.dn||x.name||sid,u})}

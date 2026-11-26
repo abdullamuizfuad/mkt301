@@ -81,6 +81,14 @@ async rtsViewAs(){const p=await page({sid:LECT,rts:true});/* View as student sho
     await vaOpen('S081441')});await p.waitForTimeout(500);
   ok(/Pinned hello/.test(await p.textContent('.pinnote')),'pinned message not shown in View as student');ok(await p.$('#rtsb'),'tutorial block not shown in View as student');
   ok(await p.evaluate(()=>!!VIEWAS),'not in View as student');await p.done()},
+async courseMarks(){const p=await page({sid:STUDENT});if(!(await p.evaluate(()=>typeof cmSet==='function')))return p.done();/* MKT101 only */
+  ok(!(await p.$('#cmcard')),'marks card shown without marks');const x0=await p.evaluate(()=>U.xp);
+  await p.evaluate(()=>applyMarks({cm_t:{q:'cm',band:0,xp:0,n:'Test Student',g:3,mt:38.5,mtw:12.83,rp:15,pr:9.2,tot:37.03,pass:50,hd:'NR',st:'Present',nog:0}}));await p.go('#/');await p.waitForTimeout(300);
+  const t=await p.textContent('#cmcard');ok(/37\.03/.test(t)&&/Raw 52\.5\/70/.test(t)&&/Out of reach/.test(t)&&/provisional/i.test(t),'card content: '+t.slice(0,200));
+  ok(await p.evaluate(()=>{const a=document.getElementById('cmcard'),h=document.getElementById('thead');return !!h&&h.nextElementSibling===a}),'card should sit right under the profile block');
+  ok(await p.evaluate(()=>document.getElementById('cmmore').hidden&&!!document.querySelector('#cmcard .cmbar')),'card should start folded with the total bar showing');await p.click('#cmtg');await p.waitForTimeout(200);ok(await p.evaluate(()=>!document.getElementById('cmmore').hidden),'tap should open the details');
+  ok((await p.evaluate(()=>U.xp))===x0,'marks gave XP');ok(await p.evaluate(()=>!Object.keys(U.rev||{}).some(k=>/^cm_/.test(k))),'marks treated as an answer mark');
+  await p.done()},
 async pinNote(){const p=await page({sid:STUDENT});
   await p.evaluate(()=>{applyMarks({note_old1:{q:'note',fb:'Old text',at:'2026-11-17T10:00:00Z',by:'lecturer'}});applyMarks({note_pin_t:{q:'note',fb:'Pinned text',at:'2026-11-17T11:00:00Z',by:'lecturer',pin:true,sup:'note_old1'}})});
   await p.go('#/');await p.waitForTimeout(300);
